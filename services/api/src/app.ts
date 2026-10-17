@@ -15,6 +15,7 @@ import { registerCommercial } from "./commercial.js";
 import { registerDiscord } from "./discord.js";
 import { registerEntitlements } from "./entitlements.js";
 import { registerAccounts } from "./accounts.js";
+import { registerWorkspace } from "./web-workspace.js";
 import type { DiscordOAuth } from "./account-service.js";
 
 export async function buildApp(
@@ -230,7 +231,8 @@ export async function buildApp(
   await registerCommercial(app, { pool, authenticate });
   await registerDiscord(app, { pool });
   await registerEntitlements(app, { pool, authenticate });
-  await registerAccounts(app, { pool, ...options });
+  const web = await registerAccounts(app, { pool, ...options });
+  await registerWorkspace(app, { pool, web });
   app.get("/health", async (_request, reply) => {
     try {
       const readiness = await pool.query<{ applied: number }>(

@@ -578,6 +578,187 @@ describe.skipIf(!databaseUrl)("website accounts (real PostgreSQL)", () => {
     ]);
   });
 
+  describe("customer workspace", () => {
+    const commission = {
+      category: "website",
+      title: "TEST portfolio site",
+      details: "TEST: a five page portfolio website with a contact form.",
+      approximateBudget: null,
+      preferredTimeframe: "Within two months",
+    };
+
+    it("creates and lists only the customer's own commissions", async () => {
+      const alice = (await signIn(profileOf())).json().token;
+      const bob = (await signIn(profileOf())).json().token;
+      const created = await web("POST", "/web/workspace/commissions", {
+        token: alice,
+        payload: { requestId: randomUUID(), ...commission },
+      });
+      expect(created.statusCode).toBe(200);
+      const view = created.json().commission;
+      expect(view).toMatchObject({
+        kind: "commission",
+        status: "submitted",
+        assigned: false,
+      });
+      // No staff identifiers or internal review notes reach the website.
+      expect(view).not.toHaveProperty("reviewNote");
+      expect(view).not.toHaveProperty("assignedUserId");
+      expect(view).not.toHaveProperty("requesterId");
+
+      const mine = (
+        await web("GET", "/web/workspace/commissions", { token: alice })
+      ).json().commissions;
+      expect(mine.map((c: { id: string }) => c.id)).toContain(view.id);
+      const theirs = (
+        await web("GET", "/web/workspace/commissions", { token: bob })
+      ).json().commissions;
+      expect(theirs.map((c: { id: string }) => c.id)).not.toContain(view.id);
+      expect(
+        (
+          await web("GET", `/web/workspace/commissions/${view.id}`, {
+            token: bob,
+          })
+        ).statusCode,
+      ).toBe(404);
+    });
+
+    it("validates commission input and ignores client-chosen status", async () => {
+      const token = (await signIn(profileOf())).json().token;
+      const bad = (payload: object) =>
+        web("POST", "/web/workspace/commissions", {
+          token,
+          payload: { requestId: randomUUID(), ...commission, ...payload },
+        });
+      expect((await bad({ category: "hacking" })).statusCode).toBe(400);
+      expect((await bad({ details: "short" })).statusCode).toBe(400);
+      expect((await bad({ status: "completed" })).statusCode).toBe(400);
+      expect((await bad({ kind: "partner" })).statusCode).toBe(400);
+    });
+
+    it("runs a ticket conversation and hides internal notes", async () => {
+      const profile = profileOf();
+      const token = (await signIn(profile)).json().token;
+      const categories = (
+        await web("GET", "/web/workspace/ticket-categories", { token })
+      ).json().categories;
+      expect(categories).toEqual([{ key: "technical", label: "Technical" }]);
+      const ticket = (
+        await web("POST", "/web/workspace/tickets", {
+          token,
+          payload: {
+            requestId: randomUUID(),
+            category: "technical",
+            description: "TEST: my download link does not work.",
+          },
+        })
+      ).json().ticket;
+      expect(ticket).not.toHaveProperty("customerId");
+      const replied = await web(
+        "POST",
+        `/web/workspace/tickets/${ticket.id}/replies`,
+        {
+          token,
+          payload: {
+            requestId: randomUUID(),
+            expectedVersion: ticket.version,
+            content: "TEST: still broken today.",
+          },
+        },
+      );
+      expect(replied.statusCode).toBe(200);
+      // A staff-only note on the same ticket must never reach the customer.
+      const userId = (await web("GET", "/web/account", { token })).json().id;
+      await pool.query(
+        "INSERT INTO support_messages(tenant_id,ticket_id,author_id,kind,content,request_id) VALUES($1,$2,$3,'note','TEST internal note',$4)",
+        [tenantId, ticket.id, userId, randomUUID()],
+      );
+      const detail = (
+        await web("GET", `/web/workspace/tickets/${ticket.id}`, { token })
+      ).json();
+      expect(
+        detail.messages.map((m: { content: string }) => m.content),
+      ).toEqual(["TEST: still broken today."]);
+      expect(detail.messages[0]).toMatchObject({ fromYou: true });
+      expect(detail.messages[0]).not.toHaveProperty("authorId");
+      // Stale version (someone else changed the ticket) is refused.
+      const stale = await web(
+        "POST",
+        `/web/workspace/tickets/${ticket.id}/replies`,
+        {
+          token,
+          payload: {
+            requestId: randomUUID(),
+            expectedVersion: ticket.version,
+            content: "TEST late",
+          },
+        },
+      );
+      expect(stale.statusCode).toBe(409);
+      const other = (await signIn(profileOf())).json().token;
+      expect(
+        (
+          await web("GET", `/web/workspace/tickets/${ticket.id}`, {
+            token: other,
+          })
+        ).statusCode,
+      ).toBe(404);
+    });
+
+    it("keeps staff accounts out of the customer workspace", async () => {
+      const token = (await signIn(profileOf())).json().token;
+      const userId = (await web("GET", "/web/account", { token })).json().id;
+      await pool.query(
+        "UPDATE support_members SET role='staff' WHERE tenant_id=$1 AND user_id=$2",
+        [tenantId, userId],
+      );
+      expect(
+        (await web("GET", "/web/workspace/tickets", { token })).statusCode,
+      ).toBe(403);
+    });
+  });
+
+  it("enforces 2FA on the API, not only on the website", async () => {
+    const profile = profileOf();
+    const first = (await signIn(profile)).json().token;
+    const { secret } = (
+      await web("POST", "/web/account/mfa/totp/setup", { token: first })
+    ).json();
+    await web("POST", "/web/account/mfa/totp/enable", {
+      token: first,
+      payload: { code: totpCode(secret, currentStep()) },
+    });
+    const pending = (await signIn(profile)).json().token;
+    expect(
+      (await web("GET", "/web/workspace/tickets", { token: pending }))
+        .statusCode,
+    ).toBe(403);
+    expect(
+      (await web("GET", "/web/account/sessions", { token: pending }))
+        .statusCode,
+    ).toBe(403);
+    expect(
+      (
+        await web("PATCH", "/web/account", {
+          token: pending,
+          payload: { displayName: "x" },
+        })
+      ).statusCode,
+    ).toBe(403);
+    // Still allowed before 2FA: reading the profile (verify page) and logging out.
+    expect(
+      (await web("GET", "/web/account", { token: pending })).statusCode,
+    ).toBe(200);
+    await web("POST", "/web/account/mfa/verify", {
+      token: pending,
+      payload: { code: totpCode(secret, currentStep() + 1) },
+    });
+    expect(
+      (await web("GET", "/web/workspace/tickets", { token: pending }))
+        .statusCode,
+    ).toBe(200);
+  });
+
   it("fails safely when Discord is unavailable", async () => {
     discord.down = true;
     try {

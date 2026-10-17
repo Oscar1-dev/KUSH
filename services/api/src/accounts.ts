@@ -5,6 +5,7 @@ import {
   AccountService,
   discordOAuth,
   oauthSettingsFromEnv,
+  passedMfa,
   type DiscordOAuth,
   type WebSession,
 } from "./account-service.js";
@@ -57,16 +58,25 @@ export async function registerAccounts(
       throw error;
     }
   };
-  /** Website secret + a live website session. */
+  /**
+   * Website secret + a live website session. Unless `beforeMfa` is set, a
+   * session on a 2FA account must have passed 2FA (enforced here, not only
+   * by the website).
+   */
   const signedIn =
     (
       work: (session: WebSession, request: FastifyRequest) => Promise<unknown>,
+      options: { beforeMfa?: boolean } = {},
     ) =>
     async (request: FastifyRequest, reply: FastifyReply) =>
       handle(reply, async () => {
         website(request);
         const session = await service.session(bearer(request));
         if (!session) return reply.code(401).send({ error: "Please sign in" });
+        if (!options.beforeMfa && !passedMfa(session))
+          return reply
+            .code(403)
+            .send({ error: "Two-factor verification required", mfa: true });
         return work(session, request);
       });
   const body = (schema: z.ZodType) =>
@@ -125,7 +135,8 @@ export async function registerAccounts(
 
   app.get(
     "/web/account",
-    signedIn((session) => service.profile(session)),
+    // Readable before 2FA: the verify page needs to know 2FA is pending.
+    signedIn((session) => service.profile(session), { beforeMfa: true }),
   );
 
   app.patch(
@@ -169,12 +180,15 @@ export async function registerAccounts(
   app.post(
     "/web/account/logout",
     { schema: { body: body(logoutSchema) } },
-    signedIn(async (session, request) => ({
-      revoked: await service.logout(
-        session,
-        logoutSchema.parse(request.body).scope,
-      ),
-    })),
+    signedIn(
+      async (session, request) => ({
+        revoked: await service.logout(
+          session,
+          logoutSchema.parse(request.body).scope,
+        ),
+      }),
+      { beforeMfa: true },
+    ),
   );
 
   app.post(
@@ -193,13 +207,16 @@ export async function registerAccounts(
   app.post(
     "/web/account/mfa/verify",
     { schema: { body: body(verifySchema) } },
-    signedIn((session, request) => {
-      const input = verifySchema.parse(request.body);
-      return service.verify(session, {
-        ...(input.code ? { code: input.code } : {}),
-        ...(input.recoveryCode ? { recoveryCode: input.recoveryCode } : {}),
-      });
-    }),
+    signedIn(
+      (session, request) => {
+        const input = verifySchema.parse(request.body);
+        return service.verify(session, {
+          ...(input.code ? { code: input.code } : {}),
+          ...(input.recoveryCode ? { recoveryCode: input.recoveryCode } : {}),
+        });
+      },
+      { beforeMfa: true },
+    ),
   );
 
   app.post(
@@ -221,5 +238,7 @@ export async function registerAccounts(
     ),
   );
 
-  return service;
+  return { service, signedIn, handle, body, website };
 }
+
+export type WebHelpers = Awaited<ReturnType<typeof registerAccounts>>;

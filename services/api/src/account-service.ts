@@ -130,7 +130,13 @@ export interface WebSession {
   userId: string;
   role: string;
   mfaVerifiedAt: Date | null;
+  /** The account has 2FA switched on (so this session must pass it). */
+  mfaEnabled: boolean;
 }
+
+/** True when the session may see account data (2FA passed, if enabled). */
+export const passedMfa = (session: WebSession) =>
+  !session.mfaEnabled || session.mfaVerifiedAt !== null;
 
 export class AccountService {
   constructor(
@@ -352,13 +358,15 @@ export class AccountService {
         user_id: string;
         role: string;
         mfa_verified_at: Date | null;
+        mfa_enabled: boolean;
       }>(
         `UPDATE sessions s SET last_seen_at=now()
          FROM users u
          WHERE s.token_hash=$1 AND s.kind='web' AND u.id=s.user_id AND u.disabled=false
            AND s.expires_at > now()
            AND s.last_seen_at > now() - make_interval(days => $2)
-         RETURNING s.id,s.user_id,u.role,s.mfa_verified_at`,
+         RETURNING s.id,s.user_id,u.role,s.mfa_verified_at,
+           EXISTS(SELECT 1 FROM mfa_totp m WHERE m.user_id=u.id AND m.enabled_at IS NOT NULL) AS mfa_enabled`,
         [tokenHash(token), WEB_SESSION_IDLE_DAYS],
       )
     ).rows[0];
@@ -368,6 +376,7 @@ export class AccountService {
           userId: row.user_id,
           role: row.role,
           mfaVerifiedAt: row.mfa_verified_at,
+          mfaEnabled: row.mfa_enabled,
         }
       : null;
   }
