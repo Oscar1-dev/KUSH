@@ -434,6 +434,7 @@ describe("ticket commands", () => {
         supportTenantId: "t",
         roleIds,
         channelIds,
+        panelMessages: {},
       },
       componentSecret: "component-secret-with-at-least-32-characters",
       health: new HealthMonitor(GUILD),

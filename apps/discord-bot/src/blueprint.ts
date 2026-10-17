@@ -350,6 +350,15 @@ export const channels: DesiredChannel[] = [
   category("information", "INFORMATION", { publish: ["administrator"] }, [
     "01-start-here",
   ]),
+  // Honeypot: deliberately writable by members. Compromised or spam accounts
+  // that post everywhere land here first; the bot deletes the message and
+  // times the author out (see src/moderation/honeypot.ts). Staff are exempt.
+  text(
+    "information",
+    "do-not-post",
+    "Do not post in this channel. Messages here are removed automatically and the author is timed out for review.",
+    community,
+  ),
   text(
     "information",
     "welcome",

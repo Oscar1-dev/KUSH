@@ -9,9 +9,14 @@ import {
   type StringSelectMenuInteraction,
 } from "discord.js";
 import { ApiError, requestUuid } from "../api-client.js";
+import {
+  HONEYPOT_CHANNEL_KEY,
+  handleHoneypotMessage,
+} from "../moderation/honeypot.js";
 import { roles as blueprintRoles } from "../blueprint.js";
 import { ARGUMENTS_OPTION, slashOptions } from "../commands.js";
 import { verifyComponentId } from "../component-id.js";
+import { PUBLIC_COMMISSION_BUTTON } from "../content/channel-content.js";
 import { PUBLIC_TICKET_BUTTON } from "../panels.js";
 import { ticketCategory } from "../tickets/categories.js";
 import { roleKeysFor, type Actor } from "./authority.js";
@@ -59,6 +64,17 @@ export async function handleMessage(
 ): Promise<void> {
   if (message.author.bot || message.webhookId || !message.inGuild()) return;
   if (message.guildId !== services.config.guildId) return;
+  if (message.channelId === services.config.channelIds[HONEYPOT_CHANNEL_KEY]) {
+    const member =
+      message.member ?? (await message.guild.members.fetch(message.author.id));
+    await handleHoneypotMessage(
+      message,
+      member,
+      actorFromMember(member, services.config.roleIds),
+      services,
+    );
+    return;
+  }
   const tokens = tokenise(message.content);
   if (!tokens) {
     await mirrorTicketMessage(message, services);
@@ -284,6 +300,13 @@ async function handleComponent(
           userId,
           publicApply as "seller" | "reseller",
         ),
+      );
+      return;
+    }
+    if (interaction.customId === PUBLIC_COMMISSION_BUTTON) {
+      const category = ticketCategory("commission")!;
+      await interaction.showModal(
+        ticketModal(signerFor(services), userId, category.key, category.label),
       );
       return;
     }

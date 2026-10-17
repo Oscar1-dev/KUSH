@@ -8,6 +8,7 @@ This is a model of the blueprint, not evidence of live guild state. Live verific
 
 | Channel | @everyone (unverified) | Member | Restricted (after restriction) | Member (timed out) | Verified Customer | Beta Tester | Approved Seller | Verified Reseller | Creative Partner | Moderator | Support Staff | Support Lead | Developer | Administrator | Owner role | KUSH Bot |
 | --- | :-: | :-: | :-: | :-: | :-: | :-: | :-: | :-: | :-: | :-: | :-: | :-: | :-: | :-: | :-: | :-: |
+| information/#do-not-post | R | W | R | R | W | W | W | W | W | M | W | W | W | M | M | M |
 | information/#welcome | R | R | R | R | R | R | R | R | R | R | R | R | R | W | M | M |
 | information/#rules | R | R | R | R | R | R | R | R | R | R | R | R | R | W | M | M |
 | information/#announcements | R | R | R | R | R | R | R | R | R | R | R | R | R | W | M | M |

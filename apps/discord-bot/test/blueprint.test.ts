@@ -42,7 +42,7 @@ const programmes = [
 ];
 const informational = channelsWhere(
   (key) =>
-    key.startsWith("information:") ||
+    (key.startsWith("information:") && key !== "information:do-not-post") ||
     key.startsWith("studio:") ||
     key.startsWith("support:") ||
     key === "partnerships:partner-information" ||
@@ -151,6 +151,12 @@ describe("effective permissions by role", () => {
       expect(cell(key, "member"), key).toBe("read");
     for (const key of [...privateStaff, ...customerOnly, ...programmes])
       expect(cell(key, "member"), key).toBe("none");
+  });
+
+  it("makes the honeypot writable by members so compromised accounts trip it", () => {
+    expect(cell("information:do-not-post", "member")).toBe("write");
+    expect(cell("information:do-not-post", "visitor")).toBe("read");
+    expect(cell("information:do-not-post", "restricted")).toBe("read");
   });
 
   it("gives customers read access to downloads and guides only", () => {

@@ -27,6 +27,8 @@ const usage = `Usage:
                                         Offline plan from a snapshot and the configured stable IDs
   cli.ts setup --apply --confirm-guild <id> --plan-hash <hash> [--restrict-unmanaged]
                                         LIVE MUTATION: apply a reviewed plan (owner approval required)
+  cli.ts content --preview | content [--publish --confirm-guild <id>]
+                                        Official channel messages (preview, plan, or LIVE publish/edit)
   cli.ts register-commands             LIVE: register slash fallbacks in the configured guild only
   cli.ts lockdown [--apply --confirm-guild <id>]
                                         Restrict exposed sensitive channels (owner-authorised)`;
@@ -124,6 +126,68 @@ async function main() {
       });
       console.log(JSON.stringify(serialisePlan(summarise(plan)), null, 2));
       console.error(`Read-only snapshot written to ${snapshotPath()}`);
+    });
+    return;
+  }
+  if (operation === "content") {
+    const { channelContent } = await import("./content/channel-content.js");
+    const { renderContentPreview, publishContent, planContent } =
+      await import("./content/publisher.js");
+    const config = await readConfig();
+    if (flag(args, "--preview")) {
+      process.stdout.write(
+        renderContentPreview(channelContent, config.channelIds),
+      );
+      return;
+    }
+    await liveSession(async (_adapter, liveConfig) => {
+      const { Client, GatewayIntentBits } = await import("discord.js");
+      const { DiscordContentAdapter } =
+        await import("./content/content-discord.js");
+      const client = new Client({ intents: [GatewayIntentBits.Guilds] });
+      await client.login(await readBotToken());
+      try {
+        const guild = await client.guilds.fetch(liveConfig.guildId);
+        const adapter = new DiscordContentAdapter(guild);
+        if (!flag(args, "--publish")) {
+          console.log(
+            JSON.stringify(
+              await planContent(
+                channelContent,
+                liveConfig.channelIds,
+                liveConfig.panelMessages,
+                adapter,
+              ),
+              null,
+              2,
+            ),
+          );
+          return;
+        }
+        if (option(args, "--confirm-guild") !== liveConfig.guildId)
+          throw new Error(
+            "--confirm-guild does not match the configured guild",
+          );
+        const result = await publishContent(
+          channelContent,
+          liveConfig.channelIds,
+          liveConfig.panelMessages,
+          adapter,
+        );
+        await writeFile(
+          configPath(),
+          `${JSON.stringify({ ...liveConfig, panelMessages: result.published }, null, 2)}\n`,
+        );
+        console.log(
+          JSON.stringify(
+            { actions: result.actions, errors: result.errors },
+            null,
+            2,
+          ),
+        );
+      } finally {
+        await client.destroy();
+      }
     });
     return;
   }

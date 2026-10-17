@@ -51,6 +51,7 @@ function harness(clock = { now: 1_000_000 }) {
       supportTenantId: "11111111-1111-4111-8111-111111111111",
       roleIds: {},
       channelIds: {},
+      panelMessages: {},
     },
     componentSecret: SECRET,
     health: new HealthMonitor("22345678901234567", () => clock.now),

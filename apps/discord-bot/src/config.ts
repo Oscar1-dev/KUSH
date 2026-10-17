@@ -21,6 +21,13 @@ export const runtimeConfigSchema = z.object({
   supportTenantId: z.string().uuid(),
   roleIds: z.record(z.string(), snowflake).default({}),
   channelIds: z.record(z.string(), snowflake).default({}),
+  /** Official bot messages by content ID, so republishing edits them. */
+  panelMessages: z
+    .record(
+      z.string(),
+      z.object({ channelId: snowflake, messageId: snowflake }),
+    )
+    .default({}),
 });
 
 export type RuntimeConfig = z.infer<typeof runtimeConfigSchema>;
