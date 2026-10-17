@@ -549,6 +549,35 @@ describe.skipIf(!databaseUrl)("website accounts (real PostgreSQL)", () => {
     });
   });
 
+  it("audits failed MFA attempts even though the attempt rolls back", async () => {
+    const profile = profileOf();
+    const { token } = (await signIn(profile)).json();
+    const { secret } = (
+      await web("POST", "/web/account/mfa/totp/setup", { token })
+    ).json();
+    await web("POST", "/web/account/mfa/totp/enable", {
+      token,
+      payload: { code: totpCode(secret, currentStep()) },
+    });
+    await web("POST", "/web/account/mfa/verify", {
+      token,
+      payload: { code: "000000" },
+    });
+    await web("POST", "/web/account/mfa/totp/disable", {
+      token,
+      payload: { code: "000000" },
+    });
+    const actions = await pool.query(
+      `SELECT a.action FROM audit_events a JOIN user_identities i ON i.user_id=a.actor_id
+       WHERE i.subject=$1 AND a.action LIKE 'mfa.%failed'`,
+      [profile.id],
+    );
+    expect(actions.rows.map((r) => r.action).sort()).toEqual([
+      "mfa.step_up.failed",
+      "mfa.verify.failed",
+    ]);
+  });
+
   it("fails safely when Discord is unavailable", async () => {
     discord.down = true;
     try {

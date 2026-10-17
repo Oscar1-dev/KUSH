@@ -48,10 +48,10 @@ describe("TOTP", () => {
     const sealed = sealSecret(RFC_SECRET);
     expect(sealed).not.toContain(RFC_SECRET);
     expect(openSecret(sealed)).toBe(RFC_SECRET);
-    const tampered =
-      sealed.slice(0, -2) +
-      (sealed.endsWith("A") ? "B" : "A") +
-      sealed.slice(-1);
+    const [version, iv, tag, data] = sealed.split(".");
+    const flipped = Buffer.from(tag!, "base64");
+    flipped[0] = flipped[0]! ^ 1;
+    const tampered = [version, iv, flipped.toString("base64"), data].join(".");
     expect(() => openSecret(tampered)).toThrow();
   });
 

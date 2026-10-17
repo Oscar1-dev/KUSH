@@ -53,6 +53,7 @@ export interface OAuthSettings {
   clientSecret: string;
   redirectUri: string;
   apiBase: string;
+  authorizeUrl: string;
 }
 
 export function oauthSettingsFromEnv(): OAuthSettings | null {
@@ -65,6 +66,10 @@ export function oauthSettingsFromEnv(): OAuthSettings | null {
     clientSecret,
     redirectUri,
     apiBase: process.env.KUSH_DISCORD_API_BASE ?? "https://discord.com/api/v10",
+    // Overridable only so local end-to-end tests can use a mock Discord.
+    authorizeUrl:
+      process.env.KUSH_DISCORD_AUTHORIZE_URL ??
+      "https://discord.com/oauth2/authorize",
   };
 }
 
@@ -75,7 +80,7 @@ export function discordOAuth(settings: OAuthSettings): DiscordOAuth {
       params.set("redirect_uri", settings.redirectUri);
       params.set("response_type", "code");
       params.set("scope", "identify");
-      return `https://discord.com/oauth2/authorize?${params}`;
+      return `${settings.authorizeUrl}?${params}`;
     },
     async exchange(code, verifier) {
       const response = await fetch(`${settings.apiBase}/oauth2/token`, {
@@ -595,7 +600,8 @@ export class AccountService {
           allowRecovery: true,
         }))
       ) {
-        await this.audit(c, session.userId, "mfa.verify.failed");
+        // Separate connection: the transaction is about to roll back.
+        await this.audit(this.pool, session.userId, "mfa.verify.failed");
         fail(400, "That code is not valid");
       }
       await c.query("UPDATE sessions SET mfa_verified_at=now() WHERE id=$1", [
@@ -610,7 +616,8 @@ export class AccountService {
   /** Sensitive actions need a fresh authenticator code, not just a session. */
   private async requireFresh(c: PoolClient, session: WebSession, code: string) {
     if (!(await this.consumeFactor(c, session.userId, { code }))) {
-      await this.audit(c, session.userId, "mfa.step_up.failed");
+      // Separate connection: the transaction is about to roll back.
+      await this.audit(this.pool, session.userId, "mfa.step_up.failed");
       fail(400, "That code is not valid");
     }
   }
