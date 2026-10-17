@@ -1,0 +1,732 @@
+
+/* ==========================================
+   KUSH — BUILD 005.2
+   MANIFESTO / PRINCIPLES / CINEMATIC FINALE
+   ========================================== */
+
+.manifesto,
+.principles,
+.footer {
+  position: relative;
+  width: 100%;
+  overflow: hidden;
+}
+
+.manifesto {
+  min-height: 950px;
+  display: flex;
+  flex-direction: column;
+  padding:
+    clamp(38px, 4vw, 65px)
+    clamp(24px, 5vw, 86px)
+    clamp(48px, 5vw, 80px);
+
+  background: #a7fa43;
+  color: #11160d;
+}
+
+.manifestoTop,
+.sectionMeta,
+.footerTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+
+  padding-bottom: 20px;
+  border-bottom: 1px solid currentColor;
+
+  font-size: 10px;
+  font-weight: 850;
+  letter-spacing: 0.18em;
+}
+
+.manifestoTop {
+  border-color: rgba(17, 22, 13, 0.29);
+}
+
+.manifestoTopRight {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.statement {
+  position: relative;
+  z-index: 1;
+  flex: 1;
+
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+
+  padding: clamp(85px, 10vw, 150px) 0;
+}
+
+.statementLabel {
+  display: inline-flex;
+  align-items: center;
+  gap: 22px;
+  margin-bottom: clamp(30px, 5vw, 70px);
+
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.19em;
+}
+
+.statementLine {
+  display: block;
+  width: 62px;
+  height: 1px;
+  background: currentColor;
+}
+
+.statement h2 {
+  margin: 0;
+  max-width: 1700px;
+
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: clamp(74px, 12.5vw, 220px);
+  font-weight: 1000;
+  line-height: 0.82;
+  letter-spacing: -0.105em;
+}
+
+.outlineText {
+  display: inline-block;
+  color: transparent;
+  -webkit-text-stroke: 2px #151b10;
+}
+
+.italicText {
+  position: relative;
+  display: inline-block;
+  font-style: italic;
+  letter-spacing: -0.12em;
+}
+
+.italicText::after {
+  content: "";
+  position: absolute;
+  left: 1%;
+  right: 4%;
+  bottom: -0.065em;
+  height: clamp(4px, 0.6vw, 9px);
+  background: #151b10;
+  transform: rotate(-1.2deg);
+}
+
+.manifestoBottom {
+  position: relative;
+  z-index: 2;
+
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 40px;
+
+  padding-top: 32px;
+  border-top: 1px solid rgba(17, 22, 13, 0.3);
+}
+
+.manifestoBottom p {
+  max-width: 460px;
+  margin: 0;
+
+  font-size: clamp(18px, 2vw, 27px);
+  font-weight: 600;
+  line-height: 1.35;
+  letter-spacing: -0.045em;
+}
+
+.manifestoArrow {
+  display: grid;
+  place-items: center;
+  flex: none;
+
+  width: 74px;
+  height: 74px;
+  border: 1px solid rgba(17, 22, 13, 0.6);
+  border-radius: 50%;
+
+  transition:
+    color 400ms ease,
+    background 400ms ease,
+    transform 500ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.manifestoArrow:hover {
+  color: #a7fa43;
+  background: #11160d;
+  transform: translateY(5px);
+}
+
+.manifestoIndex {
+  position: absolute;
+  top: 47%;
+  right: 20px;
+
+  writing-mode: vertical-rl;
+  font-size: 10px;
+  letter-spacing: 0.2em;
+  font-weight: 900;
+  opacity: 0.45;
+}
+
+/* ==========================================
+   PRINCIPLES
+   ========================================== */
+
+.principles {
+  padding:
+    clamp(100px, 12vw, 190px)
+    clamp(24px, 5vw, 86px);
+
+  background: #100f13;
+  color: #f1eee9;
+}
+
+.sectionMeta {
+  color: #a7fa43;
+  border-color: rgba(255, 255, 255, 0.18);
+}
+
+.sectionMeta span:last-child {
+  color: #8f8994;
+}
+
+.principlesHeading {
+  display: flex;
+  justify-content: space-between;
+  align-items: end;
+  gap: 60px;
+
+  margin: clamp(90px, 10vw, 160px) 0
+    clamp(80px, 8vw, 130px);
+}
+
+.principlesHeading h2 {
+  margin: 0;
+
+  font-size: clamp(70px, 10.5vw, 170px);
+  font-weight: 1000;
+  line-height: 0.85;
+  letter-spacing: -0.105em;
+}
+
+.principlesHeading h2 span {
+  color: #ad80ed;
+}
+
+.principlesHeading p {
+  max-width: 295px;
+  margin: 0 0 7px;
+
+  color: #ada5b4;
+  font-size: 16px;
+  line-height: 1.6;
+}
+
+.principleList {
+  border-top: 1px solid rgba(255, 255, 255, 0.18);
+}
+
+.principle {
+  display: grid;
+  grid-template-columns: 110px minmax(0, 1fr) 40px;
+  gap: 28px;
+  align-items: start;
+
+  padding: clamp(36px, 4vw, 65px) 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.18);
+
+  transition:
+    padding 400ms cubic-bezier(0.16, 1, 0.3, 1),
+    background 400ms ease;
+}
+
+.principle:hover {
+  padding-left: 16px;
+  background: linear-gradient(
+    90deg,
+    rgba(167, 250, 67, 0.055),
+    transparent 75%
+  );
+}
+
+.principleNumber {
+  padding-top: 8px;
+
+  color: #a7fa43;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+}
+
+.principleContent h3 {
+  margin: 0 0 18px;
+
+  font-size: clamp(27px, 3.6vw, 56px);
+  line-height: 1;
+  font-weight: 950;
+  letter-spacing: -0.065em;
+}
+
+.principleContent p {
+  max-width: 480px;
+  margin: 0;
+
+  color: #aea8b4;
+  font-size: 15px;
+  line-height: 1.65;
+}
+
+.principleIcon {
+  justify-self: end;
+  margin-top: 7px;
+  color: #a7fa43;
+}
+
+.principlesEnd {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 30px;
+
+  margin-top: 90px;
+
+  font-size: clamp(12px, 1.7vw, 22px);
+  font-weight: 900;
+  letter-spacing: 0.04em;
+  color: #8d8791;
+}
+
+.principlesEnd b {
+  padding: 0 clamp(7px, 1.5vw, 20px);
+  color: #a7fa43;
+  font-weight: 400;
+}
+
+.principlesEnd svg {
+  color: #a7fa43;
+  flex: none;
+}
+
+/* ==========================================
+   CINEMATIC FOOTER
+   ========================================== */
+
+.footer {
+  padding:
+    clamp(42px, 5vw, 75px)
+    clamp(24px, 5vw, 86px)
+    32px;
+
+  background:
+    radial-gradient(
+      ellipse at 75% 38%,
+      rgba(87, 36, 139, 0.22),
+      transparent 54%
+    ),
+    linear-gradient(
+      145deg,
+      #16111f 0%,
+      #0b0b0e 65%
+    );
+
+  color: #f2efe9;
+}
+
+.footerTop {
+  border-color: rgba(255, 255, 255, 0.17);
+  color: #a7fa43;
+}
+
+.status {
+  display: inline-flex;
+  align-items: center;
+  gap: 11px;
+  color: #c7bfce;
+}
+
+.statusDot {
+  display: inline-block;
+  flex: none;
+
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+
+  background: #a7fa43;
+  box-shadow: 0 0 14px rgba(167, 250, 67, 0.3);
+}
+
+.footerMain {
+  display: flex;
+  justify-content: space-between;
+  align-items: end;
+  gap: 50px;
+
+  padding: clamp(120px, 13vw, 210px) 0
+    clamp(120px, 13vw, 210px);
+}
+
+.footerTitleWrap {
+  min-width: 0;
+}
+
+.footerEyebrow {
+  display: block;
+  margin-bottom: 42px;
+
+  color: #a7fa43;
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 0.2em;
+}
+
+.footerMain h2 {
+  margin: 0;
+
+  font-size: clamp(65px, 10.3vw, 170px);
+  font-weight: 1000;
+  line-height: 0.83;
+  letter-spacing: -0.11em;
+}
+
+.footerMain h2 span {
+  color: #a7fa43;
+}
+
+.footerDescription {
+  max-width: 495px;
+  margin: 48px 0 0;
+
+  color: #aea7b5;
+  font-size: clamp(16px, 1.5vw, 20px);
+  line-height: 1.55;
+  letter-spacing: -0.018em;
+}
+
+.footerActions {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  align-items: stretch;
+  flex: 0 0 min(310px, 30%);
+  padding-bottom: 5px;
+}
+
+.primaryLink,
+.secondaryLink {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+
+  padding: 22px 20px;
+
+  font-size: 10px;
+  font-weight: 850;
+  letter-spacing: 0.13em;
+
+  transition:
+    color 300ms ease,
+    background 300ms ease,
+    border-color 300ms ease,
+    transform 400ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.primaryLink {
+  background: #a7fa43;
+  color: #11160d;
+}
+
+.primaryLink:hover {
+  background: #c4ff83;
+  transform: translateY(-3px);
+}
+
+.secondaryLink {
+  color: #ede7f0;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+}
+
+.secondaryLink:hover {
+  border-color: #a7fa43;
+  color: #a7fa43;
+  transform: translateY(-3px);
+}
+
+.signatureArea {
+  position: relative;
+}
+
+.signatureMeta {
+  display: flex;
+  justify-content: space-between;
+  gap: 20px;
+
+  color: #9d95a4;
+  font-size: 10px;
+  font-weight: 750;
+  letter-spacing: 0.14em;
+}
+
+.signature {
+  display: block;
+  width: 100%;
+  margin: 14px 0 -0.025em;
+
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: clamp(120px, 30.5vw, 600px);
+  font-weight: 1000;
+  line-height: 0.78;
+  letter-spacing: -0.13em;
+  white-space: nowrap;
+  text-align: center;
+  color: #f2eee9;
+
+  user-select: none;
+}
+
+.signature span {
+  color: #a7fa43;
+}
+
+.signature sup {
+  display: inline-block;
+  vertical-align: top;
+  margin-top: 0.12em;
+  margin-left: 0.1em;
+
+  font-size: 0.065em;
+  letter-spacing: 0;
+  color: #aaa0b1;
+}
+
+.signatureUnderline {
+  width: 100%;
+  height: 1px;
+  margin-top: 35px;
+
+  background: linear-gradient(
+    90deg,
+    #a7fa43 0%,
+    rgba(167, 250, 67, 0.2) 42%,
+    rgba(255, 255, 255, 0.12) 100%
+  );
+}
+
+.footerBottom {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+
+  padding-top: 28px;
+
+  color: #a49eaa;
+  font-size: 10px;
+  font-weight: 750;
+  letter-spacing: 0.11em;
+}
+
+.footerBottom a {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  color: #eee9f0;
+
+  transition: color 300ms ease;
+}
+
+.footerBottom a:hover {
+  color: #a7fa43;
+}
+
+/* ==========================================
+   RESPONSIVE
+   ========================================== */
+
+@media (max-width: 1100px) {
+  .manifesto {
+    min-height: 780px;
+  }
+
+  .statement h2 {
+    font-size: clamp(77px, 12vw, 145px);
+  }
+
+  .principlesHeading {
+    align-items: start;
+    flex-direction: column;
+    gap: 38px;
+  }
+
+  .footerMain {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 65px;
+  }
+
+  .footerActions {
+    flex: auto;
+    max-width: 440px;
+  }
+}
+
+@media (max-width: 700px) {
+  .manifesto {
+    min-height: 740px;
+    padding: 28px 22px 45px;
+  }
+
+  .manifestoTop,
+  .sectionMeta,
+  .footerTop {
+    font-size: 9px;
+  }
+
+  .manifestoTopRight {
+    display: none;
+  }
+
+  .statement {
+    padding: 120px 0 100px;
+  }
+
+  .statement h2 {
+    font-size: clamp(57px, 12.2vw, 95px);
+  }
+
+  .outlineText {
+    -webkit-text-stroke-width: 1.5px;
+  }
+
+  .manifestoBottom p {
+    font-size: 18px;
+  }
+
+  .manifestoArrow {
+    width: 58px;
+    height: 58px;
+  }
+
+  .manifestoIndex {
+    display: none;
+  }
+
+  .principles {
+    padding: 100px 22px;
+  }
+
+  .principlesHeading {
+    margin: 90px 0 75px;
+  }
+
+  .principlesHeading h2 {
+    font-size: clamp(58px, 11vw, 90px);
+  }
+
+  .principle {
+    grid-template-columns: 48px minmax(0, 1fr);
+    gap: 14px;
+  }
+
+  .principleContent h3 {
+    font-size: clamp(25px, 5vw, 36px);
+  }
+
+  .principleIcon {
+    display: none;
+  }
+
+  .principlesEnd {
+    margin-top: 70px;
+    line-height: 1.8;
+  }
+
+  .footer {
+    padding: 34px 22px 28px;
+  }
+
+  .footerMain {
+    padding: 125px 0 120px;
+  }
+
+  .footerMain h2 {
+    font-size: clamp(57px, 10.8vw, 105px);
+  }
+
+  .footerDescription {
+    margin-top: 35px;
+  }
+
+  .signature {
+    font-size: 30vw;
+  }
+
+  .footerBottom {
+    align-items: flex-start;
+    flex-wrap: wrap;
+    line-height: 1.8;
+  }
+
+  .footerBottomStatus {
+    display: none;
+  }
+}
+
+@media (max-width: 400px) {
+  .statement h2 {
+    font-size: 12vw;
+  }
+
+  .statementLabel {
+    font-size: 9px;
+  }
+
+  .manifestoBottom {
+    align-items: flex-end;
+    gap: 18px;
+  }
+
+  .manifestoBottom p {
+    font-size: 16px;
+  }
+
+  .principlesHeading h2 {
+    font-size: 11vw;
+  }
+
+  .footerMain h2 {
+    font-size: 10.5vw;
+  }
+
+  .footerTop .status {
+    font-size: 8px;
+  }
+}
+
+/* ==========================================
+   ACCESSIBILITY
+   ========================================== */
+
+.manifestoArrow:focus-visible,
+.primaryLink:focus-visible,
+.secondaryLink:focus-visible,
+.footerBottom a:focus-visible {
+  outline: 3px solid currentColor;
+  outline-offset: 5px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .manifestoArrow,
+  .principle,
+  .primaryLink,
+  .secondaryLink,
+  .footerBottom a {
+    transition: none !important;
+  }
+}
