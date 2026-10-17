@@ -30,6 +30,12 @@ import {
   onMemberUpdate,
 } from "./automation/membership.js";
 import { RoleSyncWorker } from "./automation/role-sync.js";
+import {
+  NotificationWorker,
+  PERMANENT_DISCORD_ERRORS,
+  type SendResult,
+} from "./automation/notifications.js";
+import { DiscordAPIError } from "discord.js";
 import { configuredRoleId } from "./blueprint.js";
 import { TicketManager } from "./tickets/manager.js";
 
@@ -230,6 +236,51 @@ export async function startBot(): Promise<{
       }),
     );
   services.kickRoleSync = kick;
+
+  // ------------------------------------------- website -> Discord outbox
+  // Permanent Discord errors (DMs closed, channel deleted) are reported as
+  // undeliverable so they are not retried; anything else is retried.
+  const deliver = async (
+    send: () => Promise<SendResult | void>,
+  ): Promise<SendResult> => {
+    try {
+      return (await send()) ?? "sent";
+    } catch (error) {
+      if (
+        error instanceof DiscordAPIError &&
+        typeof error.code === "number" &&
+        PERMANENT_DISCORD_ERRORS.has(error.code)
+      )
+        return "undeliverable";
+      throw error;
+    }
+  };
+  const noMentions = { parse: [] as never[] };
+  const notifications = new NotificationWorker(
+    api,
+    {
+      sendToChannel: (channelId, content) =>
+        deliver(async () => {
+          const channel = await guild().channels.fetch(channelId);
+          if (!channel?.isTextBased()) return "undeliverable";
+          await channel.send({ content, allowedMentions: noMentions });
+        }),
+      sendDm: (discordUserId, content) =>
+        deliver(async () => {
+          const user = await client.users.fetch(discordUserId);
+          await user.send({ content, allowedMentions: noMentions });
+        }),
+    },
+    () => config.channelIds,
+    log,
+  );
+  health.notifications(() => ({ ...notifications.stats }));
+  const kickNotifications = () =>
+    void notifications.tick().catch((error: unknown) =>
+      log.warn("notifications.tick.failed", {
+        error: error instanceof Error ? error.message : "unknown",
+      }),
+    );
   const membership = {
     api,
     log,
@@ -342,7 +393,9 @@ export async function startBot(): Promise<{
     }, 5 * 60_000),
     // The queue is the source of retries; this poll drains it.
     setInterval(kick, 15_000),
+    setInterval(kickNotifications, 10_000),
   ];
+  kickNotifications();
   const healthPort = Number(process.env.KUSH_BOT_HEALTH_PORT ?? 4321);
   const server = await startHealthServer(health, healthPort);
   log.info("health.listening", {

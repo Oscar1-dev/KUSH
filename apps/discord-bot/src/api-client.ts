@@ -90,6 +90,9 @@ export interface DesiredRoles {
   linked: boolean;
 }
 
+export type { NotificationJob } from "./automation/notifications.js";
+import type { NotificationJob } from "./automation/notifications.js";
+
 export interface RoleSyncJob {
   id: string;
   discordUserId: string;
@@ -430,6 +433,26 @@ export class DiscordApiClient {
       ...outcome,
       generation: job.generation,
     });
+  }
+
+  async notificationJobs() {
+    return (
+      await this.#request<{ jobs: NotificationJob[] }>(
+        "GET",
+        `${this.#tenant}/notifications/jobs`,
+      )
+    ).jobs;
+  }
+
+  async finishNotificationJob(
+    jobId: string,
+    outcome: { ok: true } | { ok: false; error: string },
+  ) {
+    await this.#request(
+      "POST",
+      `${this.#tenant}/notifications/jobs/${jobId}`,
+      outcome,
+    );
   }
 
   async reconcileRoles() {

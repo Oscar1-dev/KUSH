@@ -26,6 +26,13 @@ export interface HealthSnapshot {
       lastRunAt: string | null;
       lastError: string | null;
     } | null;
+    notifications: {
+      delivered: number;
+      undeliverable: number;
+      failed: number;
+      lastRunAt: string | null;
+      lastError: string | null;
+    } | null;
   };
   commands: { succeeded: number; failed: number };
   lastError: string | null;
@@ -55,6 +62,8 @@ export class HealthMonitor {
   #commands = { succeeded: 0, failed: 0 };
   #memberEvents = false;
   #roleSync: (() => HealthSnapshot["automation"]["roleSync"]) | null = null;
+  #notifications: (() => HealthSnapshot["automation"]["notifications"]) | null =
+    null;
   #lastError: string | null = null;
 
   constructor(
@@ -100,6 +109,9 @@ export class HealthMonitor {
   roleSync(stats: () => HealthSnapshot["automation"]["roleSync"]) {
     this.#roleSync = stats;
   }
+  notifications(stats: () => HealthSnapshot["automation"]["notifications"]) {
+    this.#notifications = stats;
+  }
   recordCommand(succeeded: boolean) {
     if (succeeded) this.#commands.succeeded += 1;
     else this.#commands.failed += 1;
@@ -130,6 +142,9 @@ export class HealthMonitor {
       automation: {
         memberEvents: this.#memberEvents,
         roleSync: this.#roleSync ? { ...this.#roleSync()! } : null,
+        notifications: this.#notifications
+          ? { ...this.#notifications()! }
+          : null,
       },
       commands: { ...this.#commands },
       lastError: this.#lastError,
