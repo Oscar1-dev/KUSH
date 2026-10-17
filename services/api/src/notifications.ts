@@ -18,7 +18,13 @@ export type NotificationKind =
   | "ticket.message"
   | "ticket.status"
   | "commission.created"
-  | "commission.status";
+  | "commission.status"
+  | "application.created"
+  | "application.channel"
+  | "application.message"
+  | "application.status"
+  | "agreement.issued"
+  | "staff.role_grant";
 
 type Queryable = Pick<PoolClient, "query">;
 
@@ -41,6 +47,19 @@ export type Delivery =
   | { target: "channel"; channelKey: string; content: string }
   | { target: "ticket_channel"; channelId: string; content: string }
   | { target: "dm"; discordUserId: string; content: string }
+  | {
+      target: "create_application_channel";
+      applicationId: string;
+      number: number;
+      applicantDiscordId: string;
+      content: string;
+    }
+  | {
+      target: "grant_role";
+      discordUserId: string;
+      roleId: string;
+      reason: string;
+    }
   | { target: "none"; reason: string };
 
 const MAX_ATTEMPTS = 8;
@@ -95,6 +114,12 @@ export class NotificationService {
     detail: Record<string, string>;
   }): Promise<Delivery> {
     const c = this.pool;
+    if (
+      job.kind.startsWith("application.") ||
+      job.kind === "agreement.issued" ||
+      job.kind === "staff.role_grant"
+    )
+      return this.renderRecruitment(job);
     if (job.kind === "commission.created" || job.kind === "commission.status") {
       const r = (
         await c.query<{
@@ -222,6 +247,129 @@ export class NotificationService {
       discordUserId,
       content: `Your KUSH ticket **#${t.number}** is now **${ticketLabels[status] ?? status}**.\n${site()}/account/support/${job.subject_id}`,
     };
+  }
+
+  private async renderRecruitment(job: {
+    tenant_id: string;
+    kind: NotificationKind;
+    subject_id: string;
+    detail: Record<string, string>;
+  }): Promise<Delivery> {
+    const a = (
+      await this.pool.query<{
+        number: number;
+        status: string;
+        discord_user_id: string;
+        discord_channel_id: string | null;
+        title: string;
+      }>(
+        `SELECT a.number,a.status,a.discord_user_id,a.discord_channel_id,p.title FROM staff_applications a
+         JOIN staff_positions p ON p.id=a.position_id WHERE a.tenant_id=$1 AND a.id=$2`,
+        [job.tenant_id, job.subject_id],
+      )
+    ).rows[0];
+    if (!a) return { target: "none", reason: "application no longer exists" };
+    const staffLink = `${site()}/staff/applications/${job.subject_id}`;
+    const mine = `${site()}/account/applications/${job.subject_id}`;
+    // Applicant-facing updates go to their private channel when it exists,
+    // otherwise by DM. Exactly one delivery either way.
+    const toApplicant = (content: string): Delivery =>
+      a.discord_channel_id
+        ? {
+            target: "ticket_channel",
+            channelId: a.discord_channel_id,
+            content: `<@${a.discord_user_id}> ${content}`,
+          }
+        : { target: "dm", discordUserId: a.discord_user_id, content };
+
+    switch (job.kind) {
+      case "application.created":
+        // No applicant personal data in staff channels: number, role, link.
+        return {
+          target: "channel",
+          channelKey: "staff:staff-chat",
+          content: `🧑‍💼 New staff application **#${a.number}** for **${a.title}**. Recruiters can review it: ${staffLink}`,
+        };
+      case "application.channel":
+        if (a.discord_channel_id)
+          return { target: "none", reason: "channel already exists" };
+        return {
+          target: "create_application_channel",
+          applicationId: job.subject_id,
+          number: a.number,
+          applicantDiscordId: a.discord_user_id,
+          content: [
+            `<@${a.discord_user_id}> thanks for applying to be **${a.title}** at KUSH (application **#${a.number}**).`,
+            "This private channel is between you and the KUSH recruitment team. Messages here and on the website are kept together.",
+            `Track your application: ${mine}`,
+          ].join("\n"),
+        };
+      case "application.message": {
+        const m = (
+          await this.pool.query<{
+            content: string;
+            kind: string;
+            from_applicant: boolean;
+          }>(
+            `SELECT m.content,m.kind,(m.author_id=x.user_id) AS from_applicant FROM staff_application_messages m
+             JOIN staff_applications x ON x.id=m.application_id WHERE m.id=$1`,
+            [job.detail.messageId],
+          )
+        ).rows[0];
+        if (!m || m.kind !== "message")
+          return { target: "none", reason: "not a shared message" };
+        if (!a.discord_channel_id) {
+          if (m.from_applicant)
+            return { target: "none", reason: "no channel yet" };
+          return {
+            target: "dm",
+            discordUserId: a.discord_user_id,
+            content: `KUSH recruitment sent you a message about application #${a.number}: ${mine}`,
+          };
+        }
+        return {
+          target: "ticket_channel",
+          channelId: a.discord_channel_id,
+          content: `**${m.from_applicant ? "Applicant" : "KUSH recruitment"}** (via the website):\n${clip(m.content)}`,
+        };
+      }
+      case "agreement.issued":
+        return toApplicant(
+          `you've been conditionally accepted. 🎉 Please read and sign the KUSH Staff NDA on the website (sign in with this Discord account): ${site()}/account/agreements/${job.detail.agreementId}`,
+        );
+      case "staff.role_grant":
+        return {
+          target: "grant_role",
+          discordUserId: job.detail.discordUserId ?? a.discord_user_id,
+          roleId: job.detail.roleId!,
+          reason: `KUSH staff activation (application #${a.number})`,
+        };
+      default: {
+        const words: Record<string, string> = {
+          reviewing: "is now being reviewed by the KUSH team",
+          more_info:
+            "needs a little more information from you. Please reply here or on the website",
+          interview:
+            "has moved to an interview stage. The team will contact you here",
+          conditionally_accepted:
+            "has been conditionally accepted. Your NDA will follow shortly",
+          nda_signed: "NDA is signed. The team will now confirm your role",
+          approved: "has been approved. Your access will be activated shortly",
+          activated:
+            "is complete. Welcome to the KUSH team! Your staff role has been granted. Staff tools need two-factor authentication on your KUSH account",
+          rejected:
+            "was not successful this time. Thank you for your interest in KUSH",
+          withdrawn: "has been withdrawn",
+        };
+        const status = job.detail.status ?? a.status;
+        const text = words[status];
+        if (!text)
+          return { target: "none", reason: "status not applicant-facing" };
+        return toApplicant(
+          `your application **#${a.number}** ${text}. ${mine}`,
+        );
+      }
+    }
   }
 
   /** Claims due jobs (2-minute lease) and returns what to deliver. */

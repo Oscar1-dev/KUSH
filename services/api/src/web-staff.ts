@@ -249,4 +249,8 @@ export async function registerStaff(
     "/web/staff/audit",
     asStaff(async (ctx) => ({ events: await staff.auditLog(ctx) })),
   );
+
+  return { access, asStaff };
 }
+
+export type StaffHelpers = Awaited<ReturnType<typeof registerStaff>>;

@@ -100,12 +100,7 @@ export const ticketTransitions: Record<string, string[]> = {
   in_progress: ["pending", "waiting_for_customer", "resolved"],
   waiting_for_customer: ["pending", "in_progress", "resolved"],
   resolved: ["in_progress", "waiting_for_customer"],
-  reopened: [
-    "pending",
-    "in_progress",
-    "waiting_for_customer",
-    "resolved",
-  ],
+  reopened: ["pending", "in_progress", "waiting_for_customer", "resolved"],
 };
 export class SupportService {
   constructor(private pool: Pool) {}
