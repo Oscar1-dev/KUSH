@@ -8,7 +8,7 @@ import {
   type ModalSubmitInteraction,
   type StringSelectMenuInteraction,
 } from "discord.js";
-import { ApiError } from "../api-client.js";
+import { ApiError, requestUuid } from "../api-client.js";
 import { roles as blueprintRoles } from "../blueprint.js";
 import { ARGUMENTS_OPTION, slashOptions } from "../commands.js";
 import { verifyComponentId } from "../component-id.js";
@@ -60,7 +60,10 @@ export async function handleMessage(
   if (message.author.bot || message.webhookId || !message.inGuild()) return;
   if (message.guildId !== services.config.guildId) return;
   const tokens = tokenise(message.content);
-  if (!tokens) return;
+  if (!tokens) {
+    await mirrorTicketMessage(message, services);
+    return;
+  }
   const resolved = router.resolve(tokens);
   if (!resolved) return; // Unknown `!word`: stay silent to avoid noise.
 
@@ -74,10 +77,15 @@ export async function handleMessage(
     channelId: message.channelId,
     args: resolved.args,
     services,
+    deleteTrigger: async () => {
+      await message.delete();
+    },
     reply: async (reply: BotReply) => {
       await message.reply({
         ...reply,
         allowedMentions: { ...mentionsFor(actor.userId), repliedUser: false },
+        // The trigger may have been deleted (e.g. !note); still answer.
+        failIfNotExists: false,
       });
     },
     replyPrivately: async (reply: BotReply) => {
@@ -89,6 +97,68 @@ export async function handleMessage(
       }
     },
   });
+}
+
+// ------------------------------------------------- ticket message mirror
+
+const unrecordedWarned = new Set<string>();
+
+/**
+ * Persists a message typed in a private ticket channel as a ticket reply,
+ * authored by the matching KUSH identity. The backend decides whether the
+ * author may reply; refusals are explained once per member and channel.
+ */
+export async function mirrorTicketMessage(
+  message: Message<true>,
+  services: BotServices,
+): Promise<void> {
+  if (!services.tickets.channels.has(message.channelId)) return;
+  const content = [
+    message.content,
+    ...message.attachments.map((file) => `[attachment: ${file.name}]`),
+  ]
+    .join("\n")
+    .trim();
+  if (!content) return;
+  const actor = { discordUserId: message.author.id };
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    try {
+      const ticket = await services.api.ticketByChannel(
+        actor,
+        message.channelId,
+      );
+      await services.api.message(actor, ticket.id, {
+        requestId: requestUuid(`message:${message.id}`),
+        expectedVersion: ticket.version,
+        kind: "reply",
+        content: content.slice(0, 10_000),
+      });
+      return;
+    } catch (error) {
+      if (error instanceof ApiError && error.status === 409 && attempt === 0)
+        continue;
+      const key = `${message.channelId}:${message.author.id}`;
+      if (
+        error instanceof ApiError &&
+        [403, 404].includes(error.status) &&
+        !unrecordedWarned.has(key)
+      ) {
+        unrecordedWarned.add(key);
+        await message
+          .reply({
+            content:
+              "This message was not added to the ticket record: your Discord account is not linked to a KUSH staff account with access to this ticket.",
+            allowedMentions: { parse: [], repliedUser: false },
+          })
+          .catch(() => undefined);
+      }
+      services.log.warn("ticket.mirror.failed", {
+        channelId: message.channelId,
+        status: error instanceof ApiError ? error.status : "error",
+      });
+      return;
+    }
+  }
 }
 
 // ----------------------------------------------------------- interactions
@@ -321,8 +391,20 @@ async function handleComponent(
         category: category.key,
         description: interaction.fields.getTextInputValue("description").trim(),
       });
+      const channelId = await services.tickets.open({
+        ticket: created.ticket,
+        queue: created.queue,
+        creatorId: userId,
+        existingChannelId: created.channel?.channel_id ?? null,
+      });
+      services.audit({
+        action: `ticket.created.${created.queue}`,
+        actorId: userId,
+        outcome: "ok",
+        detail: { ticket: created.ticket.number },
+      });
       await respond(interaction, {
-        content: `Ticket ${created.reference} (${category.label}) was created. Only you and authorised staff can see it.`,
+        content: `Ticket ${created.reference} (${category.label}) is open in <#${channelId}>. Only you and authorised ${created.queue === "reports" ? "moderators" : "staff"} can see it.`,
       });
       return;
     }

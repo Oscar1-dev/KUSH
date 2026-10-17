@@ -60,6 +60,9 @@ function harness(clock = { now: 1_000_000 }) {
     memberRoleIds: async () => null,
     audit: (event) => audits.push(event),
     api: {} as BotServices["api"],
+    tickets: {
+      channels: new Map(),
+    } as unknown as BotServices["tickets"],
   };
   const router = new CommandRouter(commands, () => clock.now);
   const run = async (

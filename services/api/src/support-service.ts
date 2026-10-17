@@ -686,6 +686,19 @@ export class SupportService {
     });
   }
 
+  /**
+   * Claim by ticket number. Unassigned staff cannot "see" the ticket yet, so
+   * the number is resolved here and claim() applies the queue rules.
+   */
+  async claimByNumber(user: User, id: string, number: number) {
+    const found = await this.pool.query<{ id: string }>(
+      "SELECT id FROM support_tickets WHERE tenant_id=$1 AND number=$2",
+      [id, number],
+    );
+    if (!found.rows[0]) return notFound();
+    return this.claim(user, id, found.rows[0].id);
+  }
+
   /** Unassigned open tickets the caller may claim. Summary only: no description. */
   async queue(user: User, id: string) {
     const { tenant, role } = await this.tenant(this.pool, id, user);

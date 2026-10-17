@@ -7,6 +7,7 @@ import {
 } from "../panels.js";
 import { planProvisioning } from "../provisioning.js";
 import { ticketCategories } from "../tickets/categories.js";
+import { ticketCommands } from "../tickets/commands.js";
 import { hasAuthority } from "./authority.js";
 import {
   CommandError,
@@ -62,8 +63,6 @@ const pending = (
 
 const ENTITLEMENTS =
   "Product entitlements are not connected yet. Nothing is shown until KUSH has verified purchase records.";
-const TICKET_STAFF =
-  "Staff ticket management in Discord arrives with private ticket channels. Use KUSH Developer meanwhile.";
 const MODERATION =
   "Moderation cases are not connected to the KUSH backend yet, so no action was taken or recorded.";
 
@@ -302,27 +301,7 @@ export const commands: CommandDefinition[] = [
   })),
 
   // -------------------------------------------------------- support staff
-  ...(
-    [
-      ["tickets", "List tickets you can work on", "!tickets"],
-      ["claim", "Claim the ticket in this channel", "!claim"],
-      ["assign", "Assign this ticket", "!assign @staff"],
-      ["close", "Close this ticket", "!close <reason>"],
-      ["reopen", "Reopen this ticket", "!reopen <reason>"],
-      ["priority", "Set ticket priority", "!priority low|normal|high|urgent"],
-      ["note", "Add an internal staff note", "!note <text>"],
-      ["transcript", "Export this ticket's transcript", "!transcript"],
-    ] as const
-  ).map(([name, summary, usage]) =>
-    pending(
-      [name],
-      "Support staff",
-      name === "assign" ? "support-lead" : "support-staff",
-      summary,
-      usage,
-      TICKET_STAFF,
-    ),
-  ),
+  ...ticketCommands,
 
   // ----------------------------------------------------------- moderation
   pending(

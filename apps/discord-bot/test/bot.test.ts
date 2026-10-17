@@ -119,7 +119,7 @@ describe("Discord bot foundation", () => {
         category: "technical",
         description: "A reproducible technical issue",
       }),
-    ).resolves.toEqual({ reference: "#42" });
+    ).resolves.toMatchObject({ reference: "#42" });
     expect(calls[0]?.url).toContain(
       "/discord/integration/tenants/11111111-1111-4111-8111-111111111111/tickets",
     );

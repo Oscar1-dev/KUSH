@@ -370,6 +370,64 @@ describe.skipIf(!databaseUrl)("Discord ticket system (real PostgreSQL)", () => {
     expect(reopened.json().ticket.status).toBe("reopened");
   });
 
+  // Regression (found in live E2E): unassigned staff could not claim by number
+  // or channel because resolving the ticket applied assigned-only visibility.
+  it("lets unassigned staff claim by ticket number and by channel", async () => {
+    const byNumber = (await createTicket(people.guestB)).json().ticket;
+    const claimedByNumber = await as(
+      people.staff,
+      "POST",
+      `/tickets/by-number/${byNumber.number}/claim`,
+    );
+    expect(claimedByNumber.statusCode).toBe(200);
+    expect(claimedByNumber.json().ticket.assignedUserId).toBe(userIds.staff);
+    const lookup = await as(
+      people.staff,
+      "GET",
+      `/tickets/by-number/${byNumber.number}`,
+    );
+    expect(lookup.statusCode).toBe(200);
+    expect(lookup.json().ticket.id).toBe(byNumber.id);
+    expect(
+      (
+        await as(
+          people.otherStaff,
+          "GET",
+          `/tickets/by-number/${byNumber.number}`,
+        )
+      ).statusCode,
+    ).toBe(404);
+
+    const member = discordId();
+    const byChannel = (await createTicket(member)).json().ticket;
+    const channelId = "523456789012345678";
+    await as(member, "PUT", `/tickets/${byChannel.id}/channel`, {
+      channelId,
+      queue: "support",
+    });
+    const claimedByChannel = await as(
+      people.otherStaff,
+      "POST",
+      `/tickets/by-channel/${channelId}/claim`,
+    );
+    expect(claimedByChannel.statusCode).toBe(200);
+    expect(claimedByChannel.json().ticket.assignedUserId).toBe(
+      userIds.otherStaff,
+    );
+
+    // Reports stay out of reach for support staff even by number.
+    const report = (await createTicket(member, "member-report")).json().ticket;
+    expect(
+      (
+        await as(
+          people.staff,
+          "POST",
+          `/tickets/by-number/${report.number}/claim`,
+        )
+      ).statusCode,
+    ).toBe(404);
+  });
+
   it("restricts assignment to the tenant owner and resolves Discord staff", async () => {
     const ticket = (await createTicket(people.guestA, "technical")).json()
       .ticket;

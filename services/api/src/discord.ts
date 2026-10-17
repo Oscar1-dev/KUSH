@@ -131,12 +131,12 @@ export async function registerDiscord(app: FastifyInstance, { pool }: Options) {
       })),
   );
 
-  app.get<{ Params: { tenantId: string; number: number } }>(
+  app.get<{ Params: { tenantId: string; number: string } }>(
     `${base}/tickets/by-number/:number`,
     {
       schema: {
         params: params(["tenantId"], {
-          number: { type: "integer", minimum: 1 },
+          number: { type: "string", pattern: "^[1-9][0-9]{0,8}$" },
         }),
       },
     },
@@ -145,7 +145,7 @@ export async function registerDiscord(app: FastifyInstance, { pool }: Options) {
         ticket: await support.byNumber(
           await actor(request, request.params.tenantId),
           request.params.tenantId,
-          request.params.number,
+          Number(request.params.number),
         ),
       })),
   );
@@ -302,6 +302,41 @@ export async function registerDiscord(app: FastifyInstance, { pool }: Options) {
           request.params.ticketId,
         ),
       })),
+  );
+
+  app.post<{ Params: { tenantId: string; number: string } }>(
+    `${base}/tickets/by-number/:number/claim`,
+    {
+      schema: {
+        params: params(["tenantId"], {
+          number: { type: "string", pattern: "^[1-9][0-9]{0,8}$" },
+        }),
+      },
+    },
+    async (request, reply) =>
+      handle(reply, async () => ({
+        ticket: await support.claimByNumber(
+          await actor(request, request.params.tenantId),
+          request.params.tenantId,
+          Number(request.params.number),
+        ),
+      })),
+  );
+
+  app.post<{ Params: { tenantId: string; channelId: string } }>(
+    `${base}/tickets/by-channel/:channelId/claim`,
+    { schema: { params: params(["tenantId"], channelId) } },
+    async (request, reply) =>
+      handle(reply, async () => {
+        const user = await actor(request, request.params.tenantId);
+        const ticketId = await discord.ticketIdForChannel(
+          request.params.tenantId,
+          request.params.channelId,
+        );
+        return {
+          ticket: await support.claim(user, request.params.tenantId, ticketId),
+        };
+      }),
   );
 
   app.patch<{ Params: { tenantId: string; ticketId: string }; Body: unknown }>(

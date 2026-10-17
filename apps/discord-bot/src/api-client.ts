@@ -18,6 +18,7 @@ export interface DiscordApiClientOptions {
   fetch?: typeof fetch;
 }
 
+/** Deterministic UUID from a Discord snowflake, so retries are idempotent. */
 export function requestUuid(interactionId: string): string {
   const bytes = createHash("sha256")
     .update(`kush-discord:${interactionId}`)
@@ -29,6 +30,64 @@ export function requestUuid(interactionId: string): string {
   return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
 }
 
+export type TicketQueue = "support" | "reports";
+
+export interface Ticket {
+  id: string;
+  number: number;
+  category: string;
+  status: string;
+  priority: string;
+  assignedUserId: string | null;
+  customerId: string;
+  version: number;
+  description: string;
+  closureReason: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface TicketDetail {
+  ticket: Ticket;
+  messages: {
+    id: string;
+    authorId: string;
+    kind: "reply" | "note";
+    content: string;
+    createdAt: string;
+  }[];
+  events: { id: string; actorId: string; action: string; createdAt: string }[];
+}
+
+export interface QueueItem {
+  ticketId: string;
+  number: number;
+  category: string;
+  priority: string;
+  status: string;
+  createdAt: string;
+  channelId: string | null;
+}
+
+export interface TicketChannelRecord {
+  ticketId: string;
+  number: number;
+  status: string;
+  category: string;
+  priority: string;
+  channelId: string;
+  queue: TicketQueue;
+  state: "active" | "archived";
+  customerDiscordUserId: string | null;
+  assigneeDiscordUserId: string | null;
+}
+
+/** The Discord member on whose behalf a call is made. */
+export interface DiscordActor {
+  discordUserId: string;
+  guildId?: string;
+}
+
 export class DiscordApiClient {
   readonly #fetch: typeof fetch;
 
@@ -36,24 +95,25 @@ export class DiscordApiClient {
     this.#fetch = options.fetch ?? fetch;
   }
 
-  async #post<T>(
+  get #tenant() {
+    return `/discord/integration/tenants/${this.options.tenantId}`;
+  }
+
+  async #request<T>(
+    method: "GET" | "POST" | "PATCH" | "PUT",
     path: string,
-    body: unknown,
-    actor?: { discordUserId: string; guildId: string },
+    body?: unknown,
+    actor?: DiscordActor,
   ): Promise<T> {
     const response = await this.#fetch(new URL(path, this.options.baseUrl), {
-      method: "POST",
+      method,
       headers: {
-        "content-type": "application/json",
+        ...(body === undefined ? {} : { "content-type": "application/json" }),
         "x-kush-discord-secret": this.options.integrationSecret,
-        ...(actor
-          ? {
-              "x-kush-discord-user-id": actor.discordUserId,
-              "x-kush-discord-guild-id": actor.guildId,
-            }
-          : {}),
+        "x-kush-discord-guild-id": actor?.guildId ?? this.options.guildId,
+        ...(actor ? { "x-kush-discord-user-id": actor.discordUserId } : {}),
       },
-      body: JSON.stringify(body),
+      ...(body === undefined ? {} : { body: JSON.stringify(body) }),
       signal: AbortSignal.timeout(10_000),
     });
     if (!response.ok) {
@@ -70,26 +130,38 @@ export class DiscordApiClient {
     return (await response.json()) as T;
   }
 
+  // ------------------------------------------------------------ linking
+
   async complete(input: {
     code: string;
     discordUserId: string;
     guildId: string;
   }): Promise<void> {
-    await this.#post(
-      `/discord/integration/tenants/${this.options.tenantId}/links/complete`,
-      input,
-    );
+    await this.#request("POST", `${this.#tenant}/links/complete`, input);
   }
 
+  // ------------------------------------------------------------ tickets
+
+  /** Works for members without a KUSH account (a Discord identity is created). */
   async create(input: {
     discordUserId: string;
     guildId: string;
     interactionId: string;
     category: string;
     description: string;
-  }): Promise<{ reference: string }> {
-    const result = await this.#post<{ ticket: { number: number } }>(
-      `/discord/integration/tenants/${this.options.tenantId}/tickets`,
+  }): Promise<{
+    reference: string;
+    ticket: Ticket;
+    queue: TicketQueue;
+    channel: { channel_id: string; queue: TicketQueue } | null;
+  }> {
+    const result = await this.#request<{
+      ticket: Ticket;
+      queue: TicketQueue;
+      channel: { channel_id: string; queue: TicketQueue } | null;
+    }>(
+      "POST",
+      `${this.#tenant}/tickets`,
       {
         requestId: requestUuid(input.interactionId),
         category: input.category,
@@ -97,8 +169,198 @@ export class DiscordApiClient {
       },
       input,
     );
-    return { reference: `#${result.ticket.number}` };
+    return { reference: `#${result.ticket.number}`, ...result };
   }
+
+  async setTicketChannel(
+    actor: DiscordActor,
+    ticketId: string,
+    channelId: string,
+    queue: TicketQueue,
+  ) {
+    return this.#request<{ channelId: string }>(
+      "PUT",
+      `${this.#tenant}/tickets/${ticketId}/channel`,
+      { channelId, queue },
+      actor,
+    );
+  }
+
+  async ticketByChannel(actor: DiscordActor, channelId: string) {
+    return (
+      await this.#request<{ ticket: Ticket }>(
+        "GET",
+        `${this.#tenant}/tickets/by-channel/${channelId}`,
+        undefined,
+        actor,
+      )
+    ).ticket;
+  }
+
+  async ticketByNumber(actor: DiscordActor, number: number) {
+    return (
+      await this.#request<{ ticket: Ticket }>(
+        "GET",
+        `${this.#tenant}/tickets/by-number/${number}`,
+        undefined,
+        actor,
+      )
+    ).ticket;
+  }
+
+  async listTickets(actor: DiscordActor) {
+    return (
+      await this.#request<{ tickets: Ticket[] }>(
+        "GET",
+        `${this.#tenant}/tickets`,
+        undefined,
+        actor,
+      )
+    ).tickets;
+  }
+
+  async queue(actor: DiscordActor) {
+    return (
+      await this.#request<{ queue: QueueItem[] }>(
+        "GET",
+        `${this.#tenant}/queue`,
+        undefined,
+        actor,
+      )
+    ).queue;
+  }
+
+  async transcript(actor: DiscordActor, ticketId: string) {
+    return this.#request<TicketDetail & { exportedAt: string }>(
+      "GET",
+      `${this.#tenant}/tickets/${ticketId}/transcript`,
+      undefined,
+      actor,
+    );
+  }
+
+  async claim(actor: DiscordActor, ticketId: string) {
+    return (
+      await this.#request<{ ticket: Ticket }>(
+        "POST",
+        `${this.#tenant}/tickets/${ticketId}/claim`,
+        undefined,
+        actor,
+      )
+    ).ticket;
+  }
+
+  /** Claim by number or by ticket channel (unassigned staff cannot read it first). */
+  async claimBy(
+    actor: DiscordActor,
+    target: { number: number } | { channelId: string },
+  ) {
+    const path =
+      "number" in target
+        ? `${this.#tenant}/tickets/by-number/${target.number}/claim`
+        : `${this.#tenant}/tickets/by-channel/${target.channelId}/claim`;
+    return (
+      await this.#request<{ ticket: Ticket }>("POST", path, undefined, actor)
+    ).ticket;
+  }
+
+  async assign(
+    actor: DiscordActor,
+    ticketId: string,
+    expectedVersion: number,
+    assigneeDiscordUserId: string | null,
+  ) {
+    return (
+      await this.#request<{ ticket: Ticket }>(
+        "POST",
+        `${this.#tenant}/tickets/${ticketId}/assign`,
+        { expectedVersion, assigneeDiscordUserId },
+        actor,
+      )
+    ).ticket;
+  }
+
+  async patch(
+    actor: DiscordActor,
+    ticketId: string,
+    input: { expectedVersion: number; priority?: string; status?: string },
+  ) {
+    return (
+      await this.#request<{ ticket: Ticket }>(
+        "PATCH",
+        `${this.#tenant}/tickets/${ticketId}`,
+        input,
+        actor,
+      )
+    ).ticket;
+  }
+
+  async message(
+    actor: DiscordActor,
+    ticketId: string,
+    input: {
+      requestId: string;
+      expectedVersion: number;
+      kind: "reply" | "note";
+      content: string;
+    },
+  ) {
+    return (
+      await this.#request<{ ticket: Ticket }>(
+        "POST",
+        `${this.#tenant}/tickets/${ticketId}/messages`,
+        input,
+        actor,
+      )
+    ).ticket;
+  }
+
+  async close(
+    actor: DiscordActor,
+    ticketId: string,
+    expectedVersion: number,
+    reason: string,
+  ) {
+    return (
+      await this.#request<{ ticket: Ticket }>(
+        "POST",
+        `${this.#tenant}/tickets/${ticketId}/close`,
+        { expectedVersion, confirm: true, reason },
+        actor,
+      )
+    ).ticket;
+  }
+
+  async reopen(actor: DiscordActor, ticketId: string, expectedVersion: number) {
+    return (
+      await this.#request<{ ticket: Ticket }>(
+        "POST",
+        `${this.#tenant}/tickets/${ticketId}/reopen`,
+        { expectedVersion },
+        actor,
+      )
+    ).ticket;
+  }
+
+  /** Service-level (no actor): identifiers and state for restart recovery. */
+  async ticketChannels(state: "active" | "archived" = "active") {
+    return (
+      await this.#request<{ channels: TicketChannelRecord[] }>(
+        "GET",
+        `${this.#tenant}/ticket-channels?state=${state}`,
+      )
+    ).channels;
+  }
+
+  async setChannelState(channelId: string, state: "active" | "archived") {
+    await this.#request(
+      "PATCH",
+      `${this.#tenant}/ticket-channels/${channelId}`,
+      { state },
+    );
+  }
+
+  // ----------------------------------------------------- partner programme
 
   /** Partner programme application, stored as a commercial request of kind "partner". */
   async submitApplication(input: {
@@ -110,10 +372,11 @@ export class DiscordApiClient {
     details: string;
     url: string | null;
   }): Promise<{ id: string; status: string }> {
-    const result = await this.#post<{
+    const result = await this.#request<{
       request: { id: string; status: string };
     }>(
-      `/discord/integration/tenants/${this.options.tenantId}/commercial-requests`,
+      "POST",
+      `${this.#tenant}/commercial-requests`,
       {
         requestId: requestUuid(input.interactionId),
         kind: "partner",

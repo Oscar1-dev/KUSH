@@ -199,6 +199,15 @@ export const roles: DesiredRole[] = [
 export const roleByKey = (key: RoleKey) =>
   roles.find((item) => item.key === key)!;
 
+/** Stable role ID for a key, falling back to its v1 legacy keys. */
+export const configuredRoleId = (
+  roleIds: Record<string, string>,
+  key: RoleKey,
+): string | undefined =>
+  [key, ...(roleByKey(key).legacyKeys ?? [])]
+    .map((candidate) => roleIds[candidate])
+    .find((id): id is string => Boolean(id));
+
 /** Roles a Restricted member may keep; every other role is stripped. */
 export const restrictionRetainedRoles: readonly RoleKey[] = [
   "member",

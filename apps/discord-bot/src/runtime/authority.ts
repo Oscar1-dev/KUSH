@@ -1,4 +1,4 @@
-import type { RoleKey } from "../blueprint.js";
+import { configuredRoleId, type RoleKey } from "../blueprint.js";
 
 /**
  * Command authority levels. These gate bot commands only; the KUSH API
@@ -9,6 +9,8 @@ export type Authority =
   | "member"
   | "support-staff"
   | "support-lead"
+  /** Anyone who works tickets: support staff, support lead or moderators. */
+  | "ticket-handler"
   | "moderator"
   | "administrator"
   | "owner";
@@ -35,6 +37,7 @@ const grantedBy: Record<
   moderator: ["owner", "administrator", "moderator"],
   "support-lead": ["owner", "support-lead"],
   "support-staff": ["owner", "support-lead", "support-staff"],
+  "ticket-handler": ["owner", "support-lead", "support-staff", "moderator"],
 };
 
 export function hasAuthority(actor: Actor, required: Authority): boolean {
@@ -56,7 +59,7 @@ export function roleKeysFor(
 ): Set<RoleKey> {
   const byId = new Map<string, RoleKey>();
   for (const key of knownKeys) {
-    const id = configuredRoleIds[key];
+    const id = configuredRoleId(configuredRoleIds, key);
     if (id) byId.set(id, key);
   }
   const keys = new Set<RoleKey>();

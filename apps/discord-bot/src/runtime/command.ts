@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import type { BaseMessageOptions } from "discord.js";
+import { ApiError } from "../api-client.js";
 import type { RuntimeConfig } from "../config.js";
 import type { ObservedGuild } from "../provisioning.js";
 import {
@@ -15,7 +16,7 @@ import { SlidingWindowLimiter } from "./rate-limit.js";
 
 export type BotReply = Pick<
   BaseMessageOptions,
-  "content" | "embeds" | "components"
+  "content" | "embeds" | "components" | "files"
 >;
 export type PrivateDelivery = "dm" | "ephemeral" | "unavailable";
 
@@ -34,6 +35,8 @@ export interface BotServices {
   log: Logger;
   now(): number;
   observeGuild(): Promise<ObservedGuild>;
+  /** Private ticket channels (mapping, access sync, recovery). */
+  tickets: import("../tickets/manager.js").TicketManager;
   /** Role IDs of a guild member, or null if they are not in the guild. */
   memberRoleIds(userId: string): Promise<string[] | null>;
   audit(event: AuditEvent): void;
@@ -53,6 +56,8 @@ export interface CommandContext {
   replyPrivately(message: BotReply): Promise<PrivateDelivery>;
   services: BotServices;
   registry: readonly CommandDefinition[];
+  /** Prefix only: deletes the invoking message (used for staff notes). */
+  deleteTrigger?: () => Promise<void>;
 }
 
 export type CommandGroup =
@@ -82,6 +87,17 @@ export interface CommandDefinition extends Routable {
   /** Set when the backing workflow is not connected yet; shown in !help. */
   unavailable?: string;
   run(context: CommandContext): Promise<void>;
+}
+
+/** Maps expected API refusals to safe, actionable text; null for real faults. */
+export function friendlyApiError(error: unknown): string | null {
+  if (!(error instanceof ApiError)) return null;
+  if (error.status === 404 || error.status === 403)
+    return "That ticket or action is not available to you. If you are staff, check that your Discord account is linked to your KUSH staff account.";
+  if (error.status === 401)
+    return "KUSH could not authenticate the bot. Staff have been notified in the logs.";
+  if ([400, 409, 429].includes(error.status)) return error.message;
+  return null;
 }
 
 /** A user-facing failure; its message is safe to show. */
@@ -164,6 +180,11 @@ export class CommandRouter {
     } catch (error) {
       if (error instanceof CommandError) {
         await full.reply({ content: error.message });
+        return "error";
+      }
+      const friendly = friendlyApiError(error);
+      if (friendly) {
+        await full.reply({ content: friendly });
         return "error";
       }
       const incident = randomUUID().slice(0, 8);

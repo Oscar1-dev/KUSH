@@ -20,6 +20,8 @@ import { HealthMonitor, startHealthServer } from "./runtime/health.js";
 import { createLogger, type Logger } from "./runtime/logger.js";
 import { commands } from "./runtime/registry.js";
 import { embed } from "./panels.js";
+import { DiscordTicketChannels } from "./tickets/discord-tickets.js";
+import { TicketManager } from "./tickets/manager.js";
 
 /** Exit code for configuration errors; the supervisor will not restart on it. */
 export const EXIT_CONFIG = 78;
@@ -150,12 +152,25 @@ export async function startBot(): Promise<{
     return found;
   };
   let observedCache: { at: number; value: ObservedGuild } | undefined;
+  const tickets = new TicketManager(
+    new DiscordTicketChannels(guild),
+    api,
+    {
+      guildId: config.guildId,
+      botRoleId: () =>
+        client.guilds.cache.get(config.guildId)?.members.me?.roles.botRole?.id,
+      roleIds: config.roleIds,
+      channelIds: config.channelIds,
+    },
+    log,
+  );
   const services: BotServices = {
     config,
     componentSecret,
     health,
     log,
     api,
+    tickets,
     now: Date.now,
     audit: auditSink(client, config, log),
     observeGuild: async () => {
@@ -184,6 +199,13 @@ export async function startBot(): Promise<{
       guildAvailable: available,
     });
     if (!available) log.error("guild.unavailable", { guildId: config.guildId });
+    // Restart recovery: rebuild ticket channel mappings and re-apply access.
+    else
+      void tickets.recover().catch((error: unknown) =>
+        log.error("tickets.recover.failed", {
+          error: error instanceof Error ? error.message : "unknown",
+        }),
+      );
   };
   if (client.isReady()) onReady();
   client.on(Events.ClientReady, onReady);
