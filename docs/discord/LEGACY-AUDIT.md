@@ -1,6 +1,18 @@
 # Legacy channel audit — 17 October 2026
 
-Status: **proposal for owner approval. Nothing has been changed.**
+Status: **approved (voice A) and applied 18 October 2026**, except the voice items below.
+
+## Applied result (18 Oct 2026)
+
+- Adopted in place (history kept): `#off-topic`, `#media`, `#portfolio` (was `#commission-showcase`), `#applications` (was `#partner-applications`), `#support-information` (was `#support-centre`), `#commission-management`, `#recruitment-review` (was `#partner-management`).
+- Archived into the owner-only `🗄 ARCHIVE` category: the 20 text channels marked Archive below. Nothing was deleted.
+- `General` (voice) and the `Text channels` / `Voice channels` categories no longer existed on the server at apply time.
+- **Pending owner action:** the bot role lacks Connect, Speak, Video (Stream) and Use Voice Activity, so Discord refuses voice-channel edits. Once added: `Development Lounge` and `Community Hangout` are archived, and `General Lounge` becomes the single member voice channel in COMMUNITY. The plan is already in the blueprint for archives; re-run `cli.ts inspect` then `setup --apply`.
+- Owner-only `#business-planning` and `#financial-planning` were left as they are: the bot is deliberately excluded from owner channels and cannot rename them.
+- Administrator role: holds Discord Administrator by owner decision. This overrides every channel restriction (administrators can see owner-only, ticket and application channels). It is granted only through explicit staff activation after the NDA.
+
+---
+
 
 Evidence: the bot read up to 100 messages and the pins of every channel outside blueprint v2 (`.local/legacy-audit.json`). Every legacy channel is **empty** except `#staff-tasks`, which only holds the engineering agent's own test commands. No member content, pins or bot dependencies exist in any of them. None is referenced by the bot's configuration or content.
 

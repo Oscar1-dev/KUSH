@@ -349,7 +349,7 @@ describe("v1 to v2 migration", () => {
       },
       {
         id: "v1-staff-tasks",
-        name: "staff-tasks",
+        name: "staff-notes",
         type: ChannelType.GuildText,
         parentId: "v1-staff-cat",
         overwrites: [],
@@ -424,7 +424,7 @@ describe("v1 to v2 migration", () => {
     expect(plan.unmanaged.channels).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
-          name: "staff-tasks",
+          name: "staff-notes",
           visibleToMembers: true,
         }),
         expect.objectContaining({
@@ -447,7 +447,7 @@ describe("v1 to v2 migration", () => {
         .filter((op) => op.action === "restrict-unmanaged-channel")
         .map((op) => (op as { name: string }).name)
         .sort(),
-    ).toEqual(["financial-planning", "staff-tasks"]);
+    ).toEqual(["financial-planning", "staff-notes"]);
   });
 });
 
@@ -547,7 +547,7 @@ describe("security lockdown", () => {
         },
         {
           id: "tasks",
-          name: "staff-tasks",
+          name: "staff-notes",
           type: ChannelType.GuildText,
           parentId: "cat",
           overwrites: [],
@@ -569,7 +569,7 @@ describe("security lockdown", () => {
     };
     const targets = planLockdown(blueprint, await guild.observe(), ids);
     expect(targets.map((item) => item.name).sort()).toEqual(
-      ["08 — STAFF OPERATIONS", "staff-chat", "staff-tasks"].sort(),
+      ["08 — STAFF OPERATIONS", "staff-chat", "staff-notes"].sort(),
     );
     await applyLockdown(targets, await guild.observe(), guild);
     expect(planLockdown(blueprint, await guild.observe(), ids)).toEqual([]);

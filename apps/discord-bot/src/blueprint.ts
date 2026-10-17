@@ -135,21 +135,13 @@ export const roles: DesiredRole[] = [
     hoist: true,
     legacyKeys: ["owner"],
   }),
-  role(
-    "administrator",
-    "Administrator",
-    0x166534,
-    P.ManageGuild |
-      P.ManageChannels |
-      P.ManageRoles |
-      P.ViewAuditLog |
-      P.KickMembers |
-      P.BanMembers |
-      P.ModerateMembers |
-      P.ManageNicknames |
-      P.ManageGuildExpressions,
-    { hoist: true, legacyKeys: ["administrator"] },
-  ),
+  // Discord Administrator approved by the owner on 18 Oct 2026: holders are
+  // verified administrators who have signed the staff NDA. The role is only
+  // ever granted by an explicit administrator activation (never by signing).
+  role("administrator", "Administrator", 0x166534, P.Administrator, {
+    hoist: true,
+    legacyKeys: ["administrator"],
+  }),
   role("developer", "Developer", 0x15803d, 0n, {
     hoist: true,
     legacyKeys: ["developer"],
@@ -352,6 +344,42 @@ const programme = (holder: RoleKey): Access => ({
 });
 /** The bot is excluded so a bot compromise cannot read these channels. */
 const ownerOnly: Access = { view: [], bot: "observe" };
+
+/** Legacy channels archived on 18 Oct 2026 (see LEGACY-AUDIT.md). */
+const archived: [string, "text" | "voice"][] = [
+  ["roles", "text"],
+  ["faq-old", "text"],
+  ["feedback", "text"],
+  ["polls", "text"],
+  ["product-announcements", "text"],
+  ["development-progress", "text"],
+  ["feature-requests", "text"],
+  ["bug-reports", "text"],
+  ["commission-information", "text"],
+  ["pricing-and-quotes", "text"],
+  ["customer-reviews", "text"],
+  ["marketplace", "text"],
+  ["featured-products", "text"],
+  ["marketplace-support", "text"],
+  ["seller-applications", "text"],
+  ["resolved-issues", "text"],
+  ["staff-announcements", "text"],
+  ["staff-tasks", "text"],
+  ["marketplace-review", "text"],
+  ["audit-log", "text"],
+  ["development-lounge", "voice"],
+  ["community-hangout", "voice"],
+];
+
+/** An archived voice channel: nobody but the owner (and the bot) can see it. */
+const archivedVoice = (name: string): DesiredChannel => ({
+  key: `archive:${name}`,
+  name,
+  type: ChannelType.GuildVoice,
+  parentKey: "archive",
+  botAccess: "manage",
+  overwrites: compileAccess({ view: [] }),
+});
 
 export const channels: DesiredChannel[] = [
   category("information", "📌 INFORMATION", { publish: ["administrator"] }, [
@@ -614,6 +642,25 @@ export const channels: DesiredChannel[] = [
   // ticket by member overwrites; Support Staff only through assignment.
   category("tickets", "🎫 TICKETS", { view: ["support-lead"] }),
   category("reports", "🚨 REPORTS", { view: ["moderator", "administrator"] }),
+
+  // ------------------------------------------- adopted legacy channels
+  // Approved 18 Oct 2026 (docs/discord/LEGACY-AUDIT.md). Each is an existing
+  // empty channel renamed and re-permissioned in place (history kept).
+  text("community", "off-topic", "Anything that doesn't fit elsewhere. Keep it friendly.", community),
+  text("community", "media", "Images and clips. Credit other people's work.", community),
+  text("studio", "portfolio", "Completed KUSH work, shared with the client's permission.", { publish: ["administrator", "developer"] }),
+  text("partnerships", "applications", "How to apply to join KUSH. Applications are made privately on the website.", { publish: ["administrator"] }),
+  text("support", "support-information", "Troubleshooting guides and how to get help.", { publish: ["support-lead", "administrator"] }),
+  text("staff", "commission-management", "Commission coordination. Customer details stay in the dashboard.", { view: ["administrator", "developer"] }),
+  text("staff", "recruitment-review", "Recruitment coordination. Applicant details stay in application channels and the dashboard.", { view: ["administrator"] }),
+
+  // ----------------------------------------------------------- archive
+  // Redundant legacy channels, kept (not deleted) in an owner-only category
+  // so they can be restored. The bot keeps access only to manage them.
+  category("archive", "🗄 ARCHIVE", { view: [] }),
+  ...archived.map(([name, type]) =>
+    type === "voice" ? archivedVoice(name) : text("archive", name, "Archived.", { view: [] }),
+  ),
 ];
 
 export const channelByKey = (key: string) =>

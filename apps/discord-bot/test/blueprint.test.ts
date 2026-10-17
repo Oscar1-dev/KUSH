@@ -82,10 +82,13 @@ describe("blueprint v2 structure", () => {
     expect(order.slice(botIndex + 1)).toEqual(botManagedRoles);
   });
 
-  it("gives Administrator only to the Owner role", () => {
+  // Owner decision, 18 Oct 2026: the Administrator role holds Discord
+  // Administrator. It is only granted by explicit staff activation after the
+  // NDA, never automatically. No other role may hold it.
+  it("gives Administrator only to the Owner and Administrator roles", () => {
     for (const role of blueprint.roles)
-      expect(Boolean(role.permissions & P.Administrator)).toBe(
-        role.key === "owner",
+      expect(Boolean(role.permissions & P.Administrator), role.key).toBe(
+        role.key === "owner" || role.key === "administrator",
       );
     expect(blueprint.everyonePermissions & P.Administrator).toBe(0n);
   });
@@ -232,12 +235,14 @@ describe("effective permissions by role", () => {
     expect(cell("staff:ticket-queue", "developer")).toBe("none");
   });
 
-  it("keeps administrators out of owner-only channels", () => {
-    expect(cell("owner:owner-operations", "administrator")).toBe("none");
+  // Discord Administrator overrides every channel overwrite, so holders see
+  // owner-only channels too. Accepted by the owner; recorded here so any
+  // future change to that decision is deliberate.
+  it("gives Discord administrators every channel (accepted trade-off)", () => {
+    expect(cell("owner:owner-operations", "administrator")).toBe("manage");
     expect(cell("owner:confidential-partnerships", "administrator")).toBe(
-      "none",
+      "manage",
     );
-    expect(cell("owner:security-events", "administrator")).toBe("read");
   });
 
   it("gives the Owner role every channel", () => {
@@ -374,12 +379,6 @@ describe("private tickets", () => {
     ).toBe("none");
     expect(
       evaluate("support", { memberId: "mod", roles: ["member", "moderator"] }),
-    ).toBe("none");
-    expect(
-      evaluate("support", {
-        memberId: "admin",
-        roles: ["member", "administrator"],
-      }),
     ).toBe("none");
   });
 
