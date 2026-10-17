@@ -57,7 +57,7 @@ const view = (
   updatedAt: row.updated_at.toISOString(),
 });
 
-const transitions: Record<
+export const transitions: Record<
   CommercialRequest["kind"],
   Record<string, string[]>
 > = {

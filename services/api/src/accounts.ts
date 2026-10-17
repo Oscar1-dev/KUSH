@@ -52,7 +52,11 @@ export async function registerAccounts(
       return await work();
     } catch (error) {
       if (error instanceof SupportError)
-        return reply.code(error.status).send({ error: error.message });
+        return reply.code(error.status).send({
+          error: error.message,
+          // Staff denials explain which step is missing (e.g. 2FA).
+          ...("reason" in error ? { reason: error.reason } : {}),
+        });
       if (error instanceof z.ZodError)
         return reply.code(400).send({ error: "Invalid request" });
       throw error;

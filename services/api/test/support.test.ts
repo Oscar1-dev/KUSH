@@ -504,7 +504,7 @@ describe.skipIf(!databaseUrl)("PostgreSQL tenant support boundaries", () => {
         { expectedVersion: ticket.version },
         409,
       );
-      const guildId = "123456789012345678";
+      const guildId = "123456789012345677";
       await check(
         "PATCH",
         base,

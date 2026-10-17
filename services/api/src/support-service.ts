@@ -93,6 +93,20 @@ const notFound = () => fail(404, "Support resource not found");
 /** Moderation-report categories for a tenant (moderators only, never staff). */
 export const reportCategoriesOf = (config: { reportCategories?: string[] }) =>
   config.reportCategories ?? [...defaultReportCategories];
+/** Allowed status changes (closing and reopening are explicit actions). */
+export const ticketTransitions: Record<string, string[]> = {
+  open: ["pending", "in_progress", "waiting_for_customer", "resolved"],
+  pending: ["open", "in_progress", "waiting_for_customer", "resolved"],
+  in_progress: ["pending", "waiting_for_customer", "resolved"],
+  waiting_for_customer: ["pending", "in_progress", "resolved"],
+  resolved: ["in_progress", "waiting_for_customer"],
+  reopened: [
+    "pending",
+    "in_progress",
+    "waiting_for_customer",
+    "resolved",
+  ],
+};
 export class SupportService {
   constructor(private pool: Pool) {}
   private async transaction<T>(fn: (c: PoolClient) => Promise<T>): Promise<T> {
@@ -519,19 +533,7 @@ export class SupportService {
       )
         fail(400, "Choose a configured category");
       if (input.status && input.status !== ticket.status) {
-        const transitions: Record<string, string[]> = {
-          open: ["pending", "in_progress", "waiting_for_customer", "resolved"],
-          pending: ["open", "in_progress", "waiting_for_customer", "resolved"],
-          in_progress: ["pending", "waiting_for_customer", "resolved"],
-          waiting_for_customer: ["pending", "in_progress", "resolved"],
-          resolved: ["in_progress", "waiting_for_customer"],
-          reopened: [
-            "pending",
-            "in_progress",
-            "waiting_for_customer",
-            "resolved",
-          ],
-        };
+        const transitions = ticketTransitions;
         if (!transitions[ticket.status]?.includes(input.status))
           fail(
             409,
