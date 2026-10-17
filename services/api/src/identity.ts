@@ -38,7 +38,7 @@ export async function registerIdentity(
   app.get("/admin/users", async (request, reply) => {
     if (!(await guard(request, reply, true))) return;
     const result = await pool.query(
-      'SELECT id,email,role,disabled,created_at AS "createdAt" FROM users ORDER BY created_at,id',
+      `SELECT id,email,role,disabled,created_at AS "createdAt" FROM users WHERE kind='account' ORDER BY created_at,id`,
     );
     return { users: result.rows };
   });

@@ -9,7 +9,15 @@ export const supportStatuses = [
   "reopened",
 ] as const;
 export const supportPriorities = ["low", "normal", "high", "urgent"] as const;
-export const supportRoles = ["owner", "staff", "customer"] as const;
+/** Moderators see only moderation-report tickets; staff never see them. */
+export const supportRoles = [
+  "owner",
+  "staff",
+  "moderator",
+  "customer",
+] as const;
+/** Ticket categories routed to moderators instead of support staff. */
+export const defaultReportCategories = ["member-report"] as const;
 export type SupportRole = (typeof supportRoles)[number];
 export const supportConfigSchema = z
   .object({
@@ -30,6 +38,10 @@ export const supportConfigSchema = z
       ),
     retentionDays: z.number().int().min(1).max(3650).nullable(),
     allowReopen: z.boolean(),
+    reportCategories: z
+      .array(z.string().regex(/^[a-z0-9_-]{1,40}$/))
+      .max(30)
+      .optional(),
   })
   .strict();
 export const tenantInputSchema = z

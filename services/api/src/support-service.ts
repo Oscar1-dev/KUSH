@@ -11,6 +11,7 @@ import type {
   SupportTicketDetail,
 } from "@kush/contracts";
 import {
+  defaultReportCategories,
   tenantInputSchema,
   ticketInputSchema,
   ticketPatchSchema,
@@ -89,6 +90,9 @@ const fail = (status: number, message: string): never => {
   throw new SupportError(status, message);
 };
 const notFound = () => fail(404, "Support resource not found");
+/** Moderation-report categories for a tenant (moderators only, never staff). */
+export const reportCategoriesOf = (config: { reportCategories?: string[] }) =>
+  config.reportCategories ?? [...defaultReportCategories];
 export class SupportService {
   constructor(private pool: Pool) {}
   private async transaction<T>(fn: (c: PoolClient) => Promise<T>): Promise<T> {
@@ -140,17 +144,24 @@ export class SupportService {
     role: SupportRole,
     lock = false,
   ) {
-    const result = await c.query<TicketRow>(
-      `SELECT * FROM support_tickets WHERE tenant_id=$1 AND id=$2${lock ? " FOR UPDATE" : ""}`,
+    const result = await c.query<
+      TicketRow & { report_categories: string[] | null }
+    >(
+      `SELECT t.*,st.config->'reportCategories' AS report_categories FROM support_tickets t JOIN support_tenants st ON st.id=t.tenant_id WHERE t.tenant_id=$1 AND t.id=$2${lock ? " FOR UPDATE OF t" : ""}`,
       [tenantId, ticketId],
     );
-    const ticket = result.rows[0];
-    if (!ticket) return notFound();
+    const row = result.rows[0];
+    if (!row) return notFound();
+    const { report_categories, ...ticket } = row;
+    const report = reportCategoriesOf({
+      reportCategories: report_categories ?? undefined,
+    }).includes(ticket.category);
     if (role === "customer" && ticket.customer_id !== user.id)
       return notFound();
-    if (role === "staff" && ticket.assigned_user_id !== user.id)
+    if (role === "staff" && (report || ticket.assigned_user_id !== user.id))
       return notFound();
-    return ticket;
+    if (role === "moderator" && !report) return notFound();
+    return ticket as TicketRow;
   }
   private async audit(
     c: Queryable,
@@ -365,15 +376,20 @@ export class SupportService {
       assignedUserId?: string;
     },
   ) {
-    const { role } = await this.tenant(this.pool, id, user);
+    const { tenant, role } = await this.tenant(this.pool, id, user);
     const values: unknown[] = [id];
     const predicates = ["tenant_id=$1"];
+    const reports = reportCategoriesOf(tenant.config);
     const add = (sql: string, value: unknown) => {
       values.push(value);
       predicates.push(sql.replace("?", `$${values.length}`));
     };
     if (role === "customer") add("customer_id=?", user.id);
-    if (role === "staff") add("assigned_user_id=?", user.id);
+    if (role === "staff") {
+      add("assigned_user_id=?", user.id);
+      add("NOT (category = ANY(?::text[]))", reports);
+    }
+    if (role === "moderator") add("category = ANY(?::text[])", reports);
     if (query.search)
       add(
         "(description ILIKE ? ESCAPE '\\')",
@@ -484,9 +500,14 @@ export class SupportService {
       if (input.assignedUserId !== undefined) {
         this.owner(role);
         if (input.assignedUserId) {
+          const handlers = reportCategoriesOf(tenant.config).includes(
+            ticket.category,
+          )
+            ? ["owner", "moderator"]
+            : ["owner", "staff"];
           const candidate = await c.query(
-            "SELECT m.user_id FROM support_members m JOIN users u ON u.id=m.user_id WHERE m.tenant_id=$1 AND m.user_id=$2 AND m.active AND m.role IN('owner','staff') AND NOT u.disabled AND u.role IN('admin','operator')",
-            [id, input.assignedUserId],
+            "SELECT m.user_id FROM support_members m JOIN users u ON u.id=m.user_id WHERE m.tenant_id=$1 AND m.user_id=$2 AND m.active AND m.role = ANY($3::text[]) AND NOT u.disabled AND u.role IN('admin','operator')",
+            [id, input.assignedUserId, handlers],
           );
           if (!candidate.rowCount)
             fail(400, "Assignment requires active tenant staff");
@@ -633,5 +654,86 @@ export class SupportService {
       await this.event(c, result.rows[0]!, user, "ticket.reopened");
       return ticketView(result.rows[0]!);
     });
+  }
+  /** Lets support staff or moderators take an unassigned ticket in their queue. */
+  async claim(user: User, id: string, ticketId: string) {
+    return this.transaction(async (c) => {
+      const { tenant, role } = await this.tenant(c, id, user, true);
+      if (role === "customer") return notFound();
+      const result = await c.query<TicketRow>(
+        "SELECT * FROM support_tickets WHERE tenant_id=$1 AND id=$2 FOR UPDATE",
+        [id, ticketId],
+      );
+      const ticket = result.rows[0] ?? notFound();
+      const report = reportCategoriesOf(tenant.config).includes(
+        ticket.category,
+      );
+      if ((role === "staff" && report) || (role === "moderator" && !report))
+        return notFound();
+      if (ticket.status === "closed")
+        fail(409, "Closed tickets must be explicitly reopened");
+      if (ticket.assigned_user_id === user.id) return ticketView(ticket);
+      if (ticket.assigned_user_id && role !== "owner")
+        fail(409, "Ticket is already claimed by another staff member");
+      const updated = await c.query<TicketRow>(
+        "UPDATE support_tickets SET assigned_user_id=$3,version=version+1,updated_at=now() WHERE tenant_id=$1 AND id=$2 RETURNING *",
+        [id, ticketId, user.id],
+      );
+      await this.event(c, updated.rows[0]!, user, "ticket.claimed", {
+        previousAssignee: ticket.assigned_user_id,
+      });
+      return ticketView(updated.rows[0]!);
+    });
+  }
+
+  /** Unassigned open tickets the caller may claim. Summary only: no description. */
+  async queue(user: User, id: string) {
+    const { tenant, role } = await this.tenant(this.pool, id, user);
+    if (role === "customer") return notFound();
+    const reports = reportCategoriesOf(tenant.config);
+    const filter =
+      role === "staff"
+        ? "AND NOT (t.category = ANY($2::text[]))"
+        : role === "moderator"
+          ? "AND t.category = ANY($2::text[])"
+          : "AND ($2::text[] IS NOT NULL)";
+    const result = await this.pool.query<{
+      id: string;
+      number: number;
+      category: string;
+      priority: string;
+      status: string;
+      created_at: Date;
+      channel_id: string | null;
+    }>(
+      `SELECT t.id,t.number,t.category,t.priority,t.status,t.created_at,d.channel_id
+       FROM support_tickets t LEFT JOIN discord_ticket_channels d ON d.tenant_id=t.tenant_id AND d.ticket_id=t.id
+       WHERE t.tenant_id=$1 AND t.assigned_user_id IS NULL AND t.status<>'closed' ${filter}
+       ORDER BY CASE t.priority WHEN 'urgent' THEN 0 WHEN 'high' THEN 1 WHEN 'normal' THEN 2 ELSE 3 END,t.created_at
+       LIMIT 50`,
+      [id, reports],
+    );
+    return result.rows.map((row) => ({
+      ticketId: row.id,
+      number: row.number,
+      category: row.category,
+      priority: row.priority,
+      status: row.status,
+      createdAt: row.created_at.toISOString(),
+      channelId: row.channel_id,
+    }));
+  }
+
+  /** Resolves a ticket number with the same visibility rules as get. */
+  async byNumber(user: User, id: string, number: number) {
+    const { role } = await this.tenant(this.pool, id, user);
+    const found = await this.pool.query<{ id: string }>(
+      "SELECT id FROM support_tickets WHERE tenant_id=$1 AND number=$2",
+      [id, number],
+    );
+    if (!found.rows[0]) return notFound();
+    return ticketView(
+      await this.ticket(this.pool, id, found.rows[0].id, user, role),
+    );
   }
 }

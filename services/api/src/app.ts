@@ -12,6 +12,7 @@ import { registerIdentity } from "./identity.js";
 import { registerDelivery } from "./delivery.js";
 import { registerSupport } from "./support.js";
 import { registerCommercial } from "./commercial.js";
+import { registerDiscord } from "./discord.js";
 
 export async function buildApp(databaseUrl: string, logging = false) {
   const app = Fastify({
@@ -201,6 +202,7 @@ export async function buildApp(databaseUrl: string, logging = false) {
   await registerDelivery(app, { db, pool, authenticate, audit });
   await registerSupport(app, { pool, authenticate });
   await registerCommercial(app, { pool, authenticate });
+  await registerDiscord(app, { pool });
   app.get("/health", async (_request, reply) => {
     try {
       const readiness = await pool.query<{ applied: number }>(
@@ -214,13 +216,14 @@ export async function buildApp(databaseUrl: string, logging = false) {
             "0005_support_requests",
             "0006_commercial",
             "0007_discord_link_throttling",
+            "0008_discord_tickets",
           ],
         ],
       );
-      if (readiness.rows[0]?.applied !== 7)
+      if (readiness.rows[0]?.applied !== 8)
         throw new Error("Database migrations pending");
       await pool.query(
-        "SELECT disabled FROM users LIMIT 0; SELECT created_at FROM sessions LIMIT 0; SELECT ip_hash FROM login_attempts LIMIT 0; SELECT endpoint FROM connection_profiles LIMIT 0; SELECT version FROM clients LIMIT 0; SELECT document FROM projects LIMIT 0; SELECT tenant_id FROM audit_events LIMIT 0; SELECT id FROM support_tenants LIMIT 0; SELECT create_category FROM support_tickets LIMIT 0; SELECT version FROM commercial_requests LIMIT 0; SELECT state FROM discord_account_links LIMIT 0; SELECT failed_attempts FROM discord_link_attempts LIMIT 0",
+        "SELECT disabled FROM users LIMIT 0; SELECT created_at FROM sessions LIMIT 0; SELECT ip_hash FROM login_attempts LIMIT 0; SELECT endpoint FROM connection_profiles LIMIT 0; SELECT version FROM clients LIMIT 0; SELECT document FROM projects LIMIT 0; SELECT tenant_id FROM audit_events LIMIT 0; SELECT id FROM support_tenants LIMIT 0; SELECT create_category FROM support_tickets LIMIT 0; SELECT version FROM commercial_requests LIMIT 0; SELECT state FROM discord_account_links LIMIT 0; SELECT failed_attempts FROM discord_link_attempts LIMIT 0; SELECT kind FROM users LIMIT 0; SELECT user_id FROM discord_identities LIMIT 0; SELECT channel_id FROM discord_ticket_channels LIMIT 0",
       );
       return { status: "ok", database: "connected" };
     } catch {

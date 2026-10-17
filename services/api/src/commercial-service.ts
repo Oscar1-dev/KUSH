@@ -119,7 +119,10 @@ export class CommercialService {
        AND (m.role='customer' OR u.role IN ('admin','operator'))`,
       [tenantId, user.id],
     );
-    return result.rows[0] ?? missing();
+    const member = result.rows[0] ?? missing();
+    // Moderators handle moderation reports only, never commercial records.
+    if (member.role === "moderator") missing();
+    return member;
   }
   private async audit(
     client: Queryable,

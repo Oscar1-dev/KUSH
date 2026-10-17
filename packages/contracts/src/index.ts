@@ -1,6 +1,7 @@
 import { z } from "zod";
 export * from "./support.js";
 export * from "./commercial.js";
+export * from "./discord.js";
 export const loginSchema = z
   .object({
     email: z.string().trim().email().max(254),

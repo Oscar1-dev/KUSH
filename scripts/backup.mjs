@@ -36,6 +36,8 @@ const tables = [
   "commercial_requests",
   "discord_account_links",
   "discord_link_attempts",
+  "discord_identities",
+  "discord_ticket_channels",
   "audit_events",
 ];
 const transient = ["sessions", "login_attempts"];
