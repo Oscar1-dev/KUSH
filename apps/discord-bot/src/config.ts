@@ -1,4 +1,5 @@
 import { readFile } from "node:fs/promises";
+import { fileURLToPath } from "node:url";
 import { z } from "zod";
 
 const snowflake = z
@@ -24,19 +25,34 @@ export const runtimeConfigSchema = z.object({
 
 export type RuntimeConfig = z.infer<typeof runtimeConfigSchema>;
 
+/** Repository-root `.local/discord.json` (gitignored), from src/ or dist/. */
+export const defaultConfigPath = fileURLToPath(
+  new URL("../../../.local/discord.json", import.meta.url),
+);
+
+export const configPath = (environment: NodeJS.ProcessEnv = process.env) =>
+  environment.KUSH_DISCORD_CONFIG ?? defaultConfigPath;
+
 export async function loadRuntimeConfig(
-  path = process.env.KUSH_DISCORD_CONFIG ?? ".local/discord.json",
+  path = configPath(),
 ): Promise<RuntimeConfig> {
   return runtimeConfigSchema.parse(JSON.parse(await readFile(path, "utf8")));
 }
 
-export function readBotToken(
+/**
+ * Reads the token from DISCORD_BOT_TOKEN, or from the file named by
+ * DISCORD_BOT_TOKEN_FILE (kept under the gitignored .local/secrets/).
+ */
+export async function readBotToken(
   environment: NodeJS.ProcessEnv = process.env,
-): string {
-  const token = environment.DISCORD_BOT_TOKEN?.trim();
+): Promise<string> {
+  const file = environment.DISCORD_BOT_TOKEN_FILE?.trim();
+  const token = (
+    environment.DISCORD_BOT_TOKEN ?? (file ? await readFile(file, "utf8") : "")
+  ).trim();
   if (!token)
     throw new Error(
-      "DISCORD_BOT_TOKEN is required at runtime and must not be stored in configuration",
+      "DISCORD_BOT_TOKEN or DISCORD_BOT_TOKEN_FILE is required at runtime; tokens must not be stored in configuration",
     );
   return token;
 }

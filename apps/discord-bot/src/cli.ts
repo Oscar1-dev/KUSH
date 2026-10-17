@@ -1,12 +1,94 @@
-import { readFile } from "node:fs/promises";
+import { copyFile, mkdir, readFile, writeFile } from "node:fs/promises";
+import { dirname, join } from "node:path";
 import { blueprint } from "./blueprint.js";
 import { commandJson } from "./commands.js";
-import { runtimeConfigSchema } from "./config.js";
+import { configPath, readBotToken, runtimeConfigSchema } from "./config.js";
+import { renderMatrixMarkdown } from "./permission-matrix.js";
 import {
+  applyPlan,
+  ApplyError,
+  planHash,
   planProvisioning,
+  reviveObservedGuild,
   serialisePlan,
   type ObservedGuild,
+  type ProvisionPlan,
+  type StableIds,
 } from "./provisioning.js";
+
+const usage = `Usage:
+  cli.ts commands                       Print slash command JSON
+  cli.ts validate [config.json]         Validate non-secret runtime configuration
+  cli.ts matrix                         Print the generated permission matrix
+  cli.ts inspect                        LIVE READ-ONLY: snapshot the configured guild and print a plan
+  cli.ts setup --dry-run [snapshot.json] [--restrict-unmanaged]
+                                        Offline plan from a snapshot and the configured stable IDs
+  cli.ts setup --apply --confirm-guild <id> --plan-hash <hash> [--restrict-unmanaged]
+                                        LIVE MUTATION: apply a reviewed plan (owner approval required)`;
+
+const flag = (args: string[], name: string) => args.includes(name);
+const option = (args: string[], name: string) => {
+  const index = args.indexOf(name);
+  return index >= 0 ? args[index + 1] : undefined;
+};
+
+async function readConfig(path = configPath()) {
+  return runtimeConfigSchema.parse(JSON.parse(await readFile(path, "utf8")));
+}
+
+const snapshotPath = () => join(dirname(configPath()), "discord-observed.json");
+
+function summarise(plan: ProvisionPlan) {
+  const exposures = plan.operations.filter(
+    (op) => op.action === "update-channel" && op.exposure,
+  );
+  const exposedUnmanaged = plan.unmanaged.channels.filter(
+    (item) => item.visibleToMembers,
+  );
+  return {
+    blueprintVersion: plan.blueprintVersion,
+    guildId: plan.guildId,
+    planHash: planHash(plan),
+    counts: Object.fromEntries(
+      [...new Set(plan.operations.map((op) => op.action))].map((action) => [
+        action,
+        plan.operations.filter((op) => op.action === action).length,
+      ]),
+    ),
+    exposedManagedChannels: exposures.map((op) =>
+      op.action === "update-channel" ? op.key : "",
+    ),
+    exposedUnmanagedChannels: exposedUnmanaged.map((item) => item.name),
+    conflicts: plan.conflicts,
+    unmanagedRoles: plan.unmanaged.roles.map((role) => role.name),
+    operations: plan.operations.map((op) =>
+      op.action === "update-channel" || op.action === "update-role"
+        ? { action: op.action, key: op.key, changes: op.changes }
+        : op.action === "create-role" || op.action === "create-channel"
+          ? { action: op.action, key: op.key }
+          : op,
+    ),
+  };
+}
+
+async function liveSession<T>(
+  work: (
+    adapter: import("./discord-adapter.js").DiscordGuildAdapter,
+    config: Awaited<ReturnType<typeof readConfig>>,
+  ) => Promise<T>,
+): Promise<T> {
+  const config = await readConfig();
+  const { connectGuild } = await import("./discord-adapter.js");
+  const { adapter, close } = await connectGuild(
+    await readBotToken(),
+    config.guildId,
+  );
+  try {
+    return await work(adapter, config);
+  } finally {
+    await close();
+  }
+}
 
 async function main() {
   const [operation, ...args] = process.argv.slice(2);
@@ -14,36 +96,112 @@ async function main() {
     console.log(JSON.stringify(commandJson, null, 2));
     return;
   }
+  if (operation === "matrix") {
+    process.stdout.write(renderMatrixMarkdown(blueprint));
+    return;
+  }
   if (operation === "validate") {
     const path =
-      args.find((argument) => !argument.startsWith("--")) ??
-      process.env.KUSH_DISCORD_CONFIG ??
-      ".local/discord.json";
-    runtimeConfigSchema.parse(JSON.parse(await readFile(path, "utf8")));
+      args.find((argument) => !argument.startsWith("--")) ?? configPath();
+    await readConfig(path);
     console.log(`Valid Discord configuration: ${path}`);
     return;
   }
-  if (operation === "setup") {
-    if (!args.includes("--dry-run"))
-      throw new Error(
-        "Live apply is intentionally unavailable; run setup with --dry-run",
+  if (operation === "inspect") {
+    await liveSession(async (adapter, config) => {
+      const observed = await adapter.observe();
+      await writeFile(
+        snapshotPath(),
+        `${JSON.stringify(serialisePlan(observed), null, 2)}\n`,
       );
-    const statePath = args.find((argument) => argument.endsWith(".json"));
-    const observed: ObservedGuild = statePath
-      ? (JSON.parse(await readFile(statePath, "utf8")) as ObservedGuild)
-      : { roles: [], channels: [] };
-    console.log(
-      JSON.stringify(
-        serialisePlan(planProvisioning(blueprint, observed)),
-        null,
-        2,
-      ),
-    );
+      const plan = planProvisioning(blueprint, observed, config, {
+        restrictUnmanaged: flag(args, "--restrict-unmanaged"),
+      });
+      console.log(JSON.stringify(serialisePlan(summarise(plan)), null, 2));
+      console.error(`Read-only snapshot written to ${snapshotPath()}`);
+    });
     return;
   }
-  throw new Error(
-    "Usage: cli.ts commands | validate [config.json] | setup --dry-run [observed.json]",
-  );
+  if (operation === "setup" && flag(args, "--dry-run")) {
+    const config = await readConfig().catch(() => undefined);
+    const path =
+      args.find((argument) => argument.endsWith(".json")) ?? snapshotPath();
+    const observed: ObservedGuild = reviveObservedGuild(
+      JSON.parse(await readFile(path, "utf8")),
+    );
+    const ids: StableIds = config ?? {};
+    const plan = planProvisioning(blueprint, observed, ids, {
+      restrictUnmanaged: flag(args, "--restrict-unmanaged"),
+    });
+    console.log(JSON.stringify(serialisePlan(summarise(plan)), null, 2));
+    return;
+  }
+  if (operation === "setup" && flag(args, "--apply")) {
+    const confirmGuild = option(args, "--confirm-guild");
+    const reviewedHash = option(args, "--plan-hash");
+    if (!confirmGuild || !reviewedHash)
+      throw new Error(
+        "Live apply requires --confirm-guild <id> and --plan-hash <hash> from a reviewed dry-run",
+      );
+    await liveSession(async (adapter, config) => {
+      if (config.guildId !== confirmGuild)
+        throw new Error("--confirm-guild does not match the configured guild");
+      const plan = planProvisioning(
+        blueprint,
+        await adapter.observe(),
+        config,
+        {
+          restrictUnmanaged: flag(args, "--restrict-unmanaged"),
+        },
+      );
+      if (planHash(plan) !== reviewedHash)
+        throw new Error(
+          `Live plan ${planHash(plan)} differs from reviewed ${reviewedHash}; run inspect again and re-review`,
+        );
+      const backups = join(dirname(configPath()), "backups");
+      await mkdir(backups, { recursive: true });
+      await copyFile(
+        configPath(),
+        join(
+          backups,
+          `discord-${new Date().toISOString().replaceAll(":", "-")}.json`,
+        ),
+      );
+      const persist = async (mapping: StableIds) =>
+        writeFile(
+          configPath(),
+          `${JSON.stringify(
+            {
+              ...config,
+              roleIds: { ...config.roleIds, ...mapping.roleIds },
+              channelIds: { ...config.channelIds, ...mapping.channelIds },
+            },
+            null,
+            2,
+          )}\n`,
+        );
+      try {
+        const result = await applyPlan(plan, adapter);
+        await persist(result.mapping);
+        const after = planProvisioning(blueprint, await adapter.observe(), {
+          ...config,
+          ...result.mapping,
+        });
+        console.log(
+          JSON.stringify(
+            serialisePlan({ applied: result.applied, after: summarise(after) }),
+            null,
+            2,
+          ),
+        );
+      } catch (error) {
+        if (error instanceof ApplyError) await persist(error.partial.mapping);
+        throw error;
+      }
+    });
+    return;
+  }
+  throw new Error(usage);
 }
 
 void main().catch((error: unknown) => {

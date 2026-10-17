@@ -11,7 +11,9 @@
     "dev": "tsx src/index.ts",
     "discord:setup": "tsx src/cli.ts setup --dry-run",
     "discord:validate": "tsx src/cli.ts validate",
-    "discord:commands": "tsx src/cli.ts commands"
+    "discord:commands": "tsx src/cli.ts commands",
+    "discord:inspect": "tsx src/cli.ts inspect",
+    "discord:matrix": "tsx src/cli.ts matrix"
   },
   "dependencies": {
     "discord.js": "^14.24.2",

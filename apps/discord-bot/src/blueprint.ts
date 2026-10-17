@@ -1,315 +1,650 @@
-import { ChannelType, PermissionFlagsBits } from "discord.js";
+import { ChannelType, PermissionFlagsBits as P } from "discord.js";
+
+/**
+ * KUSH Discord server blueprint, version 2.
+ *
+ * Design rules (verified by test/blueprint.test.ts and documented in
+ * docs/discord/PERMISSIONS.md):
+ *
+ * - Ordinary participation (send, react, attach) comes from the Member role's
+ *   guild-level permissions, never from a channel allow overwrite. That is
+ *   what lets a channel-level Restricted deny actually take effect: in
+ *   Discord a role allow always beats another role's deny on the same channel.
+ * - Elevated access (staff, customer, partner, beta) is granted by channel
+ *   role allows. Restriction therefore strips those roles
+ *   (see rolesAfterRestriction) instead of relying on overwrite precedence.
+ * - Only the Owner role carries Administrator.
+ * - Private channels deny @everyone ViewChannel and allow named roles.
+ * - Downloads/setup channels contain instructions only; actual links are
+ *   issued privately by the bot after a backend entitlement check.
+ */
 
 export type RoleKey =
   | "owner"
-  | "co-owner"
-  | "management"
   | "administrator"
   | "developer"
-  | "support-team"
+  | "support-lead"
+  | "support-staff"
   | "moderator"
-  | "commission-manager"
-  | "marketplace-reviewer"
-  | "partner-manager"
-  | "verified-seller"
-  | "official-partner"
-  | "reseller"
+  | "kush-bot"
+  | "creative-partner"
+  | "verified-reseller"
+  | "approved-seller"
   | "verified-customer"
-  | "premium-customer"
   | "beta-tester"
-  | "contributor"
   | "member"
-  | "product-updates"
-  | "announcements"
-  | "development-updates"
-  | "marketplace-updates"
-  | "community-events"
-  | "kush-bot";
+  | "restricted";
+
+export type Principal = RoleKey | "everyone";
 
 export interface DesiredRole {
   key: RoleKey;
   name: string;
   colour: number;
   permissions: bigint;
-  hoist?: boolean;
+  hoist: boolean;
+  /** Integration role created by Discord when the bot is installed. */
+  managed?: boolean;
+  /** v1 configuration keys whose stable IDs this role adopts. */
+  legacyKeys?: string[];
 }
+
 export interface DesiredOverwrite {
-  principal: RoleKey | "everyone";
+  principal: Principal;
   allow: bigint;
   deny: bigint;
 }
+
+export type BotAccess = "manage" | "observe";
+
 export interface DesiredChannel {
   key: string;
   name: string;
   type: ChannelType;
   parentKey?: string;
   topic?: string;
-  access: "information" | "community" | "staff" | "management" | "voice";
+  /** "observe": the bot is deliberately excluded and cannot repair drift. */
+  botAccess: BotAccess;
   overwrites: DesiredOverwrite[];
+  legacyKeys?: string[];
 }
+
+// ---------------------------------------------------------------- bit sets
+
+export const read = P.ViewChannel | P.ReadMessageHistory;
+/** Everything a Restricted member must lose. */
+export const participation =
+  P.SendMessages |
+  P.SendMessagesInThreads |
+  P.CreatePublicThreads |
+  P.CreatePrivateThreads |
+  P.AddReactions |
+  P.AttachFiles |
+  P.EmbedLinks |
+  P.UseExternalEmojis |
+  P.UseExternalStickers |
+  P.SendVoiceMessages |
+  P.SendPolls |
+  P.UseApplicationCommands |
+  P.UseExternalApps;
+const post =
+  P.SendMessages | P.SendMessagesInThreads | P.EmbedLinks | P.AttachFiles;
+const threadCreation = P.CreatePublicThreads | P.CreatePrivateThreads;
+const moderation = P.ManageMessages | P.ManageThreads | P.PinMessages;
+
+/**
+ * Discord only lets the bot write overwrite bits and role permissions it
+ * holds itself, so this is the union of every bit the blueprint applies
+ * (enforced by test). None grant Administrator, ManageGuild, MentionEveryone,
+ * webhooks, kicks or bans.
+ */
+export const requiredBotPermissions =
+  read |
+  post |
+  participation |
+  moderation |
+  P.ManageChannels |
+  P.ManageRoles |
+  P.ModerateMembers |
+  P.ChangeNickname;
+
+// ------------------------------------------------------------------- roles
 
 const role = (
   key: RoleKey,
   name: string,
   colour: number,
-  permissions = 0n,
-  hoist = false,
-): DesiredRole => ({ key, name, colour, permissions, hoist });
+  permissions: bigint,
+  options: Partial<Pick<DesiredRole, "hoist" | "managed" | "legacyKeys">> = {},
+): DesiredRole => ({
+  key,
+  name,
+  colour,
+  permissions,
+  hoist: options.hoist ?? false,
+  ...(options.managed ? { managed: true } : {}),
+  ...(options.legacyKeys ? { legacyKeys: options.legacyKeys } : {}),
+});
 
-export const requiredBotPermissions =
-  PermissionFlagsBits.ViewChannel |
-  PermissionFlagsBits.ReadMessageHistory |
-  PermissionFlagsBits.SendMessages |
-  PermissionFlagsBits.SendMessagesInThreads |
-  PermissionFlagsBits.ManageThreads |
-  PermissionFlagsBits.ManageMessages |
-  PermissionFlagsBits.ManageChannels |
-  PermissionFlagsBits.ManageRoles;
+/** Guild-level permissions for @everyone (unverified visitors). */
+export const everyonePermissions = read | P.UseApplicationCommands;
 
+/** Ordered highest to lowest. Array order is the required role hierarchy. */
 export const roles: DesiredRole[] = [
-  role("owner", "Owner", 0x7c3aed, PermissionFlagsBits.Administrator, true),
-  role("co-owner", "Co-Owner", 0x6d28d9, 0n, true),
-  role("management", "Management", 0x5b21b6, 0n, true),
-  role("administrator", "Administrator", 0x166534, 0n, true),
-  role("developer", "Developer", 0x15803d),
-  role("support-team", "Support Team", 0x16a34a),
-  role("moderator", "Moderator", 0x22c55e),
-  role("commission-manager", "Commission Manager", 0x047857),
-  role("marketplace-reviewer", "Marketplace Reviewer", 0x0f766e),
-  role("partner-manager", "Partner Manager", 0x0e7490),
-  role("verified-seller", "Verified Seller", 0x7e22ce),
-  role("official-partner", "Official Partner", 0x9333ea),
-  role("reseller", "Reseller", 0xa855f7),
-  role("verified-customer", "Verified Customer", 0x65a30d),
-  role("premium-customer", "Premium Customer", 0xca8a04),
-  role("beta-tester", "Beta Tester", 0x2563eb),
-  role("contributor", "Contributor", 0x0891b2),
-  role("member", "Member", 0x64748b),
-  role("product-updates", "Product Updates", 0x4d7c0f),
-  role("announcements", "Announcements", 0x3f6212),
-  role("development-updates", "Development Updates", 0x0369a1),
-  role("marketplace-updates", "Marketplace Updates", 0x6b21a8),
-  role("community-events", "Community Events", 0xbe123c),
-  role("kush-bot", "KUSH Bot", 0x22c55e, requiredBotPermissions),
+  role("owner", "Owner", 0x7c3aed, P.Administrator, {
+    hoist: true,
+    legacyKeys: ["owner"],
+  }),
+  role(
+    "administrator",
+    "Administrator",
+    0x166534,
+    P.ManageGuild |
+      P.ManageChannels |
+      P.ManageRoles |
+      P.ViewAuditLog |
+      P.KickMembers |
+      P.BanMembers |
+      P.ModerateMembers |
+      P.ManageNicknames |
+      P.ManageGuildExpressions,
+    { hoist: true, legacyKeys: ["administrator"] },
+  ),
+  role("developer", "Developer", 0x15803d, 0n, {
+    hoist: true,
+    legacyKeys: ["developer"],
+  }),
+  role("support-lead", "Support Lead", 0x0e7490, 0n, { hoist: true }),
+  role("support-staff", "Support Staff", 0x16a34a, 0n, {
+    hoist: true,
+    legacyKeys: ["support-team"],
+  }),
+  role("moderator", "Moderator", 0x22c55e, P.ModerateMembers, {
+    hoist: true,
+    legacyKeys: ["moderator"],
+  }),
+  role("kush-bot", "KUSH Bot", 0x22c55e, requiredBotPermissions, {
+    managed: true,
+  }),
+  role("creative-partner", "Creative Partner", 0x9333ea, 0n),
+  role("verified-reseller", "Verified Reseller", 0xa855f7, 0n, {
+    legacyKeys: ["reseller"],
+  }),
+  role("approved-seller", "Approved Seller", 0x7e22ce, 0n, {
+    legacyKeys: ["verified-seller"],
+  }),
+  role("verified-customer", "Verified Customer", 0x65a30d, 0n, {
+    legacyKeys: ["verified-customer"],
+  }),
+  role("beta-tester", "Beta Tester", 0x2563eb, 0n, {
+    legacyKeys: ["beta-tester"],
+  }),
+  role(
+    "member",
+    "Member",
+    0x64748b,
+    P.SendMessages |
+      P.SendMessagesInThreads |
+      P.CreatePublicThreads |
+      P.AddReactions |
+      P.EmbedLinks |
+      P.AttachFiles |
+      P.UseExternalEmojis |
+      P.ChangeNickname,
+    { legacyKeys: ["member"] },
+  ),
+  role("restricted", "Restricted", 0x6b7280, 0n),
 ];
 
-const read =
-  PermissionFlagsBits.ViewChannel | PermissionFlagsBits.ReadMessageHistory;
-const write =
-  PermissionFlagsBits.SendMessages |
-  PermissionFlagsBits.SendMessagesInThreads;
-const manage =
-  PermissionFlagsBits.ManageMessages | PermissionFlagsBits.ManageChannels;
-const staff: RoleKey[] = [
-  "owner",
-  "co-owner",
-  "management",
-  "administrator",
-  "developer",
-  "support-team",
-  "moderator",
-  "commission-manager",
-  "marketplace-reviewer",
-  "partner-manager",
-];
-const leaders: RoleKey[] = ["owner", "co-owner", "management"];
+export const roleByKey = (key: RoleKey) =>
+  roles.find((item) => item.key === key)!;
 
-export function permissionPolicy(
-  access: DesiredChannel["access"],
-): DesiredOverwrite[] {
-  if (access === "information")
-    return [
-      { principal: "everyone", allow: read, deny: write | manage },
-      ...staff.map((principal) => ({
-        principal,
-        allow: read | write,
-        deny: 0n,
-      })),
-    ];
-  if (access === "community")
-    return [
-      { principal: "everyone", allow: read | write, deny: manage },
-      ...staff.map((principal) => ({
-        principal,
-        allow: read | write | PermissionFlagsBits.ManageMessages,
-        deny: 0n,
-      })),
-    ];
-  if (access === "staff")
-    return [
-      {
-        principal: "everyone",
-        allow: 0n,
-        deny: PermissionFlagsBits.ViewChannel,
-      },
-      ...staff.map((principal) => ({
-        principal,
-        allow: read | write,
-        deny: 0n,
-      })),
-    ];
-  if (access === "management")
-    return [
-      {
-        principal: "everyone",
-        allow: 0n,
-        deny: PermissionFlagsBits.ViewChannel,
-      },
-      ...leaders.map((principal) => ({
-        principal,
-        allow: read | write,
-        deny: 0n,
-      })),
-    ];
+/** Roles a Restricted member may keep; every other role is stripped. */
+export const restrictionRetainedRoles: readonly RoleKey[] = [
+  "member",
+  "restricted",
+];
+
+/** Roles the bot may assign or remove. Staff roles stay human-managed. */
+export const botManagedRoles: readonly RoleKey[] = [
+  "creative-partner",
+  "verified-reseller",
+  "approved-seller",
+  "verified-customer",
+  "beta-tester",
+  "member",
+  "restricted",
+];
+
+export function rolesAfterRestriction(held: readonly RoleKey[]): RoleKey[] {
   return [
-    {
-      principal: "everyone",
-      allow:
-        PermissionFlagsBits.ViewChannel |
-        PermissionFlagsBits.Connect |
-        PermissionFlagsBits.Speak,
-      deny: manage,
-    },
+    ...new Set<RoleKey>([
+      ...held.filter((key) => restrictionRetainedRoles.includes(key)),
+      "restricted",
+    ]),
   ];
 }
+
+// ------------------------------------------------------------------ access
+
+interface Access {
+  /** Omit for public visibility; otherwise only these roles may view. */
+  view?: RoleKey[];
+  /** "members": Member base permissions apply (community chat). */
+  write?: "members" | RoleKey[];
+  /** Roles allowed to post in an otherwise read-only channel. */
+  publish?: RoleKey[];
+  moderate?: RoleKey[];
+  bot?: "write" | "observe";
+  /** Restricted may still use components/commands here (ticket appeals). */
+  restrictedMayInteract?: boolean;
+}
+
+const botWrite = read | post | P.ManageMessages | P.ManageThreads;
+
+export function compileAccess(access: Access): DesiredOverwrite[] {
+  const isPrivate = access.view !== undefined;
+  const communal = access.write === "members";
+  const grants = new Map<Principal, { allow: bigint; deny: bigint }>();
+  const grant = (principal: Principal, allow: bigint, deny = 0n) => {
+    const current = grants.get(principal) ?? { allow: 0n, deny: 0n };
+    grants.set(principal, {
+      allow: current.allow | allow,
+      deny: current.deny | deny,
+    });
+  };
+
+  // Member base permissions include SendMessages, so any channel that is not
+  // community chat must deny posting at @everyone level, private or not.
+  const readOnly = post | threadCreation | P.SendPolls;
+  if (isPrivate) grant("everyone", 0n, P.ViewChannel | readOnly);
+  else if (!communal) grant("everyone", 0n, readOnly);
+
+  for (const key of access.view ?? []) grant(key, read);
+  if (Array.isArray(access.write))
+    for (const key of access.write) grant(key, read | post);
+  for (const key of access.publish ?? []) grant(key, read | post);
+  for (const key of access.moderate ?? []) grant(key, read | moderation);
+  if ((access.bot ?? "write") === "write") grant("kush-bot", botWrite);
+
+  if (!isPrivate)
+    grant(
+      "restricted",
+      0n,
+      access.restrictedMayInteract
+        ? participation & ~P.UseApplicationCommands
+        : participation,
+    );
+
+  // A role's own deny must never cancel an allow granted to the same role.
+  return [...grants].map(([principal, value]) => ({
+    principal,
+    allow: value.allow,
+    deny: value.deny & ~value.allow,
+  }));
+}
+
+// ---------------------------------------------------------------- channels
 
 const category = (
   key: string,
   name: string,
-  access: DesiredChannel["access"],
+  access: Access,
+  legacyKeys?: string[],
 ): DesiredChannel => ({
   key,
   name,
   type: ChannelType.GuildCategory,
-  access,
-  overwrites: permissionPolicy(access),
+  botAccess: access.bot === "observe" ? "observe" : "manage",
+  overwrites: compileAccess(access),
+  ...(legacyKeys ? { legacyKeys } : {}),
 });
+
 const text = (
   parentKey: string,
-  key: string,
   name: string,
-  access: DesiredChannel["access"],
   topic: string,
+  access: Access,
+  legacyKeys?: string[],
 ): DesiredChannel => ({
-  key,
+  key: `${parentKey}:${name}`,
   name,
   type: ChannelType.GuildText,
   parentKey,
-  access,
   topic,
-  overwrites: permissionPolicy(access),
-});
-const voice = (
-  parentKey: string,
-  key: string,
-  name: string,
-): DesiredChannel => ({
-  key,
-  name,
-  type: ChannelType.GuildVoice,
-  parentKey,
-  access: "voice",
-  overwrites: permissionPolicy("voice"),
+  botAccess: access.bot === "observe" ? "observe" : "manage",
+  overwrites: compileAccess(access),
+  ...(legacyKeys ? { legacyKeys } : {}),
 });
 
-const section = (
-  index: string,
-  title: string,
-  access: DesiredChannel["access"],
-  names: string[],
-  topics: Record<string, string> = {},
-): DesiredChannel[] => {
-  const parentKey = `${index}-${title.toLowerCase().replaceAll(" ", "-")}`;
-  return [
-    category(parentKey, `${index} — ${title}`, access),
-    ...names.map((name) =>
-      text(
-        parentKey,
-        `${parentKey}:${name}`,
-        name,
-        access,
-        topics[name] ?? `KUSH ${name.replaceAll("-", " ")}.`,
-      ),
-    ),
-  ];
+const staffRoles: RoleKey[] = [
+  "administrator",
+  "developer",
+  "support-lead",
+  "support-staff",
+  "moderator",
+];
+const communityModerators: RoleKey[] = ["moderator", "administrator"];
+const community: Access = { write: "members", moderate: communityModerators };
+const customerResource: Access = {
+  view: ["verified-customer", "support-lead", "support-staff"],
+  publish: ["developer", "support-lead"],
 };
+const programme = (holder: RoleKey): Access => ({
+  view: [holder, "administrator"],
+  write: [holder, "administrator"],
+});
+/** The bot is excluded so a bot compromise cannot read these channels. */
+const ownerOnly: Access = { view: [], bot: "observe" };
 
 export const channels: DesiredChannel[] = [
-  ...section("01", "START HERE", "information", [
+  category("information", "INFORMATION", { publish: ["administrator"] }, [
+    "01-start-here",
+  ]),
+  text(
+    "information",
     "welcome",
+    "Start here: what KUSH is and how this server works.",
+    { publish: ["administrator"] },
+    ["01-start-here:welcome"],
+  ),
+  text(
+    "information",
     "rules",
+    "Community rules. Breaking them can lead to restriction or removal.",
+    { publish: ["administrator"] },
+    ["01-start-here:rules"],
+  ),
+  text(
+    "information",
     "announcements",
+    "Official KUSH announcements.",
+    { publish: ["administrator"] },
+    ["01-start-here:announcements"],
+  ),
+  text(
+    "information",
     "getting-started",
-    "roles",
-    "faq",
+    "How to link your KUSH account, open tickets and use bot commands.",
+    { publish: ["administrator", "support-lead"] },
+    ["01-start-here:getting-started"],
+  ),
+  text(
+    "information",
     "status",
+    "Service and incident status, including support updates.",
+    { publish: ["administrator", "developer", "support-lead"] },
+    ["01-start-here:status"],
+  ),
+
+  category("community", "COMMUNITY", community, ["02-community"]),
+  text("community", "general", "General KUSH community chat.", community, [
+    "02-community:general",
   ]),
-  ...section("02", "COMMUNITY", "community", [
-    "general",
-    "introductions",
-    "showcase",
-    "feedback",
+  text("community", "introductions", "Introduce yourself.", community, [
+    "02-community:introductions",
+  ]),
+  text(
+    "community",
+    "development",
+    "Development and software discussion.",
+    community,
+  ),
+  text("community", "showcases", "Share work you have built.", community, [
+    "02-community:showcase",
+  ]),
+  text(
+    "community",
     "suggestions",
-    "polls",
-    "off-topic",
-    "media",
+    "Suggestions for KUSH products and the community.",
+    community,
+    ["02-community:suggestions"],
+  ),
+
+  category("studio", "KUSH STUDIO", { publish: ["administrator"] }, [
+    "04-services-&-commissions",
   ]),
-  ...section("03", "KUSH PRODUCTS", "information", [
-    "product-catalogue",
-    "product-announcements",
-    "updates-and-changelogs",
-    "development-progress",
-    "feature-requests",
-    "bug-reports",
+  text(
+    "studio",
+    "services",
+    "Website development, custom software and creative services offered by KUSH.",
+    { publish: ["administrator"] },
+    ["04-services-&-commissions:our-services"],
+  ),
+  text(
+    "studio",
+    "commission-enquiries",
+    "How to request a commission. Enquiries are handled privately by ticket.",
+    { publish: ["administrator"] },
+    ["04-services-&-commissions:request-a-commission"],
+  ),
+
+  category("products", "PRODUCTS", { publish: ["developer"] }, [
+    "03-kush-products",
+  ]),
+  text(
+    "products",
+    "products",
+    "Verified KUSH product information.",
+    { publish: ["administrator", "developer"] },
+    ["03-kush-products:product-catalogue"],
+  ),
+  text(
+    "products",
+    "releases",
+    "Release notes and changelogs.",
+    { publish: ["developer"] },
+    ["03-kush-products:updates-and-changelogs"],
+  ),
+  text(
+    "products",
     "known-issues",
+    "Confirmed issues and workarounds.",
+    { publish: ["developer", "support-lead"] },
+    ["03-kush-products:known-issues"],
+  ),
+  text(
+    "products",
+    "downloads",
+    "How to obtain downloads. Links are sent privately by the bot after an entitlement check (!downloads).",
+    customerResource,
+  ),
+  text(
+    "products",
+    "setup-guides",
+    "Setup guides for verified customers (!guide <product>).",
+    customerResource,
+  ),
+  text(
+    "products",
     "beta-programme",
+    "Beta tester discussion and feedback.",
+    {
+      view: ["beta-tester", "developer"],
+      write: ["beta-tester", "developer"],
+      moderate: ["developer"],
+    },
+    ["03-kush-products:beta-programme"],
+  ),
+
+  category("support", "SUPPORT", { publish: ["support-lead"] }, ["06-support"]),
+  text(
+    "support",
+    "create-ticket",
+    "Open a private support ticket with the button below or !ticket.",
+    { publish: ["support-lead"], restrictedMayInteract: true },
+    ["06-support:open-a-ticket"],
+  ),
+  text(
+    "support",
+    "faq",
+    "Frequently asked questions and support information.",
+    { publish: ["support-lead"] },
+    ["06-support:support-faq"],
+  ),
+
+  category("partnerships", "PARTNERSHIPS", { publish: ["administrator"] }, [
+    "05-marketplace-&-partners",
   ]),
-  ...section("04", "SERVICES & COMMISSIONS", "information", [
-    "our-services",
-    "commission-information",
-    "pricing-and-quotes",
-    "request-a-commission",
-    "commission-showcase",
-    "customer-reviews",
-  ]),
-  ...section("05", "MARKETPLACE & PARTNERS", "information", [
-    "marketplace",
-    "featured-products",
-    "seller-information",
-    "seller-applications",
+  text(
+    "partnerships",
     "partner-information",
-    "partner-applications",
-    "marketplace-support",
-  ]),
-  ...section("06", "SUPPORT", "information", [
-    "support-centre",
-    "open-a-ticket",
-    "support-faq",
-    "resolved-issues",
-  ]),
-  category("07-community-voice", "07 — COMMUNITY VOICE", "voice"),
-  voice("07-community-voice", "voice:general", "General Lounge"),
-  voice("07-community-voice", "voice:development", "Development Lounge"),
-  voice("07-community-voice", "voice:hangout", "Community Hangout"),
-  ...section("08", "STAFF OPERATIONS", "staff", [
-    "staff-announcements",
+    "Reseller, seller and creative partner programmes. Apply privately with !apply.",
+    { publish: ["administrator"] },
+    ["05-marketplace-&-partners:partner-information"],
+  ),
+  text(
+    "partnerships",
+    "reseller-programme",
+    "Resources for verified resellers.",
+    programme("verified-reseller"),
+  ),
+  text(
+    "partnerships",
+    "seller-programme",
+    "Resources for approved sellers.",
+    programme("approved-seller"),
+    ["05-marketplace-&-partners:seller-information"],
+  ),
+  text(
+    "partnerships",
+    "creative-partners",
+    "Resources for creative partners.",
+    programme("creative-partner"),
+  ),
+
+  category("staff", "STAFF", { view: staffRoles }, ["08-staff-operations"]),
+  text(
+    "staff",
     "staff-chat",
-    "staff-tasks",
-    "commission-management",
-    "ticket-management",
-    "marketplace-review",
-    "partner-management",
+    "Staff discussion. No customer personal data.",
+    { view: staffRoles, write: staffRoles },
+    ["08-staff-operations:staff-chat"],
+  ),
+  text(
+    "staff",
+    "ticket-queue",
+    "Ticket summaries for claiming. Ticket content stays in the ticket.",
+    {
+      view: ["support-lead", "support-staff"],
+      write: ["support-lead", "support-staff"],
+      moderate: ["support-lead"],
+    },
+    ["08-staff-operations:ticket-management"],
+  ),
+  text(
+    "staff",
     "moderation-log",
+    "Moderation cases recorded by the bot.",
+    { view: ["moderator", "administrator"] },
+    ["08-staff-operations:moderation-log"],
+  ),
+  text(
+    "staff",
     "bot-log",
-    "audit-log",
-  ]),
-  ...section("09", "MANAGEMENT", "management", [
-    "management",
-    "business-planning",
-    "financial-planning",
+    "Bot audit events.",
+    { view: ["administrator", "developer"] },
+    ["08-staff-operations:bot-log"],
+  ),
+  text(
+    "staff",
+    "operational-alerts",
+    "Bot, API and integration health alerts.",
+    { view: ["administrator", "developer", "support-lead"] },
+  ),
+
+  // The category stays bot-manageable so child channels can be created.
+  category("owner", "OWNER", { view: [] }, ["09-management"]),
+  text(
+    "owner",
+    "owner-operations",
+    "Owner operations and business administration.",
+    ownerOnly,
+    ["09-management:management"],
+  ),
+  text(
+    "owner",
+    "security-events",
+    "Security events for owner review.",
+    { view: ["administrator"] },
+    ["09-management:security-alerts"],
+  ),
+  text(
+    "owner",
     "infrastructure",
-    "security-alerts",
-  ]),
+    "Infrastructure notes and alerts.",
+    { view: ["administrator"] },
+    ["09-management:infrastructure"],
+  ),
+  text(
+    "owner",
+    "confidential-partnerships",
+    "Confidential partnership negotiations.",
+    ownerOnly,
+  ),
+
+  // Containers for bot-created private channels. Members are added per
+  // ticket by member overwrites; Support Staff only through assignment.
+  category("tickets", "TICKETS", { view: ["support-lead"] }),
+  category("reports", "REPORTS", { view: ["moderator", "administrator"] }),
 ];
 
-export const blueprint = { version: 1, roles, channels } as const;
+export const channelByKey = (key: string) =>
+  channels.find((item) => item.key === key);
+
+// ---------------------------------------------------------- dynamic tickets
+
+export type TicketKind = "support" | "report";
+
+export interface DynamicOverwrite {
+  principal: Principal | { memberId: string };
+  allow: bigint;
+  deny: bigint;
+}
+
+const participant = read | post;
+
+/**
+ * Overwrites for a private ticket channel. Moderation reports are visible
+ * to moderators/administrators only, never to support staff.
+ */
+export function ticketChannelOverwrites(input: {
+  kind: TicketKind;
+  creatorId: string;
+  assigneeIds: readonly string[];
+}): DynamicOverwrite[] {
+  const staffRole: RoleKey[] =
+    input.kind === "report" ? ["moderator", "administrator"] : ["support-lead"];
+  return [
+    { principal: "everyone", allow: 0n, deny: P.ViewChannel },
+    { principal: "kush-bot", allow: botWrite, deny: 0n },
+    ...staffRole.map((principal) => ({
+      principal,
+      allow: participant,
+      deny: 0n,
+    })),
+    { principal: { memberId: input.creatorId }, allow: participant, deny: 0n },
+    ...input.assigneeIds
+      .filter((id) => id !== input.creatorId)
+      .map((memberId) => ({
+        principal: { memberId },
+        allow: participant,
+        deny: 0n,
+      })),
+  ];
+}
+
+/** Bump `version` whenever the managed set changes. */
+export const blueprint = {
+  version: 2,
+  everyonePermissions,
+  roles,
+  channels,
+} as const;
+
+export type Blueprint = {
+  version: number;
+  everyonePermissions: bigint;
+  roles: readonly DesiredRole[];
+  channels: readonly DesiredChannel[];
+};

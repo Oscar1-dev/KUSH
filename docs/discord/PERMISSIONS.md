@@ -1,120 +1,105 @@
-# Discord permissions and role hierarchy
+# Discord permissions and role hierarchy (blueprint v2)
 
-Status: M4 security specification. The repository validator can verify the declarative model, but every effective permission must also be checked in the authorised guild before launch. Discord's guild owner and any role with `Administrator` bypass channel overwrites; those principals are explicitly trusted and must be tightly controlled.
+Status: implemented as code in `apps/discord-bot/src/blueprint.ts` and verified by the effective-permission evaluator in automated tests. **Not yet verified in a live guild.** The generated per-channel result is in [PERMISSION-MATRIX.md](PERMISSION-MATRIX.md); a test fails if that file and the code disagree.
 
-## Bot installation
+Discord's guild owner account and any role with `Administrator` bypass every channel overwrite. Only the Owner role carries `Administrator`.
 
-Use a guild install with OAuth2 scopes `bot` and `applications.commands`. Never use a user token or self-bot. `Administrator`, `Mention Everyone`, `Manage Webhooks`, `Manage Events`, and access to voice audio are not required. Discord requires `Manage Guild` to read or change AutoMod rules. Configure AutoMod through an authorised human administrator, or grant a dedicated provisioner `Manage Guild` only for the reviewed AutoMod apply and revoke it afterward; the steady-state bot does not retain it.
+## How Discord evaluates permissions
 
-The maximum permission set needed by the current combined channel/role provisioning, ticket, moderation, and role-selection process, excluding AutoMod administration, is:
+The evaluator (`src/permissions.ts`) implements the [official algorithm](https://docs.discord.com/developers/topics/permissions):
 
-- View Channels
-- Send Messages
-- Manage Messages
-- Embed Links
-- Attach Files
-- Read Message History
-- Manage Channels
-- Manage Roles
-- Moderate Members
-- Kick Members
-- Ban Members
+1. Guild owner → everything.
+2. Base = `@everyone` permissions OR every held role's permissions; `Administrator` → everything.
+3. Channel: apply the `@everyone` overwrite, then the **union** of held roles' denies, then the **union** of held roles' allows, then the member overwrite.
+4. No `ViewChannel` → nothing. No `SendMessages` → no TTS, `@everyone` mentions, attachments or embeds. Timed-out members keep only `ViewChannel` and `ReadMessageHistory`.
 
-The corresponding Discord permission integer is `1099780189206`. A separately approved temporary provisioner that also configures AutoMod needs `Manage Guild`, producing `1099780189238`; revoke that permission after the reviewed apply. Treat either integer as a review aid, not as proof of the installed role's effective permissions. After provisioning, remove `Manage Channels`, `Manage Roles`, `Kick Members`, and `Ban Members` if the enabled runtime modules do not use them. The bot role must remain below Owner, Co-Owner, Management, Administrator, and every human staff role it must not assign or moderate. It must be above only the opt-in and entitlement roles it is authorised to manage.
+Step 3 has a consequence that shapes the whole design: **a role allow always beats another role's deny on the same channel.** A "Restricted" role overwrite cannot, on its own, silence someone who also holds a role with an allow on that channel.
 
-No privileged gateway intent is required for slash commands, buttons, modals, or guild configuration. Start with `Guilds` only. Add `GuildMembers` only if a reviewed entitlement reconciliation feature actually needs member enumeration. Do not request `MessageContent` merely for moderation or support; interaction inputs and Discord AutoMod cover the intended flows.
+## Design rules
 
-## Role order and capabilities
+- **Participation comes from the Member role's guild-level permissions**, never from a channel allow. Community channels need no allow overwrites, so a channel-level Restricted deny works there.
+- **Every non-community channel denies posting at `@everyone` level.** Private channels also deny `ViewChannel`. (Automated testing caught a bug in an earlier draft. Private read-only channels such as downloads and moderation-log denied only `ViewChannel`, so viewers inherited `SendMessages` from Member.)
+- **Elevated access uses channel role allows** (staff, customers, partners, beta).
+- **Restriction strips roles.** `rolesAfterRestriction()` keeps only Member and Restricted. The restriction workflow must remove all other roles; it records them for restoration, and entitlement roles are restored from the backend. A test shows why: Member + Beta Tester + Restricted can still post in `#beta-programme`.
+- **Downloads are not role-gated.** `#downloads` and `#setup-guides` hold instructions only. Links are issued privately by the bot after a backend entitlement check, so revoked or refunded customers lose access even if a stale role remains.
+- **Owner-only channels exclude the bot.** `#owner-operations` and `#confidential-partnerships` give the bot no access, so a bot compromise (with Message Content intent) cannot read them. The planner reports drift there as an owner action.
 
-Highest to lowest:
+## Role hierarchy
 
-1. Owner (guild owner account; no bot-assigned role)
-2. Co-Owner
-3. Management
-4. Administrator
-5. Developer
-6. Support Team
-7. Moderator
-8. Commission Manager
-9. Marketplace Reviewer
-10. Partner Manager
-11. KUSH Bot
-12. Verified Seller
-13. Official Partner
-14. Reseller
-15. Premium Customer
-16. Verified Customer
-17. Beta Tester
-18. Contributor
-19. Product Updates / Announcements / Development Updates / Marketplace Updates / Community Events
-20. Member
+Highest to lowest; array order in `blueprint.ts` is enforced by the planner.
 
-Human staff roles do not receive Discord's `Administrator` permission by default. Management access is granted by explicit category overwrites. Commercial, customer, and notification roles are never self-assignable unless the role is explicitly listed as an opt-in notification role. The bot rejects attempts to assign any role at or above its highest managed-role allowlist entry even if Discord would permit the operation.
+| Role              | Guild-level permissions                                                                            | Assigned by     |
+| ----------------- | -------------------------------------------------------------------------------------------------- | --------------- |
+| Owner             | Administrator                                                                                      | Owner           |
+| Administrator     | Manage Server, Channels, Roles, Nicknames, Expressions; View Audit Log; Kick; Ban; Timeout members | Owner           |
+| Developer         | —                                                                                                  | Owner / Admin   |
+| Support Lead      | —                                                                                                  | Owner / Admin   |
+| Support Staff     | —                                                                                                  | Owner / Admin   |
+| Moderator         | Timeout members                                                                                    | Owner / Admin   |
+| **KUSH Bot**      | see below (integration role)                                                                       | Discord install |
+| Creative Partner  | —                                                                                                  | Bot (approved)  |
+| Verified Reseller | —                                                                                                  | Bot (approved)  |
+| Approved Seller   | —                                                                                                  | Bot (approved)  |
+| Verified Customer | —                                                                                                  | Bot (backend)   |
+| Beta Tester       | —                                                                                                  | Bot             |
+| Member            | Send, threads (public), reactions, embeds, attachments, external emoji, change nickname            | Bot             |
+| Restricted        | — (channel denies)                                                                                 | Bot / Moderator |
 
-## Channel profiles
+`@everyone` (unverified visitors): View Channels, Read Message History, Use Application Commands.
 
-`Y` means explicit allow when needed, `N` means explicit deny where inheritance could otherwise expose the channel, and `-` means inherit. `View` and `History` are separate because denying send does not guarantee history access. Thread permissions are explicit for read-only and forum-style channels.
+**Deviation from the requested list:** the bot sits **between Moderator and Creative Partner**, not at the bottom. Discord only lets a bot assign, remove or time out roles and members below its own highest role. It must be above the seven roles it manages, and below every human staff role so it can never grant or moderate staff.
 
-| Profile / principal                         | View | History | Send | Send in threads | Create public threads | Create private threads | Manage messages | Manage channels |
-| ------------------------------------------- | ---: | ------: | ---: | --------------: | --------------------: | ---------------------: | --------------: | --------------: |
-| Information / Member                        |    Y |       Y |    N |               N |                     N |                      N |               N |               N |
-| Information / authorised publisher          |    Y |       Y |    Y |               Y |                     N |                      N |               - |               N |
-| Community / Member                          |    Y |       Y |    Y |               Y |                     Y |                      N |               N |               N |
-| Community / Moderator                       |    Y |       Y |    Y |               Y |                     Y |                      N |               Y |               N |
-| Product submissions / Member                |    Y |       Y |    Y |               Y |                     N |                      N |               N |               N |
-| Product information / publisher             |    Y |       Y |    Y |               Y |                     N |                      N |               - |               N |
-| Staff operations / ordinary member          |    N |       N |    N |               N |                     N |                      N |               N |               N |
-| Staff operations / named staff role         |    Y |       Y |    Y |               Y |                     N |                      N |   role-specific |               N |
-| Management / non-management                 |    N |       N |    N |               N |                     N |                      N |               N |               N |
-| Management / Management and Owner           |    Y |       Y |    Y |               Y |                     N |                      N |               Y |               Y |
-| Private request / unrelated member          |    N |       N |    N |               N |                     N |                      N |               N |               N |
-| Private request / named customer            |    Y |       Y |    Y |               N |                     N |                      N |               N |               N |
-| Private request / assigned authorised staff |    Y |       Y |    Y |               N |                     N |                      N |   role-specific |               N |
-| Private request / KUSH Bot                  |    Y |       Y |    Y |               N |                     N |                      N |               Y |               Y |
-| Audit and security / all other roles        |    N |       N |    N |               N |                     N |                      N |               N |               N |
-| Audit and security / explicit leadership    |    Y |       Y |    Y |               N |                     N |                      N |               Y |               N |
+## Bot permissions
 
-Attachments, embeds, reactions, polls, external application commands, and `MentionEveryone` follow the same profile and are denied unless a channel has a documented need. `MentionEveryone` remains denied to the bot and ordinary staff. Forum channels allow members to create a post only where the workflow intentionally accepts public submissions; read-only forum channels must deny both `SendMessages` and `SendMessagesInThreads` as well as thread creation.
+Discord only lets a bot set overwrite bits and role permissions that it holds itself. `requiredBotPermissions` is therefore the union of every bit the blueprint writes, and a test enforces this. Integer **`4012652989115472`**:
 
-## Private support and business requests
+View Channels, Read Message History, Send Messages, Send in Threads, Create Public/Private Threads, Embed Links, Attach Files, Add Reactions, External Emoji/Stickers, Voice Messages, Polls, Use Application Commands, Use External Apps, Manage Messages, Pin Messages, Manage Threads, Manage Channels, Manage Roles, Timeout Members, Change Nickname.
 
-Discord visibility is presentation, not authorisation. The KUSH API rechecks the authenticated Discord account link, tenant membership, ticket ownership or assignment, current record version, and command-specific role on every operation. A private request channel receives member overwrites only for its creator, assigned staff, relevant management, and the bot. Customer roles never grant access across requests.
+Never granted (tested): Administrator, Manage Server, Mention Everyone, Manage Webhooks, Kick, Ban. The participation bits are only there so the bot can write Restricted denies; they carry no extra risk because the bot is first-party code. AutoMod configuration needs Manage Server and remains a human administrator task.
 
-Internal notes are never mirrored to a customer-visible channel or transcript. Staff reassignment removes the former assignee's overwrite before acknowledging success. If overwrite removal fails, the backend assignment remains authoritative and the incident is logged for reconciliation; the bot must not disclose subsequent content.
+Gateway intents: `Guilds` today. `!` prefix commands will need the privileged **Message Content** intent and `GuildMessages`. Enabling that in the Developer Portal is an owner action and has not been done.
 
-## Command authorisation
+## Ticket and report channels
 
-| Command group                                                              | Minimum authority                                                              |
-| -------------------------------------------------------------------------- | ------------------------------------------------------------------------------ |
-| `/help`, `/about`, `/services`, `/products`, `/status`, `/faq`, `/profile` | Member                                                                         |
-| Ticket open/list/close/reopen/transcript                                   | Linked customer for own records, or authorised staff for assigned records      |
-| Ticket claim/assign/priority                                               | Support Team or Management, plus backend tenant authority                      |
-| Commission request/status                                                  | Request owner or Commission Manager for assigned records                       |
-| Commission quote/assign/close                                              | Commission Manager or Management                                               |
-| Marketplace browse/submit/status                                           | Member for public browse; applicant for own application                        |
-| Marketplace approve/reject                                                 | Marketplace Reviewer or Management                                             |
-| Partner apply/status                                                       | Applicant for own application                                                  |
-| Partner review                                                             | Partner Manager or Management                                                  |
-| Warn/timeout/untimeout/purge                                               | Moderator or Management; target must be below actor and bot                    |
-| Kick/ban                                                                   | Administrator or Management, explicit confirmation, target below actor and bot |
-| Config/sync/audit                                                          | Management; destructive reconciliation requires a reviewed dry-run             |
+Created at runtime under the private TICKETS and REPORTS categories via `ticketChannelOverwrites()`:
 
-Command visibility is convenience only. Every handler enforces the same rule server-side and returns an ephemeral denial. Guild roles alone never grant KUSH backend tenant access.
+| Principal                | Support ticket          | Moderation report |
+| ------------------------ | ----------------------- | ----------------- |
+| `@everyone`              | deny View               | deny View         |
+| Creator (member)         | View, Send, attach      | View, Send        |
+| Assigned staff (members) | View, Send, attach      | —                 |
+| Support Lead (role)      | View, Send              | —                 |
+| Moderator, Administrator | —                       | View, Send        |
+| KUSH Bot                 | View, Send, manage msgs | same              |
 
-## Effective-permission acceptance
+Support Staff see a ticket only when assigned. Other customers, unassigned staff and moderators cannot see support tickets; support staff cannot see reports. A restricted creator can still reply in their own ticket, because member overwrites apply last. That is the appeal path. Discord visibility is presentation only: the KUSH API rechecks link, tenant membership, ownership or assignment, and record version on every operation.
 
-Before launch, verify using Discord's effective-permission view or controlled test accounts with combined roles:
+## Command authorisation (target)
 
-- Member can view and read history in information and announcement channels but cannot send, create threads, or send inside existing threads.
-- Member can participate only in intended community/forum channels.
-- Commercial/customer roles cannot see staff, management, audit, or security channels.
-- Two customers cannot see each other's request channels or retrieve each other's backend records.
-- Unassigned and formerly assigned staff cannot see or operate a ticket.
-- Support Team cannot see management or financial planning.
-- KUSH Bot cannot manage roles above it, mention everyone, manage the guild, or use Administrator.
-- A timed-out or restricted member cannot regain send permission through a second role or member overwrite.
-- Category sync does not overwrite a deliberate private-channel exception.
+| Command group                                                          | Minimum authority                                      |
+| ---------------------------------------------------------------------- | ------------------------------------------------------ |
+| `!help !products !status !faq !rules !support !ticket !partner !apply` | Member                                                 |
+| `!account !licenses !downloads !guide`                                 | Linked account; results only for the caller, privately |
+| `!tickets !claim !note !priority !transcript !close !reopen`           | Support Staff for assigned tickets; Support Lead all   |
+| `!assign`                                                              | Support Lead                                           |
+| `!report`                                                              | Member                                                 |
+| `!warn !timeout !case`                                                 | Moderator; target below actor and bot                  |
+| `!config !permissions !health !sync !entitlement grant/revoke`         | Administrator (`!sync` apply additionally owner)       |
 
-Record guild ID, channel/role IDs, test principal, expected and actual result, timestamp, and reviewer. A config validator or dry-run is not live proof.
+Every handler checks authority itself; command visibility is not authorisation. Guild roles alone never grant KUSH backend tenant access.
 
-Official references: [Discord permissions and overwrite order](https://docs.discord.com/developers/topics/permissions), [gateway and privileged intents](https://docs.discord.com/developers/events/gateway), [application command authorisation](https://docs.discord.com/developers/interactions/application-commands), and [AutoMod permission requirements](https://docs.discord.com/developers/resources/auto-moderation).
+## Live acceptance checklist
+
+Use controlled test accounts with combined roles in the approved guild. Record guild ID, role and channel IDs, principal, expected vs actual, timestamp and reviewer. A green unit test is not live proof.
+
+- Visitor and Member read information channels; cannot send, create threads or send in threads.
+- Member writes only in COMMUNITY.
+- Customer reads `#downloads`/`#setup-guides`; cannot post there; cannot see staff, owner or partner programme channels.
+- Partner programmes are mutually isolated.
+- Moderator: moderation-log and community moderation; no ticket queue, downloads or owner channels.
+- Support Staff: ticket-queue; tickets only when assigned; no reports, moderation-log or owner channels.
+- Developer: bot-log, operational-alerts, releases, beta; no owner, moderation or ticket channels.
+- Administrator cannot see `#owner-operations` or `#confidential-partnerships`.
+- Restricted (after the strip) cannot participate anywhere except their own ticket; timed-out members cannot send.
+- Two customers cannot see each other's tickets.
+- Bot cannot see owner-only channels, mention everyone, or manage roles above it.

@@ -34,7 +34,7 @@ export async function startBot(): Promise<Client> {
         linking: api,
       }),
   );
-  await client.login(readBotToken());
+  await client.login(await readBotToken());
   return client;
 }
 

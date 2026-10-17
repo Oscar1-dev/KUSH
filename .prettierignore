@@ -7,3 +7,4 @@ dist
 Cargo.lock
 docs/FOUNDING-DIRECTIVE.md
 docs/M3-DIRECTIVE.md
+docs/discord/PERMISSION-MATRIX.md

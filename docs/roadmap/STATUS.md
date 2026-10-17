@@ -54,3 +54,39 @@ Verified: pnpm local test passed all17 tests (9 desktop and8 API), including rea
 Incomplete: Discord bot adapter/runtime, credentials, gateway, guild reconciliation, permission evaluation, slash commands, message synchronisation, retention enforcement and live-server verification. No live Discord changes or paid services were used. Native M3 verification is recorded below.
 
 Native M3 verification passed against the rebuilt Windows release executable, temporary real API and disposable PostgreSQL: workspace/ticket create and retrieve; Unicode persistence; status/priority update; public reply and private note separation; close with reason/confirmation; downloaded and parsed JSON transcript; reopen; zero WCAG2 A/AA and WCAG2.1 AA axe violations in exercised states; session expiry sign-out and preference persistence. The extended test pauses between M2 and M3 suites to respect the unchanged 100-request/minute production API limit. Evidence: test-results/native-support.png and native-support-transcript.json. Test fixtures were cleaned and the API/database stopped gracefully.
+
+## Discord Slice A — blueprint v2, permission evaluator, drift fix — 17 October 2026
+
+Implemented (apps/discord-bot):
+
+- Effective-permission evaluator (`src/permissions.ts`): owner/Administrator bypass, the @everyone → role union → member overwrite order, timeout, and implicit ViewChannel/SendMessages/Connect rules.
+- Blueprint v2 (`src/blueprint.ts`):
+  - The requested role hierarchy, Owner → … → Restricted.
+  - A consolidated INFORMATION/COMMUNITY/STUDIO/PRODUCTS/SUPPORT/PARTNERSHIPS/STAFF/OWNER layout, plus private TICKETS/REPORTS containers and per-ticket overwrites.
+  - Only Owner holds Administrator.
+  - Restriction strips roles, because Discord lets another role's allow beat a Restricted deny.
+- Planner v2 (`src/provisioning.ts`):
+  - Fails closed on unresolved principals. This is the regression fix: the v1 planner reported "no drift" whenever roles or the @everyone ID were unresolved, and the CLI never supplied the @everyone ID.
+  - Resolves roles against the full blueprint.
+  - Adopts v1 IDs via legacy keys.
+  - Reports hierarchy and bot-authority conflicts as owner actions.
+  - Flags exposure of managed and unmanaged channels.
+  - Never deletes.
+- Adapter-based apply engine (partial-failure mapping), discord.js adapter, and CLI `inspect` (live read-only), `setup --dry-run`, and `setup --apply` (gated by guild confirmation and the reviewed plan hash).
+- Generated docs/discord/PERMISSION-MATRIX.md (a test fails if it drifts); rewritten PERMISSIONS.md and SERVER-BLUEPRINT.md.
+
+Verified locally:
+
+- `@kush/discord-bot`: 59 tests passed, including regression tests that failed before the fix.
+- Role-combination matrix tests, ticket isolation tests, and a fake-guild apply after which a second plan has zero operations.
+- Repo `pnpm lint`, `pnpm typecheck`, `pnpm build` and `prettier --check .` pass.
+- `pnpm test`: desktop 9 passed; API 2 passed and 7 skipped, because no `KUSH_TEST_DATABASE_URL` was set (API untouched in this slice).
+
+Not verified: nothing was run against Discord. The discord.js adapter has never been executed live.
+
+Live state risk: on 17 October `.local/apply-discord.mjs` applied v1 to guild 1560640601676845146. It wrote empty overwrites on all categories and on the staff/management channels, which are probably visible to all members. This needs a read-only `discord:inspect` and an owner-approved v2 apply.
+
+Next:
+
+- Slice B: bot runtime — `!` prefix router (Message Content intent), rate limiting, health, restart recovery.
+- Slice C: private ticket channels backed by PostgreSQL.

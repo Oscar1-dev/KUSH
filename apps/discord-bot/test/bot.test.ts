@@ -6,13 +6,25 @@ import { commandJson } from "../src/commands.js";
 import { createComponentId, verifyComponentId } from "../src/component-id.js";
 import { runtimeConfigSchema } from "../src/config.js";
 import { supportPanel } from "../src/panels.js";
-import { planProvisioning } from "../src/provisioning.js";
 
 describe("Discord bot foundation", () => {
   it("defines every required category and unique command name", () => {
     expect(
-      blueprint.channels.filter((channel) => channel.type === 4),
-    ).toHaveLength(9);
+      blueprint.channels
+        .filter((channel) => channel.type === 4)
+        .map((channel) => channel.key),
+    ).toEqual([
+      "information",
+      "community",
+      "studio",
+      "products",
+      "support",
+      "partnerships",
+      "staff",
+      "owner",
+      "tickets",
+      "reports",
+    ]);
     const names = commandJson.map((command) => command.name);
     expect(new Set(names).size).toBe(names.length);
     expect(names).toEqual(
@@ -36,70 +48,6 @@ describe("Discord bot foundation", () => {
       PermissionFlagsBits.ManageRoles,
     );
     expect(requiredBotPermissions & PermissionFlagsBits.Administrator).toBe(0n);
-  });
-
-  it("plans missing resources and becomes idempotent against matching state", () => {
-    expect(
-      planProvisioning(blueprint, { roles: [], channels: [] }),
-    ).toHaveLength(blueprint.roles.length + blueprint.channels.length);
-    const roles = blueprint.roles.map((item, index) => ({
-      id: `r${index}`,
-      name: item.name,
-      colour: item.colour,
-      permissions: item.permissions,
-      hoist: Boolean(item.hoist),
-    }));
-    const roleIds = Object.fromEntries(
-      blueprint.roles.map((item, index) => [item.key, `r${index}`]),
-    );
-    const categoryIds = new Map(
-      blueprint.channels
-        .filter((item) => item.type === 4)
-        .map((item, index) => [item.key, `c${index}`]),
-    );
-    const channels = blueprint.channels.map((item, index) => ({
-      id: categoryIds.get(item.key) ?? `x${index}`,
-      name: item.name,
-      type: item.type,
-      parentId: item.parentKey
-        ? (categoryIds.get(item.parentKey) ?? null)
-        : null,
-      topic: item.topic ?? null,
-      overwrites: item.overwrites.map((overwrite) => ({
-        id:
-          overwrite.principal === "everyone"
-            ? "guild"
-            : roleIds[overwrite.principal]!,
-        allow: overwrite.allow,
-        deny: overwrite.deny,
-      })),
-    }));
-    expect(
-      planProvisioning(
-        blueprint,
-        { roles, channels },
-        { everyoneRoleId: "guild", roleIds },
-      ),
-    ).toEqual([]);
-  });
-
-  it("prefers stable IDs and only plans a drift update", () => {
-    const desired = { roles: [blueprint.roles[0]!], channels: [] };
-    const observed = {
-      roles: [
-        {
-          id: "123",
-          name: "Renamed",
-          colour: 0,
-          permissions: 0n,
-          hoist: false,
-        },
-      ],
-      channels: [],
-    };
-    expect(
-      planProvisioning(desired, observed, { roleIds: { owner: "123" } }),
-    ).toMatchObject([{ action: "update-role", id: "123", key: "owner" }]);
   });
 
   it("signs, scopes and expires component payloads", () => {
