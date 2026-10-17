@@ -699,6 +699,99 @@ describe.skipIf(!databaseUrl)("staff dashboard (real PostgreSQL)", () => {
     });
   });
 
+  describe("insights: notifications, summary and staff views", () => {
+    it("builds the customer feed from real events and tracks reading", async () => {
+      const customer = await person([], { mfa: false });
+      const ticket = await openTicket(customer, "technical");
+      const manager = await person([ROLE.manager]);
+      const reply = async (kind: string) =>
+        web("POST", `/web/staff/tickets/${ticket.id}/messages`, manager.token, {
+          requestId: randomUUID(),
+          expectedVersion: await version(manager, ticket.id),
+          kind,
+          content: `TEST ${kind}`,
+        });
+      await reply("note");
+      await reply("reply");
+      const feed = (
+        await web("GET", "/web/account/notifications", customer.token)
+      ).json();
+      expect(feed.unread).toBe(1); // the reply, never the note
+      expect(feed.notifications[0].href).toBe(`/account/support/${ticket.id}`);
+      await web("POST", "/web/account/notifications/seen", customer.token);
+      expect(
+        (await web("GET", "/web/account/notifications", customer.token)).json()
+          .unread,
+      ).toBe(0);
+      // Someone else's feed never shows it.
+      const other = await person([], { mfa: false });
+      expect(
+        (await web("GET", "/web/account/notifications", other.token)).json()
+          .notifications,
+      ).toEqual([]);
+      const summary = (
+        await web("GET", "/web/account/summary", customer.token)
+      ).json();
+      expect(summary).toMatchObject({ tickets: 1, products: 0 });
+    });
+
+    it("limits customers to managers and operations to administrators", async () => {
+      const support = await person([ROLE.support]);
+      const manager = await person([ROLE.manager]);
+      const admin = await person([ROLE.admin]);
+      expect(
+        (await web("GET", "/web/staff/customers", support.token)).statusCode,
+      ).toBe(403);
+      expect(
+        (await web("GET", "/web/staff/customers", manager.token)).statusCode,
+      ).toBe(200);
+      for (const path of ["operations", "catalog", "settings"]) {
+        expect(
+          (await web("GET", `/web/staff/${path}`, manager.token)).statusCode,
+        ).toBe(403);
+        expect(
+          (await web("GET", `/web/staff/${path}`, admin.token)).statusCode,
+        ).toBe(200);
+      }
+      const catalog = (
+        await web("GET", "/web/staff/catalog", admin.token)
+      ).json();
+      expect(catalog.paymentsLive).toBe(false);
+    });
+
+    it("lets administrators retry a failed delivery", async () => {
+      const admin = await person([ROLE.admin]);
+      const customer = await person([], { mfa: false });
+      await openTicket(customer, "technical");
+      const job = (
+        await pool.query<{ id: string }>(
+          "UPDATE notification_jobs SET status='failed',attempts=8,last_error='Discord 503' WHERE id=(SELECT id FROM notification_jobs WHERE tenant_id=$1 ORDER BY created_at DESC LIMIT 1) RETURNING id",
+          [tenantId],
+        )
+      ).rows[0]!;
+      const ops = (
+        await web("GET", "/web/staff/operations", admin.token)
+      ).json();
+      expect(ops.problems.map((p: { id: string }) => p.id)).toContain(job.id);
+      expect(
+        (
+          await web(
+            "POST",
+            `/web/staff/operations/jobs/${job.id}/retry`,
+            admin.token,
+          )
+        ).statusCode,
+      ).toBe(200);
+      const row = (
+        await pool.query(
+          "SELECT status,attempts FROM notification_jobs WHERE id=$1",
+          [job.id],
+        )
+      ).rows[0];
+      expect(row).toEqual({ status: "pending", attempts: 0 });
+    });
+  });
+
   it("never grants product ownership for being staff", async () => {
     const owner = await person([ROLE.owner]);
     await web("GET", "/web/staff/me", owner.token);

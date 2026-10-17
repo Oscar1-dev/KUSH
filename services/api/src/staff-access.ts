@@ -42,6 +42,8 @@ export const permissions = [
   "applications.review", // read and progress staff applications
   "applications.decide", // accept, issue NDA, approve, activate
   "agreements.manage", // NDA templates and signed agreements
+  "customers.view", // customer accounts list
+  "operations.view", // bot/outbox health, catalogue, orders, settings
 ] as const;
 export type Permission = (typeof permissions)[number];
 
@@ -61,6 +63,7 @@ const grants: Record<StaffRole, Permission[]> = {
     "commissions.assign",
     "team.view",
     "applications.review",
+    "customers.view",
   ],
   administrator: [
     "tickets.assigned",
@@ -77,6 +80,8 @@ const grants: Record<StaffRole, Permission[]> = {
     "applications.review",
     "applications.decide",
     "agreements.manage",
+    "customers.view",
+    "operations.view",
   ],
   owner: [...permissions],
 };
