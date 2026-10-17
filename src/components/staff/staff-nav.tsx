@@ -2,11 +2,33 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { FileSignature, Gauge, LifeBuoy, PenTool, ScrollText, ShieldAlert, UserPlus, Users } from "lucide-react";
+import {
+  Activity,
+  Contact,
+  FileSignature,
+  Gauge,
+  LifeBuoy,
+  Package,
+  PenTool,
+  ScrollText,
+  Settings,
+  ShieldAlert,
+  UserPlus,
+  Users,
+} from "lucide-react";
 
 import styles from "@/components/account/account.module.css";
 
-type Section = "tickets" | "reports" | "commissions" | "applications" | "agreements" | "team" | "audit";
+type Section =
+  | "tickets"
+  | "reports"
+  | "commissions"
+  | "applications"
+  | "agreements"
+  | "customers"
+  | "operations"
+  | "team"
+  | "audit";
 
 const links: { href: string; label: string; icon: typeof Gauge; section?: Section }[] = [
   { href: "/staff", label: "Overview", icon: Gauge },
@@ -15,8 +37,12 @@ const links: { href: string; label: string; icon: typeof Gauge; section?: Sectio
   { href: "/staff/commissions", label: "Commissions", icon: PenTool, section: "commissions" },
   { href: "/staff/applications", label: "Applications", icon: UserPlus, section: "applications" },
   { href: "/staff/agreements", label: "Agreements", icon: FileSignature, section: "agreements" },
+  { href: "/staff/customers", label: "Customers", icon: Contact, section: "customers" },
+  { href: "/staff/catalog", label: "Products & orders", icon: Package, section: "operations" },
   { href: "/staff/team", label: "Team", icon: Users, section: "team" },
+  { href: "/staff/operations", label: "Discord & operations", icon: Activity, section: "operations" },
   { href: "/staff/audit", label: "Audit log", icon: ScrollText, section: "audit" },
+  { href: "/staff/settings", label: "Settings", icon: Settings, section: "operations" },
 ];
 
 /** Shows only sections the API said this person may use. */

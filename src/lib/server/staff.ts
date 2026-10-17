@@ -22,7 +22,9 @@ export type Permission =
   | "audit.view"
   | "applications.review"
   | "applications.decide"
-  | "agreements.manage";
+  | "agreements.manage"
+  | "customers.view"
+  | "operations.view";
 
 export interface StaffMe {
   roles: StaffRole[];

@@ -17,6 +17,7 @@ import {
   staffApproveApplication,
   staffActivateApplication,
   staffTemplateStatus,
+  staffRetryJob,
 } from "@/app/staff/actions";
 import { FormMessage } from "@/components/account/form-message";
 import styles from "@/components/account/account.module.css";
@@ -35,6 +36,7 @@ const actions = {
   approveApplication: staffApproveApplication,
   activateApplication: staffActivateApplication,
   templateStatus: staffTemplateStatus,
+  retryJob: staffRetryJob,
 };
 
 /**

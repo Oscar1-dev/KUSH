@@ -81,6 +81,8 @@ export default async function StaffLayout({ children }: { children: React.ReactN
     ...(has(me, "commissions.assigned") || has(me, "commissions.all") ? (["commissions"] as const) : []),
     ...(has(me, "applications.review") ? (["applications"] as const) : []),
     ...(has(me, "agreements.manage") ? (["agreements"] as const) : []),
+    ...(has(me, "customers.view") ? (["customers"] as const) : []),
+    ...(has(me, "operations.view") ? (["operations"] as const) : []),
     ...(has(me, "team.view") ? (["team"] as const) : []),
     ...(has(me, "audit.view") ? (["audit"] as const) : []),
   ];

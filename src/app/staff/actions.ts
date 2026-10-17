@@ -171,3 +171,9 @@ export async function staffTemplateStatus(_p: ActionState, form: FormData) {
     return { error: "Confirm you have reviewed this text and approve it for signing." };
   return call(`/web/staff/agreement-templates/${templateId}/status`, { status }, "/staff/agreements", status === "active" ? "This version can now be issued." : "Version retired.");
 }
+
+export async function staffRetryJob(_p: ActionState, form: FormData) {
+  const jobId = id(form, "jobId");
+  if (!jobId) return { error: "Job not found." };
+  return call(`/web/staff/operations/jobs/${jobId}/retry`, {}, "/staff/operations", "Queued for another attempt.");
+}

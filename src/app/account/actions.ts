@@ -185,3 +185,9 @@ export async function regenerateRecoveryCodes(
     return { recoveryCodes, success: "New recovery codes created. The old ones no longer work." };
   });
 }
+
+export async function markNotificationsSeen() {
+  const session = await token();
+  await kushApi("/web/account/notifications/seen", { method: "POST", token: session }).catch(() => undefined);
+  revalidatePath("/account", "layout");
+}
