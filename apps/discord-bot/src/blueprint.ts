@@ -354,7 +354,7 @@ const programme = (holder: RoleKey): Access => ({
 const ownerOnly: Access = { view: [], bot: "observe" };
 
 export const channels: DesiredChannel[] = [
-  category("information", "INFORMATION", { publish: ["administrator"] }, [
+  category("information", "📌 INFORMATION", { publish: ["administrator"] }, [
     "01-start-here",
   ]),
   // Honeypot: deliberately writable by members. Compromised or spam accounts
@@ -402,7 +402,7 @@ export const channels: DesiredChannel[] = [
     ["01-start-here:status"],
   ),
 
-  category("community", "COMMUNITY", community, ["02-community"]),
+  category("community", "💬 COMMUNITY", community, ["02-community"]),
   text("community", "general", "General KUSH community chat.", community, [
     "02-community:general",
   ]),
@@ -426,7 +426,7 @@ export const channels: DesiredChannel[] = [
     ["02-community:suggestions"],
   ),
 
-  category("studio", "KUSH STUDIO", { publish: ["administrator"] }, [
+  category("studio", "🎨 KUSH STUDIO", { publish: ["administrator"] }, [
     "04-services-&-commissions",
   ]),
   text(
@@ -444,7 +444,7 @@ export const channels: DesiredChannel[] = [
     ["04-services-&-commissions:request-a-commission"],
   ),
 
-  category("products", "PRODUCTS", { publish: ["developer"] }, [
+  category("products", "📦 PRODUCTS", { publish: ["developer"] }, [
     "03-kush-products",
   ]),
   text(
@@ -492,7 +492,7 @@ export const channels: DesiredChannel[] = [
     ["03-kush-products:beta-programme"],
   ),
 
-  category("support", "SUPPORT", { publish: ["support-lead"] }, ["06-support"]),
+  category("support", "🛟 SUPPORT", { publish: ["support-lead"] }, ["06-support"]),
   text(
     "support",
     "create-ticket",
@@ -508,7 +508,7 @@ export const channels: DesiredChannel[] = [
     ["06-support:support-faq"],
   ),
 
-  category("partnerships", "PARTNERSHIPS", { publish: ["administrator"] }, [
+  category("partnerships", "🤝 PARTNERSHIPS", { publish: ["administrator"] }, [
     "05-marketplace-&-partners",
   ]),
   text(
@@ -538,7 +538,7 @@ export const channels: DesiredChannel[] = [
     programme("creative-partner"),
   ),
 
-  category("staff", "STAFF", { view: staffRoles }, ["08-staff-operations"]),
+  category("staff", "🛠️ STAFF", { view: staffRoles }, ["08-staff-operations"]),
   text(
     "staff",
     "staff-chat",
@@ -579,7 +579,7 @@ export const channels: DesiredChannel[] = [
   ),
 
   // The category stays bot-manageable so child channels can be created.
-  category("owner", "OWNER", { view: [] }, ["09-management"]),
+  category("owner", "👑 OWNER", { view: [] }, ["09-management"]),
   text(
     "owner",
     "owner-operations",
@@ -610,8 +610,8 @@ export const channels: DesiredChannel[] = [
 
   // Containers for bot-created private channels. Members are added per
   // ticket by member overwrites; Support Staff only through assignment.
-  category("tickets", "TICKETS", { view: ["support-lead"] }),
-  category("reports", "REPORTS", { view: ["moderator", "administrator"] }),
+  category("tickets", "🎫 TICKETS", { view: ["support-lead"] }),
+  category("reports", "🚨 REPORTS", { view: ["moderator", "administrator"] }),
 ];
 
 export const channelByKey = (key: string) =>
