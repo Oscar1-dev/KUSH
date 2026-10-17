@@ -11,6 +11,19 @@ export type Delivery =
   | { target: "channel"; channelKey: string; content: string }
   | { target: "ticket_channel"; channelId: string; content: string }
   | { target: "dm"; discordUserId: string; content: string }
+  | {
+      target: "create_application_channel";
+      applicationId: string;
+      number: number;
+      applicantDiscordId: string;
+      content: string;
+    }
+  | {
+      target: "grant_role";
+      discordUserId: string;
+      roleId: string;
+      reason: string;
+    }
   | { target: "none"; reason: string };
 
 export interface NotificationJob {
@@ -33,6 +46,17 @@ export type SendResult = "sent" | "undeliverable";
 export interface NotificationGateway {
   sendToChannel(channelId: string, content: string): Promise<SendResult>;
   sendDm(discordUserId: string, content: string): Promise<SendResult>;
+  createApplicationChannel(input: {
+    applicationId: string;
+    number: number;
+    applicantDiscordId: string;
+    content: string;
+  }): Promise<SendResult>;
+  grantRole(
+    discordUserId: string,
+    roleId: string,
+    reason: string,
+  ): Promise<SendResult>;
 }
 
 export interface NotificationStats {
@@ -82,6 +106,14 @@ export class NotificationWorker {
         return "skipped";
       case "dm":
         return this.gateway.sendDm(delivery.discordUserId, delivery.content);
+      case "create_application_channel":
+        return this.gateway.createApplicationChannel(delivery);
+      case "grant_role":
+        return this.gateway.grantRole(
+          delivery.discordUserId,
+          delivery.roleId,
+          delivery.reason,
+        );
       case "ticket_channel":
         return this.gateway.sendToChannel(delivery.channelId, delivery.content);
       case "channel": {
@@ -126,6 +158,7 @@ export class NotificationWorker {
 /** Discord API error codes that will never succeed on retry. */
 export const PERMANENT_DISCORD_ERRORS = new Set([
   10003, // Unknown channel
+  10007, // Unknown member (left the server)
   10013, // Unknown user
   50001, // Missing access
   50007, // Cannot send messages to this user (DMs closed)

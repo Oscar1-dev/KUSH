@@ -37,6 +37,16 @@ class FakeGateway implements NotificationGateway {
     this.sent.push({ to: `channel:${channelId}`, content });
     return this.result;
   }
+  async createApplicationChannel(input: { applicationId: string }) {
+    if (this.fail) throw this.fail;
+    this.sent.push({ to: `create:${input.applicationId}`, content: "" });
+    return this.result;
+  }
+  async grantRole(userId: string, roleId: string) {
+    if (this.fail) throw this.fail;
+    this.sent.push({ to: `grant:${userId}:${roleId}`, content: "" });
+    return this.result;
+  }
   async sendDm(userId: string, content: string) {
     if (this.fail) throw this.fail;
     this.sent.push({ to: `dm:${userId}`, content });

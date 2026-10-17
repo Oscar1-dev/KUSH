@@ -492,7 +492,9 @@ export const channels: DesiredChannel[] = [
     ["03-kush-products:beta-programme"],
   ),
 
-  category("support", "🛟 SUPPORT", { publish: ["support-lead"] }, ["06-support"]),
+  category("support", "🛟 SUPPORT", { publish: ["support-lead"] }, [
+    "06-support",
+  ]),
   text(
     "support",
     "create-ticket",
@@ -619,7 +621,8 @@ export const channelByKey = (key: string) =>
 
 // ---------------------------------------------------------- dynamic tickets
 
-export type TicketKind = "support" | "report";
+/** "application": staff applications (applicant + recruiters only). */
+export type TicketKind = "support" | "report" | "application";
 
 export interface DynamicOverwrite {
   principal: Principal | { memberId: string };
@@ -639,7 +642,13 @@ export function ticketChannelOverwrites(input: {
   assigneeIds: readonly string[];
 }): DynamicOverwrite[] {
   const staffRole: RoleKey[] =
-    input.kind === "report" ? ["moderator", "administrator"] : ["support-lead"];
+    input.kind === "report"
+      ? ["moderator", "administrator"]
+      : input.kind === "application"
+        ? // Applicants' personal details: administrators only, never support
+          // (managers review on the website; owner sees all channels).
+          ["administrator"]
+        : ["support-lead"];
   return [
     { principal: "everyone", allow: 0n, deny: P.ViewChannel },
     { principal: "kush-bot", allow: botWrite, deny: 0n },

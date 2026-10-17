@@ -455,6 +455,37 @@ export class DiscordApiClient {
     );
   }
 
+  async applicationChannels() {
+    return (
+      await this.#request<{
+        channels: {
+          applicationId: string;
+          channelId: string;
+          status: string;
+        }[];
+      }>("GET", `${this.#tenant}/application-channels`)
+    ).channels;
+  }
+
+  async recordApplicationChannel(applicationId: string, channelId: string) {
+    await this.#request(
+      "POST",
+      `${this.#tenant}/applications/${applicationId}/channel`,
+      { channelId },
+    );
+  }
+
+  async applicationMessage(
+    channelId: string,
+    input: { discordUserId: string; messageId: string; content: string },
+  ) {
+    await this.#request(
+      "POST",
+      `${this.#tenant}/application-channels/${channelId}/messages`,
+      input,
+    );
+  }
+
   async reconcileRoles() {
     return (
       await this.#request<{ queued: number }>(

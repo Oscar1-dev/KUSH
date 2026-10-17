@@ -81,7 +81,15 @@ export async function handleMessage(
   }
   const tokens = tokenise(message.content);
   if (!tokens) {
-    await mirrorTicketMessage(message, services);
+    // Application channels are recorded on the application, not a ticket.
+    const recorded = await services.applications?.mirror({
+      channelId: message.channelId,
+      authorId: message.author.id,
+      id: message.id,
+      content: message.content,
+      attachments: message.attachments.map((file) => file.name),
+    });
+    if (!recorded) await mirrorTicketMessage(message, services);
     return;
   }
   const resolved = router.resolve(tokens);

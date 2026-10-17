@@ -21,7 +21,6 @@ import { createLogger, type Logger } from "./runtime/logger.js";
 import { commands } from "./runtime/registry.js";
 import { embed } from "./panels.js";
 import { HoneypotTracker } from "./moderation/honeypot.js";
-import { DiscordTicketChannels } from "./tickets/discord-tickets.js";
 import {
   DiscordMemberGateway,
   backfillAcceptances,
@@ -36,6 +35,8 @@ import {
   type SendResult,
 } from "./automation/notifications.js";
 import { DiscordAPIError } from "discord.js";
+import { ApplicationChannels } from "./automation/applications.js";
+import { DiscordTicketChannels } from "./tickets/discord-tickets.js";
 import { configuredRoleId } from "./blueprint.js";
 import { TicketManager } from "./tickets/manager.js";
 
@@ -256,6 +257,27 @@ export async function startBot(): Promise<{
     }
   };
   const noMentions = { parse: [] as never[] };
+  const applications = new ApplicationChannels(
+    api,
+    new DiscordTicketChannels(guild),
+    {
+      guildId: config.guildId,
+      botRoleId: () =>
+        client.guilds.cache.get(config.guildId)?.members.me?.roles.botRole?.id,
+      roleIds: config.roleIds,
+      channelIds: config.channelIds,
+    },
+    log,
+  );
+  services.applications = applications;
+  await applications
+    .load()
+    .then((count) => log.info("applications.channels.loaded", { count }))
+    .catch((error: unknown) =>
+      log.warn("applications.channels.load_failed", {
+        error: error instanceof Error ? error.message : "unknown",
+      }),
+    );
   const notifications = new NotificationWorker(
     api,
     {
@@ -264,6 +286,17 @@ export async function startBot(): Promise<{
           const channel = await guild().channels.fetch(channelId);
           if (!channel?.isTextBased()) return "undeliverable";
           await channel.send({ content, allowedMentions: noMentions });
+        }),
+      createApplicationChannel: (input) =>
+        deliver(async () => {
+          await applications.create(input);
+        }),
+      grantRole: (discordUserId, roleId, reason) =>
+        deliver(async () => {
+          // Only on an administrator's explicit activation (see the API).
+          const member = await guild().members.fetch(discordUserId);
+          await member.roles.add(roleId, reason.slice(0, 100));
+          log.info("staff.role.granted", { discordUserId, roleId });
         }),
       sendDm: (discordUserId, content) =>
         deliver(async () => {

@@ -37,6 +37,8 @@ export interface BotServices {
   observeGuild(): Promise<ObservedGuild>;
   /** Wakes the role-sync worker (set once automation starts). */
   kickRoleSync?: () => void;
+  /** Private staff-application channels (set once the bot is running). */
+  applications?: import("../automation/applications.js").ApplicationChannels;
   /** Private ticket channels (mapping, access sync, recovery). */
   tickets: import("../tickets/manager.js").TicketManager;
   /** Role IDs of a guild member, or null if they are not in the guild. */
