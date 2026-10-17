@@ -132,7 +132,7 @@ export default function ClosingExperience() {
 
           <p>
             Not another list of buzzwords. These are
-            the standards we're building KUSH around.
+            the standards we&apos;re building KUSH around.
           </p>
         </div>
 
@@ -187,7 +187,7 @@ export default function ClosingExperience() {
         aria-labelledby="footer-heading"
       >
         <div className={styles.footerTop}>
-          <span>04 / WHAT'S NEXT</span>
+          <span>04 / WHAT&apos;S NEXT</span>
 
           <span className={styles.status}>
             <span className={styles.statusDot} />
@@ -221,7 +221,7 @@ export default function ClosingExperience() {
             </h2>
 
             <p className={styles.footerDescription}>
-              We're building KUSH from the ground up:
+              We&apos;re building KUSH from the ground up:
               software, creative experiences and connected
               systems. The studio and its products are
               still taking shape.

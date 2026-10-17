@@ -341,7 +341,7 @@ function DiscordVisual() {
             <span className={styles.ticketAvatar}>K</span>
             <div>
               <span>SUPPORT TEAM</span>
-              <p>Let's get this sorted for you.</p>
+              <p>Let&apos;s get this sorted for you.</p>
             </div>
           </div>
 

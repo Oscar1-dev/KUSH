@@ -32,8 +32,28 @@ Build: `pnpm build` · Typecheck: `pnpm typecheck` · Lint: `pnpm lint`.
 - Confirm actual service availability before publishing claims or accepting orders.
 - Add privacy/cookie information appropriate to the actual tracking and contact features you deploy.
 - Verify keyboard, mobile, reduced-motion, contrast and performance on actual devices.
-- No commerce, customer login, backend integration, or contact form is implemented yet.
+- Customer accounts are implemented (see below). No commerce or contact form yet.
 
 ## Note on Tauri and Rust
 
 Tauri/Rust remain appropriate for KUSH desktop products. A public browser website does not need them. Keep this frontend independently deployable, then integrate the KUSH API through documented, authenticated endpoints later.
+
+## KUSH accounts (sign-in, 2FA, dashboard)
+
+The website's server talks to the private KUSH API (`ALL PROJECTS/kush/services/api`).
+The browser only ever holds an HttpOnly session cookie; identity, sessions, 2FA and
+permissions are decided by the API. See `docs/INTEGRATION-AUDIT.md`.
+
+1. Copy `.env.example` to `.env.local` and fill in `KUSH_WEBSITE_SECRET`
+   (same value as the API's `KUSH_WEBSITE_SECRET`) and `KUSH_SITE_URL`.
+2. Start the API with `KUSH_WEBSITE_SECRET`, `KUSH_MFA_KEY`, `KUSH_SUPPORT_TENANT_ID`
+   and the `KUSH_DISCORD_CLIENT_ID` / `_CLIENT_SECRET` / `_REDIRECT_URI` settings.
+   The redirect URI is `<KUSH_SITE_URL>/auth/discord/callback` and must also be
+   added in the Discord Developer Portal.
+3. `pnpm dev`, then open `/sign-in`.
+
+Routes: `/sign-in`, `/sign-in/verify` (2FA), `/account/*` (customer dashboard),
+`/auth/discord` and `/auth/discord/callback` (OAuth2 server routes).
+
+To run a production build alongside `pnpm dev`, give it its own folder:
+`NEXT_DIST_DIR=.next-e2e pnpm build` (otherwise the two overwrite each other's `.next`).

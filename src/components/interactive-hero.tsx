@@ -48,6 +48,7 @@ export default function InteractiveHero() {
           <a href="#studio">STUDIO</a>
           <a href="#work">CAPABILITIES</a>
           <a href="#contact">STATUS</a>
+          <a href="/account">ACCOUNT</a>
         </nav>
 
         <a className="nav-cta" href="#studio">
