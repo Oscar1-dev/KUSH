@@ -50,6 +50,8 @@ export interface ObservedGuild {
   /** Also the @everyone role ID. */
   guildId: string;
   ownerId?: string;
+  /** Approximate member count, when observed live. */
+  memberCount?: number;
   /** Present when observed live: the bot's user and integration role. */
   bot?: { userId: string; roleId: string };
   roles: ObservedRole[];
@@ -78,6 +80,7 @@ export type ProvisionOperation =
       changes: string[];
     }
   | { action: "position-roles"; keys: RoleKey[] }
+  | { action: "update-everyone"; permissions: bigint; changes: string[] }
   | { action: "create-channel"; key: string; desired: DesiredChannel }
   | {
       action: "update-channel";
@@ -265,6 +268,29 @@ export function planProvisioning(
         id: current.id,
         key: wanted.key,
         desired: wanted,
+        changes,
+      });
+  }
+
+  // ---- @everyone guild-level permissions (unverified visitors).
+  const everyone = roleById.get(everyoneId);
+  if (everyone && everyone.permissions !== desired.everyonePermissions) {
+    const missing = desired.everyonePermissions & ~everyone.permissions;
+    const extra = everyone.permissions & ~desired.everyonePermissions;
+    const changes = [
+      ...(missing ? [`grant ${describeBits(missing)}`] : []),
+      ...(extra ? [`revoke ${describeBits(extra)}`] : []),
+    ];
+    if (desired.everyonePermissions & ~botPermissions)
+      conflicts.push({
+        resource: "role",
+        key: "everyone",
+        reason: `Owner must update @everyone manually (${changes.join("; ")}); the bot lacks some of these permissions.`,
+      });
+    else
+      operations.push({
+        action: "update-everyone",
+        permissions: desired.everyonePermissions,
         changes,
       });
   }
@@ -552,6 +578,7 @@ export interface GuildAdapter {
   observe(): Promise<ObservedGuild>;
   createRole(input: RoleInput, reason: string): Promise<string>;
   updateRole(id: string, input: RoleInput, reason: string): Promise<void>;
+  setEveryonePermissions(permissions: bigint, reason: string): Promise<void>;
   setRolePositions(
     positions: { id: string; position: number }[],
     reason: string,
@@ -663,6 +690,10 @@ export async function applyPlan(
         roleInput(operation.desired),
         applyReason,
       ),
+    );
+  for (const operation of ofKind("update-everyone"))
+    await step("update @everyone permissions", () =>
+      adapter.setEveryonePermissions(operation.permissions, applyReason),
     );
   for (const operation of ofKind("position-roles"))
     await step("position bot-managed roles", async () => {

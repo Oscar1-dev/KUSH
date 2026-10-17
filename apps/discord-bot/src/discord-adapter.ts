@@ -37,6 +37,7 @@ export class DiscordGuildAdapter implements GuildAdapter {
     return {
       guildId: this.guild.id,
       ownerId: this.guild.ownerId,
+      memberCount: this.guild.memberCount,
       ...(botRole ? { bot: { userId: me.id, roleId: botRole.id } } : {}),
       roles: roles.map((role) => ({
         id: role.id,
@@ -88,6 +89,10 @@ export class DiscordGuildAdapter implements GuildAdapter {
       hoist: input.hoist,
       reason,
     });
+  }
+
+  async setEveryonePermissions(permissions: bigint, reason: string) {
+    await this.guild.roles.everyone.setPermissions(permissions, reason);
   }
 
   async setRolePositions(

@@ -451,6 +451,33 @@ describe("v1 to v2 migration", () => {
   });
 });
 
+describe("@everyone permissions", () => {
+  it("reconciles default @everyone permissions to the blueprint", async () => {
+    const guild = FakeGuild.fresh(requiredBotPermissions);
+    guild.role("@everyone").permissions =
+      P.ViewChannel | P.SendMessages | P.CreateInstantInvite;
+    const plan = planProvisioning(blueprint, await guild.observe());
+    expect(plan.operations).toContainEqual(
+      expect.objectContaining({
+        action: "update-everyone",
+        permissions: blueprint.everyonePermissions,
+      }),
+    );
+    await applyPlan(plan, guild);
+    expect(guild.role("@everyone").permissions).toBe(
+      blueprint.everyonePermissions,
+    );
+  });
+
+  it("asks the owner when the bot lacks a bit @everyone needs", async () => {
+    const guild = FakeGuild.fresh(
+      requiredBotPermissions & ~P.UseApplicationCommands,
+    );
+    const plan = planProvisioning(blueprint, await guild.observe());
+    expect(plan.conflicts.map((item) => item.key)).toContain("everyone");
+  });
+});
+
 describe("snapshots and review gate", () => {
   it("round-trips a snapshot with bigint permissions", async () => {
     const guild = FakeGuild.fresh(requiredBotPermissions);

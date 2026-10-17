@@ -70,6 +70,11 @@ export class FakeGuild implements GuildAdapter {
     Object.assign(this.#role(id), input);
   }
 
+  async setEveryonePermissions(permissions: bigint): Promise<void> {
+    this.#record("setEveryonePermissions");
+    this.#role(this.state.guildId).permissions = permissions;
+  }
+
   async setRolePositions(
     positions: { id: string; position: number }[],
   ): Promise<void> {
