@@ -17,6 +17,7 @@ import {
 import { roles as blueprintRoles } from "../blueprint.js";
 import { ARGUMENTS_OPTION, slashOptions } from "../commands.js";
 import { verifyComponentId } from "../component-id.js";
+import { RULES_VERSION } from "../automation/membership.js";
 import { PUBLIC_COMMISSION_BUTTON } from "../content/channel-content.js";
 import { PUBLIC_TICKET_BUTTON } from "../panels.js";
 import { ticketCategory } from "../tickets/categories.js";
@@ -458,10 +459,14 @@ async function acceptRules(
     });
     return;
   }
+  // The database is the source of truth: record acceptance first, so a
+  // later rejoin restores Member automatically.
+  await services.api.acceptRules(interaction.user.id, RULES_VERSION);
   await interaction.member.roles.add(
     memberRoleId,
     "Accepted the community rules",
   );
+  services.kickRoleSync?.();
   services.audit({
     action: "onboarding.accept",
     actorId: interaction.user.id,

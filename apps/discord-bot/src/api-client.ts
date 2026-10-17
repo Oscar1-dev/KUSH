@@ -82,6 +82,21 @@ export interface TicketChannelRecord {
   assigneeDiscordUserId: string | null;
 }
 
+export interface DesiredRoles {
+  member: boolean;
+  verifiedCustomer: boolean;
+  productRoleIds: string[];
+  managedProductRoleIds: string[];
+  linked: boolean;
+}
+
+export interface RoleSyncJob {
+  id: string;
+  discordUserId: string;
+  reason: string;
+  attempts: number;
+}
+
 /** The Discord member on whose behalf a call is made. */
 export interface DiscordActor {
   discordUserId: string;
@@ -358,6 +373,71 @@ export class DiscordApiClient {
       `${this.#tenant}/ticket-channels/${channelId}`,
       { state },
     );
+  }
+
+  // ------------------------------------------------- membership and roles
+
+  async acceptRules(discordUserId: string, version: string) {
+    await this.#request(
+      "POST",
+      `${this.#tenant}/members/${discordUserId}/rules`,
+      { version },
+    );
+  }
+
+  async presence(discordUserId: string, present: boolean) {
+    await this.#request(
+      "POST",
+      `${this.#tenant}/members/${discordUserId}/presence`,
+      { present },
+    );
+  }
+
+  async desiredRoles(discordUserId: string) {
+    return this.#request<DesiredRoles>(
+      "GET",
+      `${this.#tenant}/members/${discordUserId}/roles`,
+    );
+  }
+
+  async memberEntitlements(discordUserId: string) {
+    return this.#request<{
+      linked: boolean;
+      entitlements: {
+        productName: string;
+        status: string;
+        expiresAt: string | null;
+      }[];
+    }>("GET", `${this.#tenant}/members/${discordUserId}/entitlements`);
+  }
+
+  async roleSyncJobs() {
+    return (
+      await this.#request<{ jobs: RoleSyncJob[] }>(
+        "GET",
+        `${this.#tenant}/role-sync/jobs`,
+      )
+    ).jobs;
+  }
+
+  async finishRoleSyncJob(
+    jobId: string,
+    outcome: { ok: true } | { ok: false; error: string },
+  ) {
+    await this.#request(
+      "POST",
+      `${this.#tenant}/role-sync/jobs/${jobId}`,
+      outcome,
+    );
+  }
+
+  async reconcileRoles() {
+    return (
+      await this.#request<{ queued: number }>(
+        "POST",
+        `${this.#tenant}/role-sync/reconcile`,
+      )
+    ).queued;
   }
 
   // ----------------------------------------------------- partner programme

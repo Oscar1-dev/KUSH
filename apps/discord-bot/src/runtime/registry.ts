@@ -228,17 +228,44 @@ export const commands: CommandDefinition[] = [
         components: [linkButton(signer(context), context.actor.userId)],
       }),
   },
-  pending(
-    ["licenses"],
-    "Customers",
-    "member",
-    "Your KUSH licences",
-    "!licenses",
-    ENTITLEMENTS,
-    {
-      aliases: [["licences"]],
+  {
+    path: ["licenses"],
+    aliases: [["licences"]],
+    group: "Customers",
+    authority: "everyone",
+    cooldownMs: 10_000,
+    summary: "Your KUSH products and licence status (sent privately)",
+    usage: "!licenses",
+    run: async (context) => {
+      const result = await context.services.api.memberEntitlements(
+        context.actor.userId,
+      );
+      const status: Record<string, string> = {
+        active: "active",
+        expired: "expired",
+        refunded: "refunded",
+        revoked: "revoked",
+      };
+      const lines = !result.linked
+        ? [
+            "Your Discord account is not linked to a KUSH account yet.",
+            "Generate a link code in your KUSH account, then type `!account`.",
+          ]
+        : result.entitlements.length
+          ? result.entitlements.map(
+              (item) =>
+                `**${item.productName}** — ${status[item.status] ?? item.status}${
+                  item.expiresAt && item.status === "active"
+                    ? ` (until <t:${Math.floor(new Date(item.expiresAt).getTime() / 1000)}:D>)`
+                    : ""
+                }`,
+            )
+          : ["Your linked KUSH account has no products yet."];
+      await privately(context, {
+        embeds: [embed("Your KUSH licences", lines.join("\n"))],
+      });
     },
-  ),
+  },
   pending(
     ["downloads"],
     "Customers",

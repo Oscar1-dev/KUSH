@@ -18,6 +18,15 @@ export interface HealthSnapshot {
     detail: string | null;
   };
   prefixCommands: { enabled: boolean; reason: string | null };
+  automation: {
+    memberEvents: boolean;
+    roleSync: {
+      processed: number;
+      failed: number;
+      lastRunAt: string | null;
+      lastError: string | null;
+    } | null;
+  };
   commands: { succeeded: number; failed: number };
   lastError: string | null;
 }
@@ -44,6 +53,8 @@ export class HealthMonitor {
     reason: "not started",
   };
   #commands = { succeeded: 0, failed: 0 };
+  #memberEvents = false;
+  #roleSync: (() => HealthSnapshot["automation"]["roleSync"]) | null = null;
   #lastError: string | null = null;
 
   constructor(
@@ -83,6 +94,12 @@ export class HealthMonitor {
   prefixCommands(enabled: boolean, reason: string | null = null) {
     this.#prefix = { enabled, reason };
   }
+  memberEvents(enabled: boolean) {
+    this.#memberEvents = enabled;
+  }
+  roleSync(stats: () => HealthSnapshot["automation"]["roleSync"]) {
+    this.#roleSync = stats;
+  }
   recordCommand(succeeded: boolean) {
     if (succeeded) this.#commands.succeeded += 1;
     else this.#commands.failed += 1;
@@ -110,6 +127,10 @@ export class HealthMonitor {
       guild: { state: this.#guild, id: this.guildId },
       api: { ...this.#api },
       prefixCommands: { ...this.#prefix },
+      automation: {
+        memberEvents: this.#memberEvents,
+        roleSync: this.#roleSync ? { ...this.#roleSync()! } : null,
+      },
       commands: { ...this.#commands },
       lastError: this.#lastError,
     };

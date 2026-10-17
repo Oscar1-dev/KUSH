@@ -22,6 +22,15 @@ import { commands } from "./runtime/registry.js";
 import { embed } from "./panels.js";
 import { HoneypotTracker } from "./moderation/honeypot.js";
 import { DiscordTicketChannels } from "./tickets/discord-tickets.js";
+import {
+  DiscordMemberGateway,
+  backfillAcceptances,
+  onMemberJoin,
+  onMemberLeave,
+  onMemberUpdate,
+} from "./automation/membership.js";
+import { RoleSyncWorker } from "./automation/role-sync.js";
+import { configuredRoleId } from "./blueprint.js";
 import { TicketManager } from "./tickets/manager.js";
 
 /** Exit code for configuration errors; the supervisor will not restart on it. */
@@ -54,7 +63,10 @@ async function connect(
   log: Logger,
 ): Promise<Client> {
   const base = [GatewayIntentBits.Guilds];
+  // Privileged: Server Members (join/leave/role automation) and Message
+  // Content (`!` commands). Both are enabled in the Developer Portal.
   const prefix = [
+    GatewayIntentBits.GuildMembers,
     GatewayIntentBits.GuildMessages,
     GatewayIntentBits.MessageContent,
   ];
@@ -63,14 +75,15 @@ async function connect(
     try {
       await client.login(token);
       health.prefixCommands(true);
+      health.memberEvents(true);
       return client;
     } catch (error) {
       await client.destroy();
       if (!isDisallowedIntents(error)) throw error;
       log.warn("gateway.intent.disallowed", {
-        intent: "MessageContent",
+        intent: "GuildMembers/MessageContent",
         action:
-          "Enable Message Content Intent in the Discord Developer Portal → Bot.",
+          "Enable Server Members and Message Content intents in the Discord Developer Portal → Bot.",
       });
     }
   }
@@ -197,6 +210,41 @@ export async function startBot(): Promise<{
   const honeypot = new HoneypotTracker();
   const dependencies = { router, services, honeypot };
 
+  // ------------------------------------------------- membership automation
+  const roleIds = () => ({
+    member: configuredRoleId(config.roleIds, "member"),
+    verifiedCustomer: configuredRoleId(config.roleIds, "verified-customer"),
+    restricted: configuredRoleId(config.roleIds, "restricted"),
+  });
+  const roleSync = new RoleSyncWorker(
+    api,
+    new DiscordMemberGateway(guild),
+    roleIds,
+    log,
+  );
+  health.roleSync(() => ({ ...roleSync.stats }));
+  const kick = () =>
+    void roleSync.tick().catch((error: unknown) =>
+      log.warn("roles.tick.failed", {
+        error: error instanceof Error ? error.message : "unknown",
+      }),
+    );
+  services.kickRoleSync = kick;
+  const membership = {
+    api,
+    log,
+    rulesChannelId:
+      config.channelIds["information:rules"] ??
+      config.channelIds["01-start-here:rules"],
+    kick,
+  };
+  const guarded = (label: string, work: () => Promise<unknown>) => () =>
+    void work().catch((error: unknown) =>
+      log.error(label, {
+        error: error instanceof Error ? error.message : "unknown",
+      }),
+    );
+
   const onReady = () => {
     health.gatewayReady();
     const available = client.guilds.cache.has(config.guildId);
@@ -207,12 +255,21 @@ export async function startBot(): Promise<{
     });
     if (!available) log.error("guild.unavailable", { guildId: config.guildId });
     // Restart recovery: rebuild ticket channel mappings and re-apply access.
-    else
+    else {
       void tickets.recover().catch((error: unknown) =>
         log.error("tickets.recover.failed", {
           error: error instanceof Error ? error.message : "unknown",
         }),
       );
+      // Catch up on anything missed while offline, then reconcile everyone.
+      guarded("roles.startup.failed", async () => {
+        if (health.snapshot().automation.memberEvents)
+          await backfillAcceptances(guild(), roleIds().member, membership);
+        const queued = await api.reconcileRoles();
+        log.info("roles.reconcile.queued", { queued });
+        await roleSync.tick();
+      })();
+    }
   };
   if (client.isReady()) onReady();
   client.on(Events.ClientReady, onReady);
@@ -246,6 +303,25 @@ export async function startBot(): Promise<{
     Events.InteractionCreate,
     (interaction) => void handleInteraction(interaction, dependencies),
   );
+  client.on(Events.GuildMemberAdd, (member) =>
+    member.guild.id === config.guildId
+      ? guarded("member.join.failed", () => onMemberJoin(member, membership))()
+      : undefined,
+  );
+  client.on(Events.GuildMemberUpdate, (before, after) =>
+    after.guild.id === config.guildId
+      ? guarded("member.update.failed", () =>
+          onMemberUpdate(before, after, membership),
+        )()
+      : undefined,
+  );
+  client.on(Events.GuildMemberRemove, (member) =>
+    member.guild.id === config.guildId
+      ? guarded("member.leave.failed", () =>
+          onMemberLeave(member, membership),
+        )()
+      : undefined,
+  );
 
   const checkApi = async () => {
     try {
@@ -264,6 +340,8 @@ export async function startBot(): Promise<{
       router.sweep();
       honeypot.sweep();
     }, 5 * 60_000),
+    // The queue is the source of retries; this poll drains it.
+    setInterval(kick, 15_000),
   ];
   const healthPort = Number(process.env.KUSH_BOT_HEALTH_PORT ?? 4321);
   const server = await startHealthServer(health, healthPort);
