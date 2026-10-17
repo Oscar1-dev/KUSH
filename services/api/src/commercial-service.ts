@@ -7,6 +7,7 @@ import {
   discordLinkStartSchema,
 } from "@kush/contracts";
 import { SupportError } from "./support-service.js";
+import { enqueueRoleSync } from "./entitlement-service.js";
 
 const LINK_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 
@@ -369,6 +370,8 @@ export class CommercialService {
         "DELETE FROM discord_link_attempts WHERE tenant_id=$1 AND discord_user_id=$2",
         [tenantId, input.discordUserId],
       );
+      // Same transaction: a verified link always gets its roles reconciled.
+      await enqueueRoleSync(client, tenantId, input.discordUserId, "linked");
       return {
         userId: match.user_id,
         discordUserId: input.discordUserId,

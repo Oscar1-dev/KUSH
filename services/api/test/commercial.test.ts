@@ -366,6 +366,11 @@ describe.skipIf(!databaseUrl)("M4 commercial request boundaries", () => {
         "DELETE FROM audit_events WHERE tenant_id=ANY($1::uuid[]) OR actor_id=ANY($2::uuid[])",
         [tenants, users],
       );
+      // Verified links queue a role sync (migration 0009).
+      await pool.query(
+        "DELETE FROM role_sync_jobs WHERE tenant_id=ANY($1::uuid[])",
+        [tenants],
+      );
       await pool.query(
         "DELETE FROM support_members WHERE tenant_id=ANY($1::uuid[])",
         [tenants],
