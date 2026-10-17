@@ -18,6 +18,13 @@ const fail = (status: number, message: string): never => {
 };
 const notFound = () => fail(404, "Not found");
 
+/** Developers may only move work along; managers run the whole journey. */
+const developerMoves: Record<string, string[]> = {
+  accepted: ["in_progress"],
+  in_progress: ["awaiting_review"],
+  awaiting_review: ["in_progress"],
+};
+
 export type TicketScope = "assigned" | "queue" | "all" | "reports";
 export type CommissionScope = "assigned" | "all";
 
@@ -191,7 +198,30 @@ export class StaffService {
        WHERE m.tenant_id=$1 AND m.ticket_id=$2 ORDER BY m.created_at,m.id`,
       [staff.tenantId, ticketId],
     );
-    return { ticket, messages: messages.rows };
+    const reports = await this.reportCategories(this.pool, staff.tenantId);
+    const working = this.mayWork(
+      staff,
+      { assigned_user_id: ticket.assignedUserId, category: ticket.category },
+      reports,
+    );
+    return {
+      ticket,
+      messages: messages.rows,
+      // What this person may do right now (the UI offers only these; every
+      // action is still re-checked when it is submitted).
+      actions: {
+        reply: working && ticket.status !== "closed",
+        claim:
+          can(staff, "tickets.queue") &&
+          !ticket.assignedUserId &&
+          !reports.includes(ticket.category),
+        assign: can(staff, "tickets.assign") && ticket.status !== "closed",
+        statuses:
+          working && ticket.status !== "closed"
+            ? [...(ticketTransitions[ticket.status] ?? []), "closed"]
+            : [],
+      },
+    };
   }
 
   /** Workers on a ticket: its assignee, or anyone who may see all tickets. */
@@ -463,7 +493,18 @@ export class StaffService {
         values,
       )
     ).rows[0];
-    return row ?? notFound();
+    if (!row) notFound();
+    const statuses = can(staff, "commissions.manage")
+      ? (commissionTransitions.commission[row.status] ?? [])
+      : (developerMoves[row.status] ?? []);
+    return {
+      ...row,
+      actions: {
+        statuses,
+        note: can(staff, "commissions.manage"),
+        assign: can(staff, "commissions.assign"),
+      },
+    };
   }
 
   /** Developers may only move work along; managers run the whole journey. */
@@ -476,11 +517,6 @@ export class StaffService {
       reviewNote?: string | null | undefined;
     },
   ) {
-    const developerMoves: Record<string, string[]> = {
-      accepted: ["in_progress"],
-      in_progress: ["awaiting_review"],
-      awaiting_review: ["in_progress"],
-    };
     return this.tx(async (c) => {
       const values: unknown[] = [staff.tenantId, id];
       const allowed = this.commissionScope(staff, values);
