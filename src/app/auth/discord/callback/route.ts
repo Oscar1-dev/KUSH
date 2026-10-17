@@ -2,11 +2,13 @@ import { NextResponse, type NextRequest } from "next/server";
 
 import { ApiError, kushApi } from "@/lib/server/kush-api";
 import {
+  NEXT_COOKIE,
   OAUTH_COOKIE,
   SESSION_COOKIE,
   SESSION_MAX_AGE,
   allow,
   cookieOptions,
+  safeNext,
   siteUrl,
   visitorKey,
 } from "@/lib/server/session";
@@ -19,6 +21,7 @@ export async function GET(request: NextRequest) {
   const finish = (path: string) => {
     const response = NextResponse.redirect(siteUrl(path));
     response.cookies.set(OAUTH_COOKIE, "", cookieOptions(0));
+    response.cookies.set(NEXT_COOKIE, "", cookieOptions(0));
     return response;
   };
   if (!allow(`oauth-callback:${await visitorKey()}`, 10, 60_000))
@@ -45,7 +48,12 @@ export async function GET(request: NextRequest) {
       },
     });
     // A brand-new session cookie on every sign-in (no session fixation).
-    const response = finish(result.mfaEnabled ? "/sign-in/verify" : "/account");
+    const next = safeNext(request.cookies.get(NEXT_COOKIE)?.value);
+    const response = finish(
+      result.mfaEnabled
+        ? `/sign-in/verify${next ? `?next=${encodeURIComponent(next)}` : ""}`
+        : (next ?? "/account"),
+    );
     response.cookies.set(SESSION_COOKIE, result.token, cookieOptions(SESSION_MAX_AGE));
     return response;
   } catch (error) {

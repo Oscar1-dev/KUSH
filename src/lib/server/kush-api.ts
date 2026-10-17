@@ -19,6 +19,8 @@ export class ApiError extends Error {
   constructor(
     readonly status: number,
     message: string,
+    /** Why staff access was refused (e.g. "mfa_required"), when given. */
+    readonly reason?: string,
   ) {
     super(message);
   }
@@ -53,8 +55,13 @@ export async function kushApi<T>(
   }
   const data = (await response.json().catch(() => ({}))) as {
     error?: string;
+    reason?: string;
   };
   if (!response.ok)
-    throw new ApiError(response.status, data.error ?? "Something went wrong");
+    throw new ApiError(
+      response.status,
+      data.error ?? "Something went wrong",
+      data.reason,
+    );
   return data as T;
 }

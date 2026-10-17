@@ -3,7 +3,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import styles from "@/components/account/account.module.css";
-import { currentAccount } from "@/lib/server/session";
+import { currentAccount, safeNext } from "@/lib/server/session";
 
 export const metadata: Metadata = {
   title: "Sign in — KUSH®",
@@ -26,7 +26,8 @@ export default async function SignInPage({
 }) {
   const params = await searchParams;
   const account = await currentAccount().catch(() => null);
-  if (account) redirect("/account");
+  const next = safeNext(typeof params.next === "string" ? params.next : null);
+  if (account) redirect(next ?? "/account");
   const error = typeof params.error === "string" ? messages[params.error] : undefined;
 
   return (
@@ -59,7 +60,7 @@ export default async function SignInPage({
         ) : null}
 
         {/* A plain link: the server starts the OAuth flow and sets the binding cookie. */}
-        <a href="/auth/discord" className={`${styles.button} ${styles.buttonDiscord}`} style={{ width: "100%" }}>
+        <a href={next ? `/auth/discord?next=${encodeURIComponent(next)}` : "/auth/discord"} className={`${styles.button} ${styles.buttonDiscord}`} style={{ width: "100%" }}>
           <DiscordGlyph />
           CONTINUE WITH DISCORD
         </a>

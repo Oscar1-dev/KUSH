@@ -1,11 +1,13 @@
 import { randomBytes } from "node:crypto";
-import { NextResponse } from "next/server";
+import { NextResponse, type NextRequest } from "next/server";
 
 import { ApiError, kushApi } from "@/lib/server/kush-api";
 import {
+  NEXT_COOKIE,
   OAUTH_COOKIE,
   allow,
   cookieOptions,
+  safeNext,
   siteUrl,
   visitorKey,
 } from "@/lib/server/session";
@@ -17,7 +19,7 @@ export const dynamic = "force-dynamic";
  * cookie; the API only accepts the callback from the browser holding it
  * (stops someone tricking a visitor into finishing *their* sign-in).
  */
-export async function GET() {
+export async function GET(request: NextRequest) {
   const failed = (reason: string) =>
     NextResponse.redirect(siteUrl(`/sign-in?error=${reason}`));
   if (!allow(`oauth-start:${await visitorKey()}`, 10, 60_000))
@@ -30,6 +32,8 @@ export async function GET() {
     );
     const response = NextResponse.redirect(authorizeUrl);
     response.cookies.set(OAUTH_COOKIE, binding, cookieOptions(10 * 60));
+    const next = safeNext(request.nextUrl.searchParams.get("next"));
+    if (next) response.cookies.set(NEXT_COOKIE, next, cookieOptions(10 * 60));
     return response;
   } catch (error) {
     return failed(

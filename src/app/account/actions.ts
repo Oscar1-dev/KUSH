@@ -10,6 +10,7 @@ import {
   SESSION_COOKIE,
   allow,
   cookieOptions,
+  safeNext,
   sessionToken,
   visitorKey,
 } from "@/lib/server/session";
@@ -151,7 +152,7 @@ export async function verifyMfa(
     });
     return { success: "verified" };
   });
-  if (result.success) redirect("/account");
+  if (result.success) redirect(safeNext(String(form.get("next") ?? "")) ?? "/account");
   return result;
 }
 

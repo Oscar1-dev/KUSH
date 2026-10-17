@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 
 import VerifyForm from "@/components/account/verify-form";
 import styles from "@/components/account/account.module.css";
-import { requireAccount } from "@/lib/server/session";
+import { requireAccount, safeNext } from "@/lib/server/session";
 
 export const metadata: Metadata = {
   title: "Two-factor check — KUSH®",
@@ -11,9 +11,16 @@ export const metadata: Metadata = {
 };
 export const dynamic = "force-dynamic";
 
-export default async function VerifyPage() {
+export default async function VerifyPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | undefined>>;
+}) {
+  const next = safeNext((await searchParams).next);
   const { account } = await requireAccount({ allowUnverified: true });
-  if (!account.mfa.enabled || account.session.mfaVerified) redirect("/account");
+  if (!account.mfa.enabled) redirect(next ? "/account/security" : "/account");
+  // Staff re-confirm 2FA periodically even on a verified session.
+  if (account.session.mfaVerified && !next?.startsWith("/staff")) redirect(next ?? "/account");
 
   return (
     <main className={styles.signIn}>
@@ -24,10 +31,11 @@ export default async function VerifyPage() {
           One more <em>step.</em>
         </h1>
         <p className={styles.lede} style={{ marginBottom: 24 }}>
-          Enter the 6-digit code from your authenticator app, or one of your
-          recovery codes.
+          {next?.startsWith("/staff")
+            ? "Staff tools need a recent two-factor check. Enter the code from your authenticator app."
+            : "Enter the 6-digit code from your authenticator app, or one of your recovery codes."}
         </p>
-        <VerifyForm />
+        <VerifyForm next={next} />
       </section>
     </main>
   );

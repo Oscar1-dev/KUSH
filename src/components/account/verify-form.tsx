@@ -7,10 +7,11 @@ import { signOut, verifyMfa, type ActionState } from "@/app/account/actions";
 import { FormMessage } from "./form-message";
 import styles from "./account.module.css";
 
-export default function VerifyForm() {
+export default function VerifyForm({ next }: { next: string | null }) {
   const [state, action, pending] = useActionState<ActionState, FormData>(verifyMfa, {});
   return (
     <form action={action} className={styles.form}>
+      {next ? <input type="hidden" name="next" value={next} /> : null}
       <label className={styles.label} htmlFor="verify-code">
         CODE
       </label>

@@ -108,3 +108,9 @@ export function siteUrl(path: string) {
   if (!origin) throw new Error("KUSH_SITE_URL is not configured");
   return new URL(path, origin);
 }
+
+/** Only same-site account/staff paths may be used as a post-sign-in target. */
+export function safeNext(value: string | null | undefined) {
+  return value && /^\/(staff|account)(\/[A-Za-z0-9/_-]*)?$/.test(value) ? value : null;
+}
+export const NEXT_COOKIE = `${prefix}kush_next`;
