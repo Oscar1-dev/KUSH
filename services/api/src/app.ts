@@ -1,8 +1,8 @@
 import Fastify, { type FastifyError } from "fastify";
 import cors from "@fastify/cors";
 import rateLimit from "@fastify/rate-limit";
-import { and, eq, gt, lt, desc, isNull } from "drizzle-orm";
-import { randomBytes } from "node:crypto";
+import { and, eq, gt, lt, desc, isNull, sql } from "drizzle-orm";
+import { randomBytes, timingSafeEqual } from "node:crypto";
 import { createDatabase, users, sessions, auditEvents } from "@kush/database";
 import type { User, LoginRequest } from "@kush/contracts";
 import { loginJsonSchema, loginSchema, responseSchemas } from "@kush/contracts";
@@ -14,14 +14,21 @@ import { registerSupport } from "./support.js";
 import { registerCommercial } from "./commercial.js";
 import { registerDiscord } from "./discord.js";
 import { registerEntitlements } from "./entitlements.js";
+import { registerAccounts } from "./accounts.js";
+import type { DiscordOAuth } from "./account-service.js";
 
-export async function buildApp(databaseUrl: string, logging = false) {
+export async function buildApp(
+  databaseUrl: string,
+  logging = false,
+  options: { oauth?: () => DiscordOAuth | null } = {},
+) {
   const app = Fastify({
     logger: logging
       ? {
           redact: [
             "req.headers.authorization",
             "req.headers.x-kush-discord-secret",
+            "req.headers.x-kush-website-secret",
             "req.body.password",
             "req.body.currentPassword",
             "res.headers.authorization",
@@ -122,7 +129,22 @@ export async function buildApp(databaseUrl: string, logging = false) {
     if (request.url !== "/health" && request.url !== "/openapi.json")
       reply.header("Cache-Control", "no-store");
   });
-  await app.register(rateLimit, { max: 100, timeWindow: "1 minute" });
+  await app.register(rateLimit, {
+    max: 100,
+    timeWindow: "1 minute",
+    // The website server relays every visitor from one IP and applies its
+    // own per-visitor limits, so its authenticated calls are exempt here.
+    allowList: (request) => {
+      const provided = request.headers["x-kush-website-secret"];
+      const expected = process.env.KUSH_WEBSITE_SECRET;
+      return (
+        typeof provided === "string" &&
+        !!expected &&
+        provided.length === expected.length &&
+        timingSafeEqual(Buffer.from(provided), Buffer.from(expected))
+      );
+    },
+  });
   let cleanupTimer: ReturnType<typeof setInterval> | undefined;
   const cleanup = async () => {
     await pool.query("DELETE FROM sessions WHERE expires_at <= now()");
@@ -166,6 +188,8 @@ export async function buildApp(databaseUrl: string, logging = false) {
           eq(sessions.tokenHash, tokenHash(authorization.slice(7))),
           gt(sessions.expiresAt, new Date()),
           eq(users.disabled, false),
+          // Website sessions only work through /web/ (website server).
+          sql`${sessions}.kind = 'api'`,
         ),
       )
       .limit(1);
@@ -180,6 +204,7 @@ export async function buildApp(databaseUrl: string, logging = false) {
       path.startsWith("/support/") ||
       path.startsWith("/commercial/") ||
       path.startsWith("/discord/") ||
+      path.startsWith("/web/") ||
       [
         "/health",
         "/openapi.json",
@@ -205,6 +230,7 @@ export async function buildApp(databaseUrl: string, logging = false) {
   await registerCommercial(app, { pool, authenticate });
   await registerDiscord(app, { pool });
   await registerEntitlements(app, { pool, authenticate });
+  await registerAccounts(app, { pool, ...options });
   app.get("/health", async (_request, reply) => {
     try {
       const readiness = await pool.query<{ applied: number }>(
@@ -222,13 +248,14 @@ export async function buildApp(databaseUrl: string, logging = false) {
             "0009_entitlements_role_sync",
             "0010_relinkable_discord_accounts",
             "0011_role_sync_generation",
+            "0012_web_accounts",
           ],
         ],
       );
-      if (readiness.rows[0]?.applied !== 11)
+      if (readiness.rows[0]?.applied !== 12)
         throw new Error("Database migrations pending");
       await pool.query(
-        "SELECT disabled FROM users LIMIT 0; SELECT created_at FROM sessions LIMIT 0; SELECT ip_hash FROM login_attempts LIMIT 0; SELECT endpoint FROM connection_profiles LIMIT 0; SELECT version FROM clients LIMIT 0; SELECT document FROM projects LIMIT 0; SELECT tenant_id FROM audit_events LIMIT 0; SELECT id FROM support_tenants LIMIT 0; SELECT create_category FROM support_tickets LIMIT 0; SELECT version FROM commercial_requests LIMIT 0; SELECT state FROM discord_account_links LIMIT 0; SELECT failed_attempts FROM discord_link_attempts LIMIT 0; SELECT kind FROM users LIMIT 0; SELECT user_id FROM discord_identities LIMIT 0; SELECT channel_id FROM discord_ticket_channels LIMIT 0; SELECT status FROM entitlements LIMIT 0; SELECT status FROM role_sync_jobs LIMIT 0; SELECT result FROM purchase_events LIMIT 0",
+        "SELECT disabled FROM users LIMIT 0; SELECT created_at FROM sessions LIMIT 0; SELECT ip_hash FROM login_attempts LIMIT 0; SELECT endpoint FROM connection_profiles LIMIT 0; SELECT version FROM clients LIMIT 0; SELECT document FROM projects LIMIT 0; SELECT tenant_id FROM audit_events LIMIT 0; SELECT id FROM support_tenants LIMIT 0; SELECT create_category FROM support_tickets LIMIT 0; SELECT version FROM commercial_requests LIMIT 0; SELECT state FROM discord_account_links LIMIT 0; SELECT failed_attempts FROM discord_link_attempts LIMIT 0; SELECT kind FROM users LIMIT 0; SELECT user_id FROM discord_identities LIMIT 0; SELECT channel_id FROM discord_ticket_channels LIMIT 0; SELECT status FROM entitlements LIMIT 0; SELECT status FROM role_sync_jobs LIMIT 0; SELECT result FROM purchase_events LIMIT 0; SELECT subject FROM user_identities LIMIT 0; SELECT kind FROM sessions LIMIT 0; SELECT enabled_at FROM mfa_totp LIMIT 0",
       );
       return { status: "ok", database: "connected" };
     } catch {
