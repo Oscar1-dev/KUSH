@@ -1,5 +1,14 @@
 import { createHash } from "node:crypto";
-import type { LinkingGateway, TicketGateway } from "./router.js";
+
+/** Non-2xx API response; `message` comes from the API and is safe to show. */
+export class ApiError extends Error {
+  constructor(
+    readonly status: number,
+    message: string,
+  ) {
+    super(message);
+  }
+}
 
 export interface DiscordApiClientOptions {
   baseUrl: string;
@@ -20,7 +29,7 @@ export function requestUuid(interactionId: string): string {
   return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
 }
 
-export class DiscordApiClient implements LinkingGateway, TicketGateway {
+export class DiscordApiClient {
   readonly #fetch: typeof fetch;
 
   constructor(private readonly options: DiscordApiClientOptions) {
@@ -51,7 +60,8 @@ export class DiscordApiClient implements LinkingGateway, TicketGateway {
       const error = (await response.json().catch(() => null)) as {
         error?: unknown;
       } | null;
-      throw new Error(
+      throw new ApiError(
+        response.status,
         typeof error?.error === "string"
           ? error.error
           : `KUSH API request failed (${response.status})`,
@@ -81,8 +91,6 @@ export class DiscordApiClient implements LinkingGateway, TicketGateway {
     const result = await this.#post<{ ticket: { number: number } }>(
       `/discord/integration/tenants/${this.options.tenantId}/tickets`,
       {
-        discordUserId: input.discordUserId,
-        guildId: input.guildId,
         requestId: requestUuid(input.interactionId),
         category: input.category,
         description: input.description,
@@ -90,5 +98,41 @@ export class DiscordApiClient implements LinkingGateway, TicketGateway {
       input,
     );
     return { reference: `#${result.ticket.number}` };
+  }
+
+  /** Partner programme application, stored as a commercial request of kind "partner". */
+  async submitApplication(input: {
+    discordUserId: string;
+    guildId: string;
+    interactionId: string;
+    programme: "seller" | "reseller";
+    title: string;
+    details: string;
+    url: string | null;
+  }): Promise<{ id: string; status: string }> {
+    const result = await this.#post<{
+      request: { id: string; status: string };
+    }>(
+      `/discord/integration/tenants/${this.options.tenantId}/commercial-requests`,
+      {
+        requestId: requestUuid(input.interactionId),
+        kind: "partner",
+        category: `${input.programme}-application`,
+        title: input.title,
+        details: input.details,
+        productUrl: input.url,
+      },
+      input,
+    );
+    return result.request;
+  }
+
+  /** Unauthenticated liveness probe of the KUSH API. */
+  async health(): Promise<boolean> {
+    const response = await this.#fetch(
+      new URL("/health", this.options.baseUrl),
+      { signal: AbortSignal.timeout(5_000) },
+    );
+    return response.ok;
   }
 }

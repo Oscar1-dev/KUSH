@@ -2,124 +2,93 @@ import {
   InteractionContextType,
   PermissionFlagsBits,
   SlashCommandBuilder,
+  SlashCommandSubcommandBuilder,
 } from "discord.js";
+import type { Authority } from "./runtime/authority.js";
+import type { CommandDefinition, SlashOption } from "./runtime/command.js";
+import { commands } from "./runtime/registry.js";
 
-const guild = (name: string, description: string) =>
-  new SlashCommandBuilder()
-    .setName(name)
-    .setDescription(description)
-    .setContexts(InteractionContextType.Guild);
-const subcommands = (
-  name: string,
-  description: string,
-  entries: readonly (readonly [string, string])[],
-  permission?: bigint,
-) => {
-  const command = guild(name, description);
-  if (permission !== undefined) command.setDefaultMemberPermissions(permission);
-  for (const [subcommand, detail] of entries)
-    command.addSubcommand((option) =>
-      option.setName(subcommand).setDescription(detail),
-    );
-  return command;
+/**
+ * Slash-command fallbacks generated from the `!` command registry, so both
+ * entry points share one definition. Replies to slash commands are
+ * ephemeral, which makes them the private fallback when DMs are closed.
+ */
+
+export const ARGUMENTS_OPTION = "arguments";
+
+/** Options a command takes in slash form. */
+export function slashOptions(command: CommandDefinition): SlashOption[] {
+  if (command.options) return command.options;
+  return /[<@]/.test(command.usage)
+    ? [{ name: ARGUMENTS_OPTION, description: "Command arguments" }]
+    : [];
+}
+
+// Visibility hint only; every handler re-checks authority itself.
+const defaultPermission: Partial<Record<Authority, bigint>> = {
+  administrator: PermissionFlagsBits.ManageGuild,
+  moderator: PermissionFlagsBits.ModerateMembers,
+  owner: PermissionFlagsBits.Administrator,
 };
 
-const info = [
-  ["help", "Show KUSH bot help"],
-  ["about", "About KUSH"],
-  ["services", "View KUSH services"],
-  ["products", "View verified product information"],
-  ["status", "View available service status"],
-  ["faq", "View common questions"],
-] as const;
-const ticket = [
-  ["open", "Open a private support request"],
-  ["list", "List support requests you can access"],
-  ["close", "Close a support request"],
-  ["reopen", "Reopen a support request"],
-  ["claim", "Claim an assigned support request"],
-  ["assign", "Assign authorised support staff"],
-  ["priority", "Set support priority"],
-  ["transcript", "Export an authorised transcript"],
-] as const;
-const commission = [
-  ["request", "Submit a commission request"],
-  ["status", "View commission status"],
-  ["quote", "Record an authorised quote"],
-  ["assign", "Assign commission staff"],
-  ["close", "Close a commission request"],
-] as const;
-const marketplace = [
-  ["browse", "Browse approved marketplace items"],
-  ["submit", "Submit an item for staff review"],
-  ["status", "View your submission status"],
-  ["approve", "Approve an item for publication"],
-  ["reject", "Reject a marketplace submission"],
-] as const;
-const partner = [
-  ["apply", "Submit a partner application"],
-  ["status", "View your application status"],
-  ["review", "Review a partner application"],
-] as const;
-const config = [
-  ["view", "View non-secret bot configuration"],
-  ["validate", "Validate the current guild configuration"],
-] as const;
+const describe = (text: string) => text.slice(0, 100);
 
-export const commandBuilders = [
-  ...info.map(([name, description]) => guild(name, description)),
-  subcommands("ticket", "Manage KUSH support requests", ticket),
-  subcommands("commission", "Manage KUSH commissions", commission),
-  subcommands(
-    "marketplace",
-    "Browse and manage reviewed marketplace submissions",
-    marketplace,
-  ),
-  subcommands("partner", "Manage KUSH partner applications", partner),
-  guild("suggest", "Submit a community suggestion"),
-  guild("report", "Privately report a concern"),
-  guild("roles", "Choose opt-in notification roles"),
-  guild("profile", "View your KUSH community profile"),
-  guild("warn", "Warn a member").setDefaultMemberPermissions(
-    PermissionFlagsBits.ModerateMembers,
-  ),
-  guild("timeout", "Temporarily restrict a member").setDefaultMemberPermissions(
-    PermissionFlagsBits.ModerateMembers,
-  ),
-  guild("untimeout", "Remove a member timeout").setDefaultMemberPermissions(
-    PermissionFlagsBits.ModerateMembers,
-  ),
-  guild("kick", "Remove a member from this server").setDefaultMemberPermissions(
-    PermissionFlagsBits.KickMembers,
-  ),
-  guild("ban", "Ban a member from this server").setDefaultMemberPermissions(
-    PermissionFlagsBits.BanMembers,
-  ),
-  guild(
-    "purge",
-    "Delete a confirmed range of messages",
-  ).setDefaultMemberPermissions(PermissionFlagsBits.ManageMessages),
-  guild(
-    "modhistory",
-    "View authorised moderation history",
-  ).setDefaultMemberPermissions(PermissionFlagsBits.ModerateMembers),
-  subcommands(
-    "config",
-    "Inspect KUSH bot configuration",
-    config,
-    PermissionFlagsBits.ManageGuild,
-  ),
-  guild("health", "Check bot and backend health").setDefaultMemberPermissions(
-    PermissionFlagsBits.ManageGuild,
-  ),
-  guild(
-    "sync",
-    "Reconcile authorised KUSH resources",
-  ).setDefaultMemberPermissions(PermissionFlagsBits.ManageGuild),
-  guild(
-    "audit",
-    "View authorised KUSH audit events",
-  ).setDefaultMemberPermissions(PermissionFlagsBits.ViewAuditLog),
-];
+const addOptions = (
+  builder: SlashCommandBuilder | SlashCommandSubcommandBuilder,
+  options: SlashOption[],
+) => {
+  for (const option of options)
+    builder.addStringOption((item) =>
+      item
+        .setName(option.name)
+        .setDescription(describe(option.description))
+        .setRequired(Boolean(option.required))
+        .setMaxLength(1_000),
+    );
+};
 
+export function buildSlashCommands(registry: readonly CommandDefinition[]) {
+  const roots = new Map<string, CommandDefinition[]>();
+  for (const command of registry)
+    roots.set(command.path[0]!, [
+      ...(roots.get(command.path[0]!) ?? []),
+      command,
+    ]);
+
+  return [...roots].map(([root, members]) => {
+    const builder = new SlashCommandBuilder()
+      .setName(root)
+      .setContexts(InteractionContextType.Guild);
+    const strictest = members
+      .map((member) => defaultPermission[member.authority])
+      .find((permission) => permission !== undefined);
+    if (
+      strictest !== undefined &&
+      members.every(
+        (member) => defaultPermission[member.authority] !== undefined,
+      )
+    )
+      builder.setDefaultMemberPermissions(strictest);
+
+    const single = members.find((member) => member.path.length === 1);
+    const nested = members.filter((member) => member.path.length === 2);
+    if (nested.length && !single) {
+      builder.setDescription(describe(`KUSH ${root} commands`));
+      for (const member of nested)
+        builder.addSubcommand((sub) => {
+          sub.setName(member.path[1]!).setDescription(describe(member.summary));
+          addOptions(sub, slashOptions(member));
+          return sub;
+        });
+    } else {
+      // A root that is itself a command (e.g. /guide); nested forms such as
+      // `!setup guide` are reached through their own root.
+      builder.setDescription(describe(single!.summary));
+      addOptions(builder, slashOptions(single!));
+    }
+    return builder;
+  });
+}
+
+export const commandBuilders = buildSlashCommands(commands);
 export const commandJson = commandBuilders.map((command) => command.toJSON());

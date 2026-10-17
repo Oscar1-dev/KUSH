@@ -29,13 +29,18 @@ describe("Discord bot foundation", () => {
     expect(new Set(names).size).toBe(names.length);
     expect(names).toEqual(
       expect.arrayContaining([
+        "help",
         "ticket",
-        "commission",
-        "marketplace",
+        "account",
+        "downloads",
+        "guide",
+        "setup",
+        "apply",
         "partner",
         "health",
         "sync",
-        "audit",
+        "permissions",
+        "entitlement",
       ]),
     );
   });
@@ -79,7 +84,7 @@ describe("Discord bot foundation", () => {
 
   it("builds an accessible support panel without fake live data", () => {
     const json = supportPanel().embeds[0]?.toJSON();
-    expect(json?.title).toBe("KUSH support centre");
+    expect(json?.title).toBe("KUSH support");
     expect(JSON.stringify(json)).not.toMatch(/online|uptime|customers served/i);
     expect(supportPanel().components).toHaveLength(1);
   });

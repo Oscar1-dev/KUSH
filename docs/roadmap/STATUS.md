@@ -86,7 +86,34 @@ Not verified: nothing was run against Discord. The discord.js adapter has never 
 
 Live state risk: on 17 October `.local/apply-discord.mjs` applied v1 to guild 1560640601676845146. It wrote empty overwrites on all categories and on the staff/management channels, which are probably visible to all members. This needs a read-only `discord:inspect` and an owner-approved v2 apply.
 
+Live read-only inspect (17 October, owner-approved) confirmed the exposure:
+
+- Staff, management and owner channels are visible to members. The guild has 2 members (the owner and the bot).
+- The bot role lacks bits the blueprint needs, and has Kick and Ban.
+- All human roles sit below the bot.
+- @everyone has Discord's default permissions.
+
+The planner now also reconciles @everyone guild permissions.
+
+## Discord Slice B — bot runtime — 17 October 2026
+
+Implemented: one command registry driving both the `!` prefix router and generated slash fallbacks. It includes:
+
+- Authority mapping and restricted-member limits.
+- DM or ephemeral private output, per-user and per-command rate limits, and incident-referenced error isolation.
+- An audit sink to #bot-log and redacted structured logs.
+- Signed user-scoped buttons and modals for tickets (category select → modal), account linking and partner applications. Applications go to the existing commercial-requests API.
+- Onboarding accept (assigns Member), a loopback health endpoint, Message Content intent fallback, and a crash supervisor with bounded backoff.
+- `!permissions` (live effective access) and `!sync` (live dry-run).
+
+Fixed: signed component IDs exceeded Discord's 100-character `custom_id` limit, so every signed button and modal would have been rejected. This includes the pre-existing v1 ticket modal. Fixed the ticket POST body, which only worked because Fastify silently strips unknown fields.
+
+Verified: 83 bot tests; lint, build and format pass. Live smoke test: gateway login, guild available, intent fallback (the Message Content intent is disabled in the portal) and the health endpoint.
+
+Pending (honest "not connected" responses): staff ticket commands, entitlements, downloads, guides, licences, products and moderation cases.
+
 Next:
 
-- Slice B: bot runtime — `!` prefix router (Message Content intent), rate limiting, health, restart recovery.
-- Slice C: private ticket channels backed by PostgreSQL.
+- Owner steps: bot role permissions, role order, and the Message Content intent.
+- Live v2 apply and guild command registration.
+- Slice C: private ticket channels with Discord-native tickets for unlinked members.

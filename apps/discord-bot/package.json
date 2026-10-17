@@ -8,6 +8,7 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "start": "node dist/index.js",
+    "start:supervised": "node dist/supervisor.js",
     "dev": "tsx src/index.ts",
     "discord:setup": "tsx src/cli.ts setup --dry-run",
     "discord:validate": "tsx src/cli.ts validate",
