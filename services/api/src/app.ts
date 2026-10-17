@@ -220,10 +220,12 @@ export async function buildApp(databaseUrl: string, logging = false) {
             "0007_discord_link_throttling",
             "0008_discord_tickets",
             "0009_entitlements_role_sync",
+            "0010_relinkable_discord_accounts",
+            "0011_role_sync_generation",
           ],
         ],
       );
-      if (readiness.rows[0]?.applied !== 9)
+      if (readiness.rows[0]?.applied !== 11)
         throw new Error("Database migrations pending");
       await pool.query(
         "SELECT disabled FROM users LIMIT 0; SELECT created_at FROM sessions LIMIT 0; SELECT ip_hash FROM login_attempts LIMIT 0; SELECT endpoint FROM connection_profiles LIMIT 0; SELECT version FROM clients LIMIT 0; SELECT document FROM projects LIMIT 0; SELECT tenant_id FROM audit_events LIMIT 0; SELECT id FROM support_tenants LIMIT 0; SELECT create_category FROM support_tickets LIMIT 0; SELECT version FROM commercial_requests LIMIT 0; SELECT state FROM discord_account_links LIMIT 0; SELECT failed_attempts FROM discord_link_attempts LIMIT 0; SELECT kind FROM users LIMIT 0; SELECT user_id FROM discord_identities LIMIT 0; SELECT channel_id FROM discord_ticket_channels LIMIT 0; SELECT status FROM entitlements LIMIT 0; SELECT status FROM role_sync_jobs LIMIT 0; SELECT result FROM purchase_events LIMIT 0",

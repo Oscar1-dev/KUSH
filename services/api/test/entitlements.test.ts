@@ -383,6 +383,30 @@ describe.skipIf(!databaseUrl)(
       expect((await pending(ids.bobDiscord!))[0]?.reason).toContain("unlinked");
     });
 
+    // Regression (live test): revoked links still held the unique Discord ID,
+    // so an unlinked Discord account could never be linked again.
+    it("lets an unlinked Discord account be linked again", async () => {
+      await link("bob", ids.bobDiscord!);
+      expect((await roles(ids.bobDiscord!)).linked).toBe(true);
+      // And one Discord account still cannot hold two verified links. (Uses
+      // the owner: starting a link code resets that user's own link.)
+      const started = await as(
+        "owner",
+        "POST",
+        `/discord/tenants/${tenantId}/links/start`,
+        {
+          requestId: randomUUID(),
+        },
+      );
+      const second = await bot("POST", "/links/complete", {
+        code: started.json().code,
+        discordUserId: ids.bobDiscord,
+        guildId: GUILD,
+      });
+      expect(second.statusCode).toBe(409);
+      await as("bob", "POST", `/discord/tenants/${tenantId}/links/revoke`);
+    });
+
     it("supports owner manual grants and revocations with sync", async () => {
       const grant = await as(
         "owner",
@@ -428,6 +452,7 @@ describe.skipIf(!databaseUrl)(
       await bot("POST", `/role-sync/jobs/${job.id}`, {
         ok: false,
         error: "Discord 503",
+        generation: job.generation,
       });
       const failed = await pool.query(
         "SELECT attempts,status,next_attempt_at>now() AS delayed FROM role_sync_jobs WHERE id=$1",
@@ -443,10 +468,51 @@ describe.skipIf(!databaseUrl)(
       expect(due.some((item: { id: string }) => item.id === job.id)).toBe(
         false,
       );
-      await bot("POST", `/role-sync/jobs/${job.id}`, { ok: true });
+      await bot("POST", `/role-sync/jobs/${job.id}`, {
+        ok: true,
+        generation: job.generation,
+      });
       const done = await pool.query(
         "SELECT status FROM role_sync_jobs WHERE id=$1",
         [job.id],
+      );
+      expect(done.rows[0].status).toBe("done");
+    });
+
+    // Regression (live test): a request queued while its job was in flight was
+    // coalesced into it and then lost when the worker marked the job done.
+    it("re-runs a job when a newer request arrives while it is in flight", async () => {
+      const member = discordId();
+      await bot("POST", `/members/${member}/rules`, { version: "v" });
+      const [inFlight] = (await bot("GET", "/role-sync/jobs"))
+        .json()
+        .jobs.filter(
+          (item: { discordUserId: string }) => item.discordUserId === member,
+        );
+      // A second change lands while the worker is still processing.
+      await bot("POST", `/members/${member}/presence`, { present: true });
+      await bot("POST", `/role-sync/jobs/${inFlight.id}`, {
+        ok: true,
+        generation: inFlight.generation,
+      });
+      const after = await pool.query(
+        "SELECT status,reason,generation FROM role_sync_jobs WHERE id=$1",
+        [inFlight.id],
+      );
+      expect(after.rows[0]).toMatchObject({ status: "pending" });
+      expect(after.rows[0].reason).toContain("joined");
+      expect(after.rows[0].generation).toBeGreaterThan(inFlight.generation);
+      // The newer generation completes normally.
+      const [again] = (await bot("GET", "/role-sync/jobs"))
+        .json()
+        .jobs.filter((item: { id: string }) => item.id === inFlight.id);
+      await bot("POST", `/role-sync/jobs/${again.id}`, {
+        ok: true,
+        generation: again.generation,
+      });
+      const done = await pool.query(
+        "SELECT status FROM role_sync_jobs WHERE id=$1",
+        [inFlight.id],
       );
       expect(done.rows[0].status).toBe("done");
     });

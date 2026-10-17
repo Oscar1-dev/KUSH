@@ -95,6 +95,8 @@ export interface RoleSyncJob {
   discordUserId: string;
   reason: string;
   attempts: number;
+  /** Bumped when a newer request is coalesced in; echoed back on completion. */
+  generation: number;
 }
 
 /** The Discord member on whose behalf a call is made. */
@@ -421,14 +423,13 @@ export class DiscordApiClient {
   }
 
   async finishRoleSyncJob(
-    jobId: string,
+    job: Pick<RoleSyncJob, "id" | "generation">,
     outcome: { ok: true } | { ok: false; error: string },
   ) {
-    await this.#request(
-      "POST",
-      `${this.#tenant}/role-sync/jobs/${jobId}`,
-      outcome,
-    );
+    await this.#request("POST", `${this.#tenant}/role-sync/jobs/${job.id}`, {
+      ...outcome,
+      generation: job.generation,
+    });
   }
 
   async reconcileRoles() {

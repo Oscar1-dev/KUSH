@@ -183,7 +183,11 @@ export async function registerEntitlements(
         params: params(["tenantId", "jobId"]),
         body: body(
           z
-            .object({ ok: z.boolean(), error: z.string().max(500).optional() })
+            .object({
+              ok: z.boolean(),
+              generation: z.number().int().min(0),
+              error: z.string().max(500).optional(),
+            })
             .strict(),
         ),
       },
@@ -192,12 +196,17 @@ export async function registerEntitlements(
       handle(reply, async () => {
         const guildId = bot(request);
         const input = z
-          .object({ ok: z.boolean(), error: z.string().optional() })
+          .object({
+            ok: z.boolean(),
+            generation: z.number().int(),
+            error: z.string().optional(),
+          })
           .parse(request.body);
         await service.finishJob(
           request.params.tenantId,
           guildId,
           request.params.jobId,
+          input.generation,
           input.ok
             ? { ok: true }
             : { ok: false, error: input.error ?? "unknown" },

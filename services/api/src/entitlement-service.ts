@@ -101,7 +101,7 @@ export async function enqueueRoleSync(
     `INSERT INTO role_sync_jobs(tenant_id,discord_user_id,reason)
      VALUES($1,$2,$3)
      ON CONFLICT (tenant_id,discord_user_id) WHERE status='pending'
-     DO UPDATE SET reason=left(role_sync_jobs.reason||','||EXCLUDED.reason,200),next_attempt_at=now(),updated_at=now()`,
+     DO UPDATE SET reason=left(role_sync_jobs.reason||','||EXCLUDED.reason,200),generation=role_sync_jobs.generation+1,next_attempt_at=now(),updated_at=now()`,
     [tenantId, discordUserId, reason],
   );
 }
@@ -244,8 +244,9 @@ export class EntitlementService {
       discord_user_id: string;
       reason: string;
       attempts: number;
+      generation: number;
     }>(
-      `SELECT id,discord_user_id,reason,attempts FROM role_sync_jobs
+      `SELECT id,discord_user_id,reason,attempts,generation FROM role_sync_jobs
        WHERE tenant_id=$1 AND status='pending' AND next_attempt_at<=now()
        ORDER BY next_attempt_at LIMIT $2`,
       [tenantId, limit],
@@ -255,6 +256,7 @@ export class EntitlementService {
       discordUserId: row.discord_user_id,
       reason: row.reason,
       attempts: row.attempts,
+      generation: row.generation,
     }));
   }
 
@@ -262,25 +264,29 @@ export class EntitlementService {
     tenantId: string,
     guildId: string,
     jobId: string,
+    generation: number,
     outcome: { ok: true } | { ok: false; error: string },
   ) {
     await this.tenant(this.pool, tenantId, guildId);
+    // Only the generation the worker processed may be completed or failed;
+    // a newer request queued meanwhile stays pending and runs again.
     if (outcome.ok) {
       await this.pool.query(
-        "UPDATE role_sync_jobs SET status='done',updated_at=now() WHERE tenant_id=$1 AND id=$2",
-        [tenantId, jobId],
+        "UPDATE role_sync_jobs SET status='done',updated_at=now() WHERE tenant_id=$1 AND id=$2 AND generation=$3",
+        [tenantId, jobId, generation],
       );
       return;
     }
     const current = await this.pool.query<{ attempts: number }>(
-      "SELECT attempts FROM role_sync_jobs WHERE tenant_id=$1 AND id=$2",
-      [tenantId, jobId],
+      "SELECT attempts FROM role_sync_jobs WHERE tenant_id=$1 AND id=$2 AND generation=$3",
+      [tenantId, jobId, generation],
     );
+    if (!current.rows[0]) return; // Superseded: already due again.
     const attempts = (current.rows[0]?.attempts ?? 0) + 1;
     await this.pool.query(
       `UPDATE role_sync_jobs SET attempts=$3,last_error=left($4,500),status=$5,
          next_attempt_at=now()+($6::integer * interval '1 millisecond'),updated_at=now()
-       WHERE tenant_id=$1 AND id=$2`,
+       WHERE tenant_id=$1 AND id=$2 AND generation=$7`,
       [
         tenantId,
         jobId,
@@ -288,6 +294,7 @@ export class EntitlementService {
         outcome.error,
         attempts >= MAX_SYNC_ATTEMPTS ? "failed" : "pending",
         retryDelayMs(attempts),
+        generation,
       ],
     );
   }

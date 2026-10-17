@@ -62,7 +62,7 @@ export interface MemberGateway {
 export interface RoleSyncApi {
   roleSyncJobs(): Promise<RoleSyncJob[]>;
   finishRoleSyncJob(
-    jobId: string,
+    job: Pick<RoleSyncJob, "id" | "generation">,
     outcome: { ok: true } | { ok: false; error: string },
   ): Promise<void>;
   desiredRoles(discordUserId: string): Promise<DesiredRoles>;
@@ -144,7 +144,7 @@ export class RoleSyncWorker {
             reason: job.reason,
           });
       }
-      await this.api.finishRoleSyncJob(job.id, { ok: true });
+      await this.api.finishRoleSyncJob(job, { ok: true });
       this.stats.processed += 1;
     } catch (error) {
       const message = error instanceof Error ? error.message : "unknown";
@@ -155,7 +155,7 @@ export class RoleSyncWorker {
         error: message,
       });
       await this.api
-        .finishRoleSyncJob(job.id, { ok: false, error: message })
+        .finishRoleSyncJob(job, { ok: false, error: message })
         .catch(() => undefined);
     }
   }

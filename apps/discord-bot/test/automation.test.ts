@@ -126,11 +126,11 @@ class FakeApi implements RoleSyncApi {
     return due;
   }
   async finishRoleSyncJob(
-    id: string,
+    job: { id: string; generation: number },
     outcome: { ok: true } | { ok: false; error: string },
   ) {
     this.finished.push({
-      id,
+      id: job.id,
       ok: outcome.ok,
       ...(outcome.ok ? {} : { error: outcome.error }),
     });
@@ -156,6 +156,7 @@ const job = (discordUserId: string, reason = "linked"): RoleSyncJob => ({
   discordUserId,
   reason,
   attempts: 0,
+  generation: 0,
 });
 
 describe("role sync worker", () => {
