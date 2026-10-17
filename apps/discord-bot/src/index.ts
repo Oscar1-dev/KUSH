@@ -289,6 +289,9 @@ export async function startBot(): Promise<{
         }),
       createApplicationChannel: (input) =>
         deliver(async () => {
+          // Not in the server: Discord rejects a member overwrite for them.
+          // Throws Unknown Member (permanent); the website flow still works.
+          await guild().members.fetch(input.applicantDiscordId);
           await applications.create(input);
         }),
       grantRole: (discordUserId, roleId, reason) =>
