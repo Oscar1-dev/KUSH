@@ -19,6 +19,8 @@ export type NotificationKind =
   | "ticket.status"
   | "commission.created"
   | "commission.status"
+  | "commission.quote"
+  | "commission.milestone"
   | "application.created"
   | "application.channel"
   | "application.message"
@@ -120,6 +122,41 @@ export class NotificationService {
       job.kind === "staff.role_grant"
     )
       return this.renderRecruitment(job);
+    if (
+      job.kind === "commission.quote" ||
+      job.kind === "commission.milestone"
+    ) {
+      const r = (
+        await c.query<{
+          category: string;
+          requester_id: string;
+          title: string;
+        }>(
+          "SELECT category,requester_id,title FROM commercial_requests WHERE tenant_id=$1 AND id=$2",
+          [job.tenant_id, job.subject_id],
+        )
+      ).rows[0];
+      if (!r) return { target: "none", reason: "commission no longer exists" };
+      if (job.kind === "commission.quote")
+        // To the team; category and link only (no customer details).
+        return {
+          target: "channel",
+          channelKey: "staff:commission-management",
+          content: `💬 A customer **${job.detail.decision === "accept" ? "accepted" : "declined"}** the quote for a **${r.category}** commission: ${site()}/staff/commissions/${job.subject_id}`,
+        };
+      const discordUserId = await this.customerDiscord(
+        c,
+        job.tenant_id,
+        r.requester_id,
+      );
+      if (!discordUserId)
+        return { target: "none", reason: "customer has no linked Discord" };
+      return {
+        target: "dm",
+        discordUserId,
+        content: `A milestone was completed on your KUSH commission **${clip(r.title, 120)}**. ${site()}/account/commissions/${job.subject_id}`,
+      };
+    }
     if (job.kind === "commission.created" || job.kind === "commission.status") {
       const r = (
         await c.query<{

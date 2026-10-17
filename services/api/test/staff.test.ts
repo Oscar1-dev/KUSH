@@ -792,6 +792,213 @@ describe.skipIf(!databaseUrl)("staff dashboard (real PostgreSQL)", () => {
     });
   });
 
+  describe("commission workflow: conversation, quotes, milestones", () => {
+    const newCommission = async (customer: Person) =>
+      (
+        await web("POST", "/web/workspace/commissions", customer.token, {
+          requestId: randomUUID(),
+          category: "website",
+          title: "TEST shop website",
+          details: "TEST: a small shop website with ten products.",
+          approximateBudget: null,
+          preferredTimeframe: null,
+        })
+      ).json().commission as { id: string };
+    const staffView = async (who: Person, id: string) =>
+      (await web("GET", `/web/staff/commissions/${id}`, who.token)).json();
+    const move = async (who: Person, id: string, status: string) =>
+      web("POST", `/web/staff/commissions/${id}`, who.token, {
+        expectedVersion: (await staffView(who, id)).commission.version,
+        status,
+      });
+
+    it("links a conversation ticket and runs quote acceptance", async () => {
+      const customer = await person([], { mfa: false });
+      const manager = await person([ROLE.manager]);
+      const created = await newCommission(customer);
+      const mine = (
+        await web(
+          "GET",
+          `/web/workspace/commissions/${created.id}`,
+          customer.token,
+        )
+      ).json();
+      expect(mine.ticketId).toBeTruthy();
+      // The linked ticket is a normal conversation the customer can open.
+      expect(
+        (
+          await web(
+            "GET",
+            `/web/workspace/tickets/${mine.ticketId}`,
+            customer.token,
+          )
+        ).statusCode,
+      ).toBe(200);
+
+      const quote = (payload: object = {}) =>
+        web(
+          "POST",
+          `/web/staff/commissions/${created.id}/quotes`,
+          manager.token,
+          {
+            amount: "£450",
+            summary: "TEST: design, build and launch, two revision rounds.",
+            timeframe: "4 weeks",
+            ...payload,
+          },
+        );
+      expect((await quote()).statusCode).toBe(409); // still "submitted"
+      await move(manager, created.id, "reviewing");
+      const proposed = await quote();
+      expect(proposed.statusCode).toBe(200);
+      expect((await quote()).statusCode).toBe(409); // one open quote at a time
+      const quoteId = proposed.json().quoteId as string;
+
+      const view = (
+        await web(
+          "GET",
+          `/web/workspace/commissions/${created.id}`,
+          customer.token,
+        )
+      ).json();
+      expect(view.commission.status).toBe("quoted");
+      expect(view.quotes[0]).toMatchObject({
+        amount: "£450",
+        status: "proposed",
+      });
+
+      // Only the requester can decide.
+      const stranger = await person([], { mfa: false });
+      expect(
+        (
+          await web(
+            "POST",
+            `/web/workspace/commissions/${created.id}/quotes/${quoteId}/accept`,
+            stranger.token,
+            {},
+          )
+        ).statusCode,
+      ).toBe(404);
+      const accepted = await web(
+        "POST",
+        `/web/workspace/commissions/${created.id}/quotes/${quoteId}/accept`,
+        customer.token,
+        {},
+      );
+      expect(accepted.json()).toEqual({ status: "accepted" });
+      expect(
+        (
+          await web(
+            "POST",
+            `/web/workspace/commissions/${created.id}/quotes/${quoteId}/accept`,
+            customer.token,
+            {},
+          )
+        ).statusCode,
+      ).toBe(409);
+      const announce = await pool.query(
+        "SELECT detail FROM notification_jobs WHERE kind='commission.quote' AND subject_id=$1",
+        [created.id],
+      );
+      expect(announce.rows[0].detail).toEqual({ decision: "accept" });
+    });
+
+    it("sends a declined quote back to review", async () => {
+      const customer = await person([], { mfa: false });
+      const manager = await person([ROLE.manager]);
+      const created = await newCommission(customer);
+      await move(manager, created.id, "reviewing");
+      const { quoteId } = (
+        await web(
+          "POST",
+          `/web/staff/commissions/${created.id}/quotes`,
+          manager.token,
+          {
+            amount: "£300",
+            summary: "TEST: a smaller first version.",
+            timeframe: null,
+          },
+        )
+      ).json();
+      await web(
+        "POST",
+        `/web/workspace/commissions/${created.id}/quotes/${quoteId}/decline`,
+        customer.token,
+        { reason: "TEST: budget too tight" },
+      );
+      const view = (
+        await web(
+          "GET",
+          `/web/workspace/commissions/${created.id}`,
+          customer.token,
+        )
+      ).json();
+      expect(view.commission.status).toBe("reviewing");
+      expect(view.quotes[0]).toMatchObject({
+        status: "declined",
+        declineReason: "TEST: budget too tight",
+      });
+    });
+
+    it("lets only the assigned developer or managers manage milestones", async () => {
+      const customer = await person([], { mfa: false });
+      const manager = await person([ROLE.manager]);
+      const developer = await person([ROLE.developer]);
+      const otherDev = await person([ROLE.developer]);
+      await web("GET", "/web/staff/me", developer.token);
+      const created = await newCommission(customer);
+      await web(
+        "POST",
+        `/web/staff/commissions/${created.id}/assign`,
+        manager.token,
+        {
+          expectedVersion: (await staffView(manager, created.id)).commission
+            .version,
+          userId: developer.userId,
+        },
+      );
+      const add = (who: Person) =>
+        web(
+          "POST",
+          `/web/staff/commissions/${created.id}/milestones`,
+          who.token,
+          { title: "TEST homepage design" },
+        );
+      expect((await add(otherDev)).statusCode).toBe(404);
+      const added = await add(developer);
+      expect(added.statusCode).toBe(200);
+      const milestoneId = added.json().milestoneId as string;
+      expect(
+        (
+          await web(
+            "POST",
+            `/web/staff/commissions/${created.id}/milestones/${milestoneId}`,
+            developer.token,
+            { status: "done" },
+          )
+        ).statusCode,
+      ).toBe(200);
+      const view = (
+        await web(
+          "GET",
+          `/web/workspace/commissions/${created.id}`,
+          customer.token,
+        )
+      ).json();
+      expect(view.milestones).toMatchObject([
+        { title: "TEST homepage design", status: "done" },
+      ]);
+      const feed = (
+        await web("GET", "/web/account/notifications", customer.token)
+      ).json();
+      expect(
+        feed.notifications.some((n: { text: string }) =>
+          n.text.includes("milestone"),
+        ),
+      ).toBe(true);
+    });
+  });
+
   it("never grants product ownership for being staff", async () => {
     const owner = await person([ROLE.owner]);
     await web("GET", "/web/staff/me", owner.token);

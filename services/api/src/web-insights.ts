@@ -84,6 +84,12 @@ function feedItem(row: FeedRow) {
             href: `/account/commissions/${row.subject_id}`,
           }
         : null;
+    case "commission.milestone":
+      return {
+        ...base,
+        text: `A milestone was completed on “${row.title}”`,
+        href: `/account/commissions/${row.subject_id}`,
+      };
     case "agreement.issued":
       return {
         ...base,
@@ -131,7 +137,7 @@ export async function registerInsights(
        WHERE j.tenant_id=$1 AND (
          (j.kind='ticket.message' AND j.detail->>'audience'='customer' AND t.customer_id=$2) OR
          (j.kind='ticket.status' AND t.customer_id=$2) OR
-         (j.kind='commission.status' AND r.requester_id=$2) OR
+         ((j.kind='commission.status' OR j.kind='commission.milestone') AND r.requester_id=$2) OR
          ((j.kind='application.status' OR j.kind='agreement.issued') AND a.user_id=$2))
        ORDER BY j.created_at DESC LIMIT 60`,
       [tenantOf(), userId],

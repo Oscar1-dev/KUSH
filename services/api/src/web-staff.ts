@@ -11,6 +11,7 @@ import {
   type StaffContext,
 } from "./staff-access.js";
 import { StaffService } from "./staff-service.js";
+import { CommissionWorkflow } from "./commission-workflow.js";
 
 const uuidParam = (name: string) => ({
   type: "object",
@@ -36,6 +37,7 @@ export async function registerStaff(
   const cached = members ? null : discordMembersFromEnv();
   const access = new StaffAccess(pool, resolvedMembers);
   const staff = new StaffService(pool, access);
+  const workflow = new CommissionWorkflow(pool);
   const { signedIn, body } = web;
 
   /**
@@ -203,12 +205,93 @@ export async function registerStaff(
   app.get(
     "/web/staff/commissions/:requestId",
     { schema: { params: uuidParam("requestId") } },
-    asStaff(async (ctx, request) => ({
-      commission: await staff.commission(
+    asStaff(async (ctx, request) => {
+      const requestId = params<{ requestId: string }>(request).requestId;
+      // staff.commission() enforces the scope; extras only follow it.
+      const commission = await staff.commission(ctx, requestId);
+      return {
+        commission,
+        ...(await workflow.extras(ctx.tenantId, requestId)),
+      };
+    }),
+  );
+
+  const quoteSchema = z
+    .object({
+      amount: z.string().trim().min(1).max(60),
+      summary: z.string().trim().min(10).max(5000),
+      timeframe: z.string().trim().max(200).nullable(),
+    })
+    .strict();
+  const milestoneSchema = z
+    .object({ title: z.string().trim().min(2).max(120) })
+    .strict();
+  const milestoneStatusSchema = z
+    .object({ status: z.enum(["planned", "in_progress", "done"]) })
+    .strict();
+  const two = (a: string, b: string) => ({
+    type: "object",
+    properties: {
+      [a]: { type: "string", format: "uuid" },
+      [b]: { type: "string", format: "uuid" },
+    },
+    required: [a, b],
+    additionalProperties: false,
+  });
+
+  app.post(
+    "/web/staff/commissions/:requestId/quotes",
+    { schema: { params: uuidParam("requestId"), body: body(quoteSchema) } },
+    asStaff((ctx, request) =>
+      workflow.propose(
         ctx,
         params<{ requestId: string }>(request).requestId,
+        quoteSchema.parse(request.body),
       ),
-    })),
+    ),
+  );
+  app.post(
+    "/web/staff/commissions/:requestId/quotes/:quoteId/withdraw",
+    { schema: { params: two("requestId", "quoteId") } },
+    asStaff((ctx, request) => {
+      const { requestId, quoteId } = params<{
+        requestId: string;
+        quoteId: string;
+      }>(request);
+      return workflow.withdraw(ctx, requestId, quoteId);
+    }),
+  );
+  app.post(
+    "/web/staff/commissions/:requestId/milestones",
+    { schema: { params: uuidParam("requestId"), body: body(milestoneSchema) } },
+    asStaff((ctx, request) =>
+      workflow.addMilestone(
+        ctx,
+        params<{ requestId: string }>(request).requestId,
+        milestoneSchema.parse(request.body).title,
+      ),
+    ),
+  );
+  app.post(
+    "/web/staff/commissions/:requestId/milestones/:milestoneId",
+    {
+      schema: {
+        params: two("requestId", "milestoneId"),
+        body: body(milestoneStatusSchema),
+      },
+    },
+    asStaff((ctx, request) => {
+      const { requestId, milestoneId } = params<{
+        requestId: string;
+        milestoneId: string;
+      }>(request);
+      return workflow.setMilestone(
+        ctx,
+        requestId,
+        milestoneId,
+        milestoneStatusSchema.parse(request.body).status,
+      );
+    }),
   );
 
   app.post(

@@ -6,6 +6,7 @@ import type { WebHelpers } from "./accounts.js";
 import { CommercialService } from "./commercial-service.js";
 import { SupportError, SupportService } from "./support-service.js";
 import { enqueueNotification } from "./notifications.js";
+import { CommissionWorkflow } from "./commission-workflow.js";
 
 /**
  * Customer workspace for the website: the signed-in customer's own
@@ -29,6 +30,7 @@ export async function registerWorkspace(
 ) {
   const support = new SupportService(pool);
   const commercial = new CommercialService(pool);
+  const workflow = new CommissionWorkflow(pool);
   const { signedIn, body } = web;
   const tenantId = () => {
     const id = process.env.KUSH_SUPPORT_TENANT_ID;
@@ -97,31 +99,71 @@ export async function registerWorkspace(
   app.get(
     "/web/workspace/commissions/:requestId",
     { schema: { params: uuidParam("requestId") } },
-    signedIn(async (session, request) => ({
-      commission: publicCommission(
-        await commercial.get(
-          await customer(session),
-          tenantId(),
-          params<{ requestId: string }>(request).requestId,
-        ),
-      ),
-    })),
+    signedIn(async (session, request) => {
+      const requestId = params<{ requestId: string }>(request).requestId;
+      const commission = await commercial.get(
+        await customer(session),
+        tenantId(),
+        requestId,
+      );
+      return {
+        commission: publicCommission(commission),
+        ...(await workflow.extras(tenantId(), requestId)),
+      };
+    }),
   );
+
+  const decisionSchema = z
+    .object({ reason: z.string().trim().max(2000).optional() })
+    .strict();
+  for (const decision of ["accept", "decline"] as const)
+    app.post(
+      `/web/workspace/commissions/:requestId/quotes/:quoteId/${decision}`,
+      {
+        schema: {
+          params: {
+            type: "object",
+            properties: {
+              requestId: { type: "string", format: "uuid" },
+              quoteId: { type: "string", format: "uuid" },
+            },
+            required: ["requestId", "quoteId"],
+            additionalProperties: false,
+          },
+          body: body(decisionSchema),
+        },
+      },
+      signedIn(async (session, request) => {
+        const user = await customer(session);
+        const { requestId, quoteId } = params<{
+          requestId: string;
+          quoteId: string;
+        }>(request);
+        return workflow.decide(
+          user.id,
+          tenantId(),
+          requestId,
+          quoteId,
+          decision,
+          decisionSchema.parse(request.body ?? {}).reason ?? null,
+        );
+      }),
+    );
 
   app.post(
     "/web/workspace/commissions",
     { schema: { body: body(commissionSchema) } },
     signedIn(async (session, request) => {
       const input = commissionSchema.parse(request.body);
-      const created = await commercial.create(
-        await customer(session),
-        tenantId(),
-        {
-          ...input,
-          kind: "commission",
-          productUrl: null,
-        },
-      );
+      const user = await customer(session);
+      const created = await commercial.create(user, tenantId(), {
+        ...input,
+        kind: "commission",
+        productUrl: null,
+      });
+      // A linked ticket carries the conversation (website + Discord). Retries
+      // reuse the same ticket (deterministic request ID).
+      await workflow.linkTicket(user, tenantId(), created);
       // Enqueued after the commit; the dedupe key makes a retried request
       // (same requestId -> same record) a no-op.
       await enqueueNotification(
