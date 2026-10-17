@@ -112,8 +112,25 @@ Verified: 83 bot tests; lint, build and format pass. Live smoke test: gateway lo
 
 Pending (honest "not connected" responses): staff ticket commands, entitlements, downloads, guides, licences, products and moderation cases.
 
+## Live Discord security and configuration — 17 October 2026 (owner-authorised)
+
+- **Lockdown applied:** 17 staff and management channels and categories now deny `@everyone` View, and the bot role keeps View/History/Send/Manage Channels. A live re-evaluation shows **0 sensitive channels visible to `@everyone` or Member**. Only the guild owner and the bot see them until the v2 apply grants staff roles. Nothing was deleted.
+- **Message Content Intent enabled** in the Developer Portal; confirmed after reload. Presence and Server Members intents unchanged (off). Public Bot is still **on**; owner decision.
+- **Bot permissions** reauthorised to exactly `4012652989115472`, verified live. Kick and Ban removed; no Administrator.
+- **Role hierarchy:** the bot role was moved below Moderator (above all bot-managed roles), verified live. It sits below the unused legacy Commission Manager role, which is harmless.
+- **Live functional checks** in a locked channel:
+  - `!help` answered (prefix enabled).
+  - `!ticket` → signed button → ephemeral category select works.
+  - `/status` (one of 30 registered guild slash commands) answered ephemerally.
+  - Ticket submission was not exercised: the API is not running.
+- Member count is 3. A third member (TIMMAH) joined at about 15:20 BST, before the lockdown (about 15:3x BST). They could have viewed the exposed channels during that window. The channels hold only bot-created topics so far.
+
+Remaining owner decisions:
+
+- Senior role edits the bot cannot make: grant Administrator on Owner; admin permissions; rename Support Team → Support Staff; hoist; Moderator Timeout.
+- Approval of the full v2 apply. It changes @everyone, renames and creates channels, and needs the onboarding panel so members keep chat access.
+
 Next:
 
-- Owner steps: bot role permissions, role order, and the Message Content intent.
 - Live v2 apply and guild command registration.
 - Slice C: private ticket channels with Discord-native tickets for unlinked members.

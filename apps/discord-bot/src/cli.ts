@@ -27,6 +27,7 @@ const usage = `Usage:
                                         Offline plan from a snapshot and the configured stable IDs
   cli.ts setup --apply --confirm-guild <id> --plan-hash <hash> [--restrict-unmanaged]
                                         LIVE MUTATION: apply a reviewed plan (owner approval required)
+  cli.ts register-commands             LIVE: register slash fallbacks in the configured guild only
   cli.ts lockdown [--apply --confirm-guild <id>]
                                         Restrict exposed sensitive channels (owner-authorised)`;
 
@@ -124,6 +125,20 @@ async function main() {
       console.log(JSON.stringify(serialisePlan(summarise(plan)), null, 2));
       console.error(`Read-only snapshot written to ${snapshotPath()}`);
     });
+    return;
+  }
+  if (operation === "register-commands") {
+    const config = await readConfig();
+    const { REST, Routes } = await import("discord.js");
+    const rest = new REST().setToken(await readBotToken());
+    // Guild-scoped: affects only the configured KUSH guild, updates instantly.
+    const result = (await rest.put(
+      Routes.applicationGuildCommands(config.applicationId, config.guildId),
+      { body: commandJson },
+    )) as { name: string }[];
+    console.log(
+      `Registered ${result.length} guild commands: ${result.map((item) => item.name).join(", ")}`,
+    );
     return;
   }
   if (operation === "lockdown") {
