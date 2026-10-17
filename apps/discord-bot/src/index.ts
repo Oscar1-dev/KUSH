@@ -20,6 +20,7 @@ import { HealthMonitor, startHealthServer } from "./runtime/health.js";
 import { createLogger, type Logger } from "./runtime/logger.js";
 import { commands } from "./runtime/registry.js";
 import { embed } from "./panels.js";
+import { HoneypotTracker } from "./moderation/honeypot.js";
 import { DiscordTicketChannels } from "./tickets/discord-tickets.js";
 import { TicketManager } from "./tickets/manager.js";
 
@@ -193,7 +194,8 @@ export async function startBot(): Promise<{
     },
   };
   const router = new CommandRouter(commands);
-  const dependencies = { router, services };
+  const honeypot = new HoneypotTracker();
+  const dependencies = { router, services, honeypot };
 
   const onReady = () => {
     health.gatewayReady();
@@ -258,7 +260,10 @@ export async function startBot(): Promise<{
   await checkApi();
   const timers = [
     setInterval(() => void checkApi(), 60_000),
-    setInterval(() => router.sweep(), 5 * 60_000),
+    setInterval(() => {
+      router.sweep();
+      honeypot.sweep();
+    }, 5 * 60_000),
   ];
   const healthPort = Number(process.env.KUSH_BOT_HEALTH_PORT ?? 4321);
   const server = await startHealthServer(health, healthPort);

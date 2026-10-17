@@ -37,6 +37,12 @@ export class SlidingWindowLimiter {
     return true;
   }
 
+  /** Hits still inside the window for a key, without recording a new one. */
+  countFor(key: string): number {
+    const cutoff = this.now() - this.windowMs;
+    return (this.#hits.get(key) ?? []).filter((time) => time > cutoff).length;
+  }
+
   /** Drops expired keys; call periodically to bound memory. */
   sweep(): void {
     const cutoff = this.now() - this.windowMs;

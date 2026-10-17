@@ -9,6 +9,8 @@ import {
 } from "../src/content/publisher.js";
 import {
   HONEYPOT_CHANNEL_KEY,
+  HoneypotTracker,
+  defaultHoneypotPolicy,
   isHoneypotExempt,
 } from "../src/moderation/honeypot.js";
 import type { RoleKey } from "../src/blueprint.js";
@@ -185,5 +187,59 @@ describe("honeypot", () => {
         actor(["member", "verified-customer", "approved-seller"]),
       ),
     ).toBe(false);
+  });
+});
+
+describe("honeypot escalation", () => {
+  it("does not restrict a single accidental post", () => {
+    const tracker = new HoneypotTracker();
+    const first = tracker.record("u1");
+    expect(first).toEqual({ strikes: 1, restrict: false });
+    expect(tracker.record("u1").restrict).toBe(false);
+  });
+
+  it("restricts only after repeated triggers inside the window", () => {
+    const now = 0;
+    const tracker = new HoneypotTracker(defaultHoneypotPolicy, () => now);
+    expect(tracker.record("u2").restrict).toBe(false);
+    expect(tracker.record("u2").restrict).toBe(false);
+    const third = tracker.record("u2");
+    expect(third.restrict).toBe(true);
+    expect(third.strikes).toBe(defaultHoneypotPolicy.strikesBeforeTimeout);
+  });
+
+  it("forgives strikes once the window passes", () => {
+    let now = 0;
+    const tracker = new HoneypotTracker(defaultHoneypotPolicy, () => now);
+    tracker.record("u3");
+    tracker.record("u3");
+    now += defaultHoneypotPolicy.windowMs + 1;
+    expect(tracker.record("u3")).toEqual({ strikes: 1, restrict: false });
+  });
+
+  it("tracks members independently", () => {
+    const tracker = new HoneypotTracker();
+    tracker.record("a");
+    tracker.record("a");
+    expect(tracker.record("b").restrict).toBe(false);
+  });
+
+  it("rate limits moderator notifications per member", () => {
+    let now = 0;
+    const tracker = new HoneypotTracker(defaultHoneypotPolicy, () => now);
+    expect(tracker.shouldNotify("u4")).toBe(true);
+    expect(tracker.shouldNotify("u4")).toBe(false);
+    expect(tracker.shouldNotify("other")).toBe(true);
+    now += defaultHoneypotPolicy.notifyEveryMs + 1;
+    expect(tracker.shouldNotify("u4")).toBe(true);
+  });
+
+  it("bounds memory when swept", () => {
+    let now = 0;
+    const tracker = new HoneypotTracker(defaultHoneypotPolicy, () => now);
+    tracker.record("u5");
+    now += defaultHoneypotPolicy.windowMs + 1;
+    tracker.sweep();
+    expect(tracker.record("u5").strikes).toBe(1);
   });
 });

@@ -131,7 +131,7 @@ export const channelContent: ChannelMessage[] = [
       page(
         embed(
           "Do not post here",
-          "This channel exists to catch spam and compromised accounts. **Any message posted here is deleted automatically and the author is timed out** while staff review it. If you posted by mistake, open a ticket once the timeout ends.",
+          "This channel exists to catch spam and compromised accounts. **Any message posted here is removed automatically** and flagged to moderators for review. A single accidental post is not punished — you will simply be told it was removed. Repeated posting in a short time leads to a temporary mute while staff look into it.",
         ).setColor(kushColours.warning),
       ),
   },

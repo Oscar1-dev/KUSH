@@ -11,6 +11,7 @@ import {
 import { ApiError, requestUuid } from "../api-client.js";
 import {
   HONEYPOT_CHANNEL_KEY,
+  HoneypotTracker,
   handleHoneypotMessage,
 } from "../moderation/honeypot.js";
 import { roles as blueprintRoles } from "../blueprint.js";
@@ -33,6 +34,7 @@ import { tokenise } from "./prefix.js";
 export interface BindingDependencies {
   router: CommandRouter;
   services: BotServices;
+  honeypot: HoneypotTracker;
 }
 
 const roleKeys = blueprintRoles.map((role) => role.key);
@@ -60,7 +62,7 @@ const mentionsFor = (userId: string) =>
 
 export async function handleMessage(
   message: Message,
-  { router, services }: BindingDependencies,
+  { router, services, honeypot }: BindingDependencies,
 ): Promise<void> {
   if (message.author.bot || message.webhookId || !message.inGuild()) return;
   if (message.guildId !== services.config.guildId) return;
@@ -72,6 +74,7 @@ export async function handleMessage(
       member,
       actorFromMember(member, services.config.roleIds),
       services,
+      honeypot,
     );
     return;
   }

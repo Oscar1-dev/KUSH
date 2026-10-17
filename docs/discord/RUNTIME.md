@@ -40,3 +40,13 @@ One registry (`src/runtime/registry.ts`) defines every command. The `!` prefix r
 `GET http://127.0.0.1:4321/health` returns gateway, guild, API, prefix-command and command-count state. It returns 200 only when everything is `ok`; partial states are `degraded`, never healthy. The supervisor restarts crashes after 1 s, doubling to a 60 s cap, and resets after 10 minutes of stable running. It does not restart after a clean exit or a configuration error (exit 78). discord.js resumes gateway sessions itself; reconnects are counted.
 
 Live smoke test (17 October 2026): the bot logged in as KUSH#8932, the guild was available, the intent fallback worked and the health endpoint answered. The API showed `down` because it was not running and the configuration pointed at port 4318 instead of 4310.
+
+## Honeypot
+
+`#do-not-post` catches spam and compromised accounts. Policy (`src/moderation/honeypot.ts`, configurable):
+
+- Every non-staff message there is removed and recorded, and the member is told privately why. **A single post applies no restriction** — accidental posts are expected.
+- A temporary mute (1 hour by default) applies only after 3 triggers within an hour. The limit, window and mute length are policy fields.
+- Moderators are notified in `#moderation-log` at most once per member per 10 minutes, with the trigger count and whether a restriction was applied.
+- Strike tracking is in memory with an hourly window, so a restart errs towards leniency. Durable moderation cases are future work.
+- Staff and the guild owner are exempt.
