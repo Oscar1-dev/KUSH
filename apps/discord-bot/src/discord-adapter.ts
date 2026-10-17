@@ -3,6 +3,7 @@ import {
   Client,
   GatewayIntentBits,
   OverwriteType,
+  PermissionFlagsBits,
   type Guild,
   type GuildChannel,
   type OverwriteResolvable,
@@ -131,9 +132,44 @@ export class DiscordGuildAdapter implements GuildAdapter {
       ...(input.topic !== undefined && input.type === ChannelType.GuildText
         ? { topic: input.topic }
         : {}),
-      permissionOverwrites: toDiscord(input.overwrites),
       reason,
     });
+    await this.#applyOverwrites(channel, input.overwrites, reason);
+  }
+
+  /**
+   * Applies overwrites one principal at a time instead of replacing the whole
+   * set. A bulk replace is evaluated as a single new state, so on a private
+   * channel Discord sees the @everyone ViewChannel deny land without the bot's
+   * own allow and refuses the edit (50013) to avoid locking the bot out. The
+   * bot's own overwrite therefore goes first, and stale ones are removed last.
+   */
+  async #applyOverwrites(
+    channel: GuildChannel,
+    overwrites: ResolvedOverwrite[],
+    reason: string,
+  ) {
+    const botRoleId = channel.guild.members.me?.roles.botRole?.id;
+    const ordered = [...overwrites].sort(
+      (left, right) =>
+        Number(right.id === botRoleId) - Number(left.id === botRoleId),
+    );
+    for (const overwrite of ordered)
+      await channel.permissionOverwrites.edit(
+        overwrite.id,
+        toOptions(overwrite.allow, overwrite.deny),
+        {
+          type:
+            overwrite.kind === "member"
+              ? OverwriteType.Member
+              : OverwriteType.Role,
+          reason,
+        },
+      );
+    const wanted = new Set(overwrites.map((overwrite) => overwrite.id));
+    for (const [existingId] of channel.permissionOverwrites.cache)
+      if (!wanted.has(existingId))
+        await channel.permissionOverwrites.delete(existingId, reason);
   }
 
   async setRoleOverwrite(
@@ -165,6 +201,20 @@ export class DiscordGuildAdapter implements GuildAdapter {
     return channel;
   }
 }
+
+/**
+ * Bitfields → discord.js per-permission options: true allow, false deny,
+ * null inherit. Every flag is listed, including the nulls: an edit merges
+ * into the existing overwrite, so omitting a bit would silently keep its
+ * previous explicit value instead of clearing it.
+ */
+const toOptions = (allow: bigint, deny: bigint) =>
+  Object.fromEntries(
+    Object.entries(PermissionFlagsBits).map(([name, flag]) => [
+      name,
+      (allow & flag) === flag ? true : (deny & flag) === flag ? false : null,
+    ]),
+  ) as Record<string, boolean | null>;
 
 const toDiscord = (overwrites: ResolvedOverwrite[]): OverwriteResolvable[] =>
   overwrites.map((overwrite) => ({

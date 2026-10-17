@@ -709,10 +709,14 @@ export async function applyPlan(
           (item): item is ObservedRole =>
             item?.position !== undefined && item.position < botPosition,
         );
+      // Pack them into the lowest slots, keeping blueprint order (highest
+      // first). Targeting the slots just under the bot instead makes Discord
+      // reject the whole batch with "Missing Permissions" when unmanaged roles
+      // occupy them; unmanaged roles simply shift up, which costs them nothing.
       await adapter.setRolePositions(
         below.map((item, index) => ({
           id: item.id,
-          position: botPosition - 1 - index,
+          position: below.length - index,
         })),
         applyReason,
       );
@@ -855,10 +859,32 @@ export async function applyLockdown(
   return done;
 }
 
-/** Hash of the operations only, so a reviewed dry-run can gate a live apply. */
+/**
+ * Hash of the operations only, so a reviewed dry-run can gate a live apply.
+ *
+ * Discord returns roles, channels and overwrites in an arbitrary order, so the
+ * hash is taken over a canonical form: operations sorted by identity, and each
+ * `changes` list sorted. Without this the same plan hashes differently on every
+ * run and the approval gate can never be satisfied.
+ */
 export function planHash(plan: ProvisionPlan): string {
+  const identity = (operation: ProvisionOperation) =>
+    [
+      operation.action,
+      "key" in operation ? operation.key : "",
+      "id" in operation ? operation.id : "",
+      "keys" in operation ? operation.keys.join(",") : "",
+      "permissions" in operation ? operation.permissions.toString() : "",
+    ].join("|");
+  const canonical = [...plan.operations]
+    .map((operation) =>
+      "changes" in operation
+        ? { ...operation, changes: [...operation.changes].sort() }
+        : operation,
+    )
+    .sort((left, right) => identity(left).localeCompare(identity(right)));
   return createHash("sha256")
-    .update(JSON.stringify(serialisePlan(plan.operations)))
+    .update(JSON.stringify(serialisePlan(canonical)))
     .digest("hex")
     .slice(0, 16);
 }

@@ -102,6 +102,23 @@ describe("blueprint v2 structure", () => {
     }
   });
 
+  // Regression (live apply, 17 Oct): an @everyone deny applies to the bot too,
+  // so if the bot's own allow does not re-grant a denied bit it loses that
+  // permission in the channel and Discord refuses the write with 50013.
+  it("re-grants the bot every bit any @everyone overwrite denies", () => {
+    for (const channel of blueprint.channels) {
+      const everyone = channel.overwrites.find(
+        (item) => item.principal === "everyone",
+      );
+      const bot = channel.overwrites.find(
+        (item) => item.principal === "kush-bot",
+      );
+      if (!everyone?.deny || !bot) continue;
+      const manageable = everyone.deny & ~P.ViewChannel;
+      expect(manageable & ~bot.allow, channel.key).toBe(0n);
+    }
+  });
+
   it("never grants the bot dangerous permissions", () => {
     for (const flag of [
       P.Administrator,

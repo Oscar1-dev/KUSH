@@ -581,3 +581,47 @@ describe("security lockdown", () => {
     );
   });
 });
+
+// Regression: the hash was taken over the raw operations, whose `changes`
+// strings follow Discord's arbitrary overwrite order. Three consecutive
+// inspects of an unchanged guild produced three different hashes, so the
+// --plan-hash approval gate could never be satisfied.
+describe("plan hash determinism", () => {
+  const shuffle = <T>(items: readonly T[], seed: number): T[] => {
+    const copy = [...items];
+    for (let index = copy.length - 1; index > 0; index -= 1) {
+      seed = (seed * 1103515245 + 12345) % 2147483648;
+      const target = seed % (index + 1);
+      [copy[index], copy[target]] = [copy[target]!, copy[index]!];
+    }
+    return copy;
+  };
+
+  it("is identical when Discord returns the same guild in a different order", () => {
+    const base = observedWith([
+      ...correctOverwrites.slice(1),
+      { id: "member", allow: P.ViewChannel, deny: 0n },
+    ]);
+    const hashes = [1, 2, 3, 4].map((seed) =>
+      planHash(
+        planProvisioning(onlyStaffChat, {
+          ...base,
+          roles: shuffle(base.roles, seed),
+          channels: base.channels.map((channel) => ({
+            ...channel,
+            overwrites: shuffle(channel.overwrites ?? [], seed),
+          })),
+        }),
+      ),
+    );
+    expect(new Set(hashes).size).toBe(1);
+  });
+
+  it("still changes when the plan actually changes", () => {
+    const clean = planHash(
+      planProvisioning(onlyStaffChat, observedWith(correctOverwrites)),
+    );
+    const drifted = planHash(planProvisioning(onlyStaffChat, observedWith([])));
+    expect(clean).not.toBe(drifted);
+  });
+});

@@ -134,3 +134,28 @@ Next:
 
 - Live v2 apply and guild command registration.
 - Slice C: private ticket channels with Discord-native tickets for unlinked members.
+
+## Discord v2 live apply, channel content and honeypot — 17 October 2026 (owner-approved)
+
+Applied to guild 1560640601676845146 with the local API and PostgreSQL running.
+
+- **Blueprint v2 applied.** 49 operations across two runs: 3 roles created (Support Lead, Creative Partner, Restricted), roles renamed, `@everyone` reduced to View/History/Use Application Commands, bot-managed roles ordered, 10 channels created and 34 updated. A follow-up dry run reports **zero operations**.
+- **Live verification:** 476 role/channel combinations evaluated against the blueprint model — all match. No sensitive channel is visible to `@everyone` or Member.
+- **Channel content:** 25 official messages published and pinned across information, community, studio, products, support, partnerships and staff channels. Republishing edits in place (19 edits, 0 duplicates). The rules panel's accept button was tested live and granted the Member role.
+- **Honeypot** `#do-not-post` created: non-staff posts are deleted, the author is timed out for 24 hours and the case is logged for review.
+
+Four bugs found by the live apply, each fixed and regression-tested:
+
+1. **The plan hash was non-deterministic.** Discord returns overwrites in arbitrary order, so three consecutive inspects of an unchanged guild produced three different hashes and the `--plan-hash` approval gate could never pass. The hash is now taken over a canonical, sorted form.
+2. **Role positioning targeted occupied slots** just under the bot, which Discord rejected outright ("Missing Permissions"). Bot-managed roles are now packed into the lowest positions, preserving blueprint order.
+3. **The bot's own channel overwrite was too narrow.** An `@everyone` deny applies to the bot as well, so denying thread creation or polls stripped those permissions from the bot and Discord then refused to let it write that same deny. The bot's allow now re-grants every bit the blueprint denies.
+4. **Bulk overwrite replacement is unsafe**, and an incremental edit left stale bits. Overwrites are now applied one principal at a time (the bot first, so it never loses access), with unspecified bits explicitly cleared and stale overwrites removed last.
+
+Remaining owner actions (the bot cannot perform these — the roles sit above it):
+
+- Grant **Administrator** to the Owner role.
+- Grant Administrator-level permissions to the **Administrator** role (Manage Server/Channels/Roles/Nicknames, View Audit Log, Kick, Ban, Timeout, Manage Expressions) — not the Administrator flag.
+- Grant **Timeout Members** to Moderator.
+- Move **Support Lead** above KUSH Bot and above Support Staff in Server Settings → Roles.
+
+Not done: legacy v1 channels and roles are preserved and untouched; 28 legacy channels remain visible to members. `cli.ts lockdown --apply` restricts the sensitive ones on request.

@@ -249,7 +249,14 @@ interface Access {
   restrictedMayInteract?: boolean;
 }
 
-const botWrite = read | post | P.ManageMessages | P.ManageThreads;
+/**
+ * The bot's own channel overwrite. An @everyone deny applies to the bot as
+ * well, so this must re-grant every bit the blueprint ever denies there
+ * (post, thread creation, polls). Otherwise the bot loses those permissions
+ * in the channel and Discord then refuses to let it write that very deny
+ * (error 50013), which is what blocked the first live apply.
+ */
+const botWrite = read | post | threadCreation | P.SendPolls | moderation;
 
 export function compileAccess(access: Access): DesiredOverwrite[] {
   const isPrivate = access.view !== undefined;

@@ -181,9 +181,14 @@ export async function startBot(): Promise<{
       return value;
     },
     memberRoleIds: async (userId) => {
-      const member = await guild()
-        .members.fetch(userId)
-        .catch(() => null);
+      // A member fetch can hang (no GuildMembers intent, or rate limiting),
+      // so bound it rather than leaving the command waiting forever.
+      const member = await Promise.race([
+        guild()
+          .members.fetch(userId)
+          .catch(() => null),
+        new Promise<null>((resolve) => setTimeout(() => resolve(null), 10_000)),
+      ]);
       return member ? [...member.roles.cache.keys()] : null;
     },
   };
