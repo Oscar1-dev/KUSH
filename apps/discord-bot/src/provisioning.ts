@@ -755,6 +755,106 @@ export function serialisePlan(value: unknown): unknown {
   ) as unknown;
 }
 
+// ---------------------------------------------------------------- lockdown
+
+export interface LockdownTarget {
+  id: string;
+  name: string;
+  reason: "private-in-blueprint" | "legacy-sensitive";
+}
+
+/** Bits the bot keeps on locked channels so it can finish the v2 apply. */
+export const lockdownBotAllow =
+  P.ViewChannel | P.ReadMessageHistory | P.SendMessages | P.ManageChannels;
+
+/**
+ * Smallest safe correction for exposed sensitive channels: every channel the
+ * blueprint makes private, plus every unmanaged channel under a legacy staff
+ * or management category, that members can currently see.
+ */
+export function planLockdown(
+  desired: Blueprint,
+  observed: ObservedGuild,
+  ids: StableIds,
+  legacySensitivePrefixes: readonly string[] = ["08-", "09-"],
+  sensitiveAreas: readonly string[] = ["staff", "owner"],
+): LockdownTarget[] {
+  const plan = planProvisioning(desired, observed, ids);
+  const byId = new Map(observed.channels.map((item) => [item.id, item]));
+  const targets = new Map<string, LockdownTarget>();
+  for (const operation of plan.operations)
+    if (
+      operation.action === "update-channel" &&
+      operation.exposure &&
+      sensitiveAreas.includes(operation.key.split(":")[0]!)
+    )
+      targets.set(operation.id, {
+        id: operation.id,
+        name: byId.get(operation.id)?.name ?? operation.key,
+        reason: "private-in-blueprint",
+      });
+  const sensitiveParents = new Set(
+    Object.entries(ids.channelIds ?? {})
+      .filter(
+        ([key]) =>
+          !key.includes(":") &&
+          legacySensitivePrefixes.some((prefix) => key.startsWith(prefix)),
+      )
+      .map(([, id]) => id),
+  );
+  for (const item of plan.unmanaged.channels) {
+    const channel = byId.get(item.id);
+    if (
+      item.visibleToMembers &&
+      channel &&
+      (sensitiveParents.has(channel.id) ||
+        (channel.parentId !== null && sensitiveParents.has(channel.parentId)))
+    )
+      targets.set(item.id, {
+        id: item.id,
+        name: item.name,
+        reason: "legacy-sensitive",
+      });
+  }
+  return [...targets.values()];
+}
+
+/** Applies a lockdown: @everyone loses ViewChannel, the bot keeps access. */
+export async function applyLockdown(
+  targets: readonly LockdownTarget[],
+  observed: ObservedGuild,
+  adapter: GuildAdapter,
+): Promise<string[]> {
+  if (!observed.bot) throw new Error("Bot role unknown; observe live first");
+  const done: string[] = [];
+  for (const target of targets) {
+    const channel = observed.channels.find((item) => item.id === target.id);
+    const everyone = channel?.overwrites?.find(
+      (item) => item.id === observed.guildId,
+    );
+    const bot = channel?.overwrites?.find(
+      (item) => item.id === observed.bot!.roleId,
+    );
+    const reason = "KUSH security lockdown: restrict sensitive channel";
+    await adapter.setRoleOverwrite(
+      target.id,
+      observed.bot.roleId,
+      (bot?.allow ?? 0n) | lockdownBotAllow,
+      (bot?.deny ?? 0n) & ~lockdownBotAllow,
+      reason,
+    );
+    await adapter.setRoleOverwrite(
+      target.id,
+      observed.guildId,
+      (everyone?.allow ?? 0n) & ~P.ViewChannel,
+      (everyone?.deny ?? 0n) | P.ViewChannel,
+      reason,
+    );
+    done.push(target.name);
+  }
+  return done;
+}
+
 /** Hash of the operations only, so a reviewed dry-run can gate a live apply. */
 export function planHash(plan: ProvisionPlan): string {
   return createHash("sha256")

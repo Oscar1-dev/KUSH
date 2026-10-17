@@ -503,3 +503,81 @@ describe("snapshots and review gate", () => {
     ).not.toBe(planHash(before));
   });
 });
+
+describe("security lockdown", () => {
+  it("restricts exposed sensitive channels and keeps bot access", async () => {
+    const { planLockdown, applyLockdown } =
+      await import("../src/provisioning.js");
+    const guild = new FakeGuild({
+      guildId: "guild",
+      bot: { userId: "bot-user", roleId: "bot" },
+      roles: [
+        {
+          id: "guild",
+          name: "@everyone",
+          colour: 0,
+          permissions: P.ViewChannel | P.SendMessages,
+          hoist: false,
+          position: 0,
+        },
+        {
+          id: "bot",
+          name: "KUSH",
+          colour: 0,
+          permissions: P.ViewChannel | P.ManageChannels | P.ManageRoles,
+          hoist: false,
+          position: 5,
+          managed: true,
+        },
+      ],
+      channels: [
+        {
+          id: "cat",
+          name: "08 — STAFF OPERATIONS",
+          type: ChannelType.GuildCategory,
+          parentId: null,
+          overwrites: [],
+        },
+        {
+          id: "chat",
+          name: "staff-chat",
+          type: ChannelType.GuildText,
+          parentId: "cat",
+          overwrites: [],
+        },
+        {
+          id: "tasks",
+          name: "staff-tasks",
+          type: ChannelType.GuildText,
+          parentId: "cat",
+          overwrites: [],
+        },
+        {
+          id: "general",
+          name: "general",
+          type: ChannelType.GuildText,
+          parentId: null,
+          overwrites: [],
+        },
+      ],
+    });
+    const ids = {
+      channelIds: {
+        "08-staff-operations": "cat",
+        "08-staff-operations:staff-chat": "chat",
+      },
+    };
+    const targets = planLockdown(blueprint, await guild.observe(), ids);
+    expect(targets.map((item) => item.name).sort()).toEqual(
+      ["08 — STAFF OPERATIONS", "staff-chat", "staff-tasks"].sort(),
+    );
+    await applyLockdown(targets, await guild.observe(), guild);
+    expect(planLockdown(blueprint, await guild.observe(), ids)).toEqual([]);
+    const general = guild.state.channels.find((item) => item.id === "general")!;
+    expect(general.overwrites).toEqual([]);
+    const chat = guild.state.channels.find((item) => item.id === "chat")!;
+    expect(chat.overwrites).toContainEqual(
+      expect.objectContaining({ id: "bot", allow: expect.any(BigInt) }),
+    );
+  });
+});

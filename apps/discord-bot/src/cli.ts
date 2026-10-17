@@ -7,7 +7,9 @@ import { renderMatrixMarkdown } from "./permission-matrix.js";
 import {
   applyPlan,
   ApplyError,
+  applyLockdown,
   planHash,
+  planLockdown,
   planProvisioning,
   reviveObservedGuild,
   serialisePlan,
@@ -24,7 +26,9 @@ const usage = `Usage:
   cli.ts setup --dry-run [snapshot.json] [--restrict-unmanaged]
                                         Offline plan from a snapshot and the configured stable IDs
   cli.ts setup --apply --confirm-guild <id> --plan-hash <hash> [--restrict-unmanaged]
-                                        LIVE MUTATION: apply a reviewed plan (owner approval required)`;
+                                        LIVE MUTATION: apply a reviewed plan (owner approval required)
+  cli.ts lockdown [--apply --confirm-guild <id>]
+                                        Restrict exposed sensitive channels (owner-authorised)`;
 
 const flag = (args: string[], name: string) => args.includes(name);
 const option = (args: string[], name: string) => {
@@ -119,6 +123,23 @@ async function main() {
       });
       console.log(JSON.stringify(serialisePlan(summarise(plan)), null, 2));
       console.error(`Read-only snapshot written to ${snapshotPath()}`);
+    });
+    return;
+  }
+  if (operation === "lockdown") {
+    await liveSession(async (adapter, config) => {
+      const observed = await adapter.observe();
+      const targets = planLockdown(blueprint, observed, config);
+      if (!flag(args, "--apply")) {
+        console.log(JSON.stringify({ dryRun: true, targets }, null, 2));
+        return;
+      }
+      if (option(args, "--confirm-guild") !== config.guildId)
+        throw new Error("--confirm-guild does not match the configured guild");
+      const locked = await applyLockdown(targets, observed, adapter);
+      const after = await adapter.observe();
+      const stillExposed = planLockdown(blueprint, after, config);
+      console.log(JSON.stringify({ locked, stillExposed }, null, 2));
     });
     return;
   }
