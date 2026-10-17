@@ -1,0 +1,12 @@
+node_modules/
+.turbo/
+dist/
+target/
+.env
+.env.*
+!.env.example
+*.log
+.local/
+coverage/
+test-results/
+playwright-report/

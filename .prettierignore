@@ -1,0 +1,9 @@
+pnpm-lock.yaml
+**/target
+**/gen
+.local
+node_modules
+dist
+Cargo.lock
+docs/FOUNDING-DIRECTIVE.md
+docs/M3-DIRECTIVE.md
