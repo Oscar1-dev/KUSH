@@ -182,9 +182,9 @@ describe("ticket channels", () => {
     expect(channel.name).toBe("ticket-0007");
     expect(channel.parentId).toBe(channelIds.tickets);
     expect(overwrite(channel.overwrites, GUILD)?.deny).toBe(P.ViewChannel);
-    expect(
-      overwrite(channel.overwrites, BOT_ROLE)?.allow! & P.ViewChannel,
-    ).toBe(P.ViewChannel);
+    expect(overwrite(channel.overwrites, BOT_ROLE)!.allow & P.ViewChannel).toBe(
+      P.ViewChannel,
+    );
     expect(
       overwrite(channel.overwrites, roleIds["support-lead"]),
     ).toBeDefined();
@@ -285,7 +285,7 @@ describe("ticket channels", () => {
       closed: false,
     });
     expect(
-      overwrite(discord.channels.get(channelId)!.overwrites, STAFF)?.allow! &
+      overwrite(discord.channels.get(channelId)!.overwrites, STAFF)!.allow &
         P.SendMessages,
     ).toBe(P.SendMessages);
     await manager.sync({
@@ -297,10 +297,10 @@ describe("ticket channels", () => {
       closed: true,
     });
     const closed = discord.channels.get(channelId)!;
-    expect(overwrite(closed.overwrites, CUSTOMER)?.deny! & P.SendMessages).toBe(
+    expect(overwrite(closed.overwrites, CUSTOMER)!.deny & P.SendMessages).toBe(
       P.SendMessages,
     );
-    expect(overwrite(closed.overwrites, CUSTOMER)?.allow! & P.ViewChannel).toBe(
+    expect(overwrite(closed.overwrites, CUSTOMER)!.allow & P.ViewChannel).toBe(
       P.ViewChannel,
     );
     await new Promise((resolve) => setTimeout(resolve, 0));
@@ -535,7 +535,7 @@ describe("ticket commands", () => {
       result.discord.channels.get(result.channelId)!.overwrites,
       CUSTOMER,
     );
-    expect(creator?.deny! & P.SendMessages).toBe(P.SendMessages);
+    expect(creator!.deny & P.SendMessages).toBe(P.SendMessages);
   });
 
   it("sends transcripts privately as a file", async () => {
