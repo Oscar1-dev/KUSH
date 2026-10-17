@@ -32,6 +32,8 @@ export async function kushApi<T>(
     method?: "GET" | "POST" | "PATCH";
     token?: string | undefined;
     body?: unknown;
+    /** Extra server-to-server headers (e.g. signer audit details). */
+    headers?: Record<string, string>;
   } = {},
 ): Promise<T> {
   let response: Response;
@@ -40,6 +42,7 @@ export async function kushApi<T>(
       method: options.method ?? "GET",
       headers: {
         "x-kush-website-secret": websiteSecret(),
+        ...(options.headers ?? {}),
         ...(options.token ? { authorization: `Bearer ${options.token}` } : {}),
         ...(options.body !== undefined
           ? { "content-type": "application/json" }
@@ -64,4 +67,23 @@ export async function kushApi<T>(
       data.reason,
     );
   return data as T;
+}
+
+/** Downloads a binary response (PDFs) from the API, server-side. */
+export async function kushApiBinary(path: string, token: string) {
+  let response: Response;
+  try {
+    response = await fetch(`${apiUrl()}${path}`, {
+      headers: { "x-kush-website-secret": websiteSecret(), authorization: `Bearer ${token}` },
+      cache: "no-store",
+      signal: AbortSignal.timeout(30_000),
+    });
+  } catch {
+    throw new ApiError(503, "KUSH services are unavailable. Please try again shortly.");
+  }
+  if (!response.ok) {
+    const data = (await response.json().catch(() => ({}))) as { error?: string; reason?: string };
+    throw new ApiError(response.status, data.error ?? "Something went wrong", data.reason);
+  }
+  return { body: await response.arrayBuffer(), disposition: response.headers.get("content-disposition") };
 }

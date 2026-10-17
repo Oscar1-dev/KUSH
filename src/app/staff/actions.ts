@@ -99,3 +99,75 @@ export async function staffAssignCommission(_p: ActionState, form: FormData) {
     "Assignment updated.",
   );
 }
+
+// ------------------------------------------------------------- recruitment
+
+export async function staffApplicationStatus(_p: ActionState, form: FormData) {
+  const appId = id(form, "applicationId");
+  if (!appId) return { error: "Application not found." };
+  const note = text(form, "note");
+  return call(
+    `/web/staff/applications/${appId}/status`,
+    { expectedVersion: version(form), status: text(form, "status"), ...(note ? { note } : {}) },
+    `/staff/applications/${appId}`,
+    "Status updated. The applicant has been notified.",
+  );
+}
+
+export async function staffApplicationMessage(_p: ActionState, form: FormData) {
+  const appId = id(form, "applicationId");
+  if (!appId) return { error: "Application not found." };
+  const kind = form.get("kind") === "note" ? "note" : "message";
+  return call(
+    `/web/staff/applications/${appId}/messages`,
+    { requestId: text(form, "requestId"), kind, content: text(form, "content") },
+    `/staff/applications/${appId}`,
+    kind === "note" ? "Internal note added." : "Message sent to the applicant.",
+  );
+}
+
+export async function staffApplicationNote(_p: ActionState, form: FormData) {
+  const appId = id(form, "applicationId");
+  if (!appId) return { error: "Application not found." };
+  return call(
+    `/web/staff/applications/${appId}/review-note`,
+    { reviewNote: text(form, "reviewNote") || null },
+    `/staff/applications/${appId}`,
+    "Review note saved.",
+  );
+}
+
+export async function staffIssueNda(_p: ActionState, form: FormData) {
+  const appId = id(form, "applicationId");
+  if (!appId) return { error: "Application not found." };
+  return call(`/web/staff/applications/${appId}/issue-nda`, { expectedVersion: version(form) }, `/staff/applications/${appId}`, "NDA issued. The applicant has been sent a secure link.");
+}
+
+export async function staffApproveApplication(_p: ActionState, form: FormData) {
+  const appId = id(form, "applicationId");
+  if (!appId) return { error: "Application not found." };
+  if (form.get("confirm") !== "yes") return { error: "Confirm you have verified the applicant's identity." };
+  const note = text(form, "note");
+  return call(
+    `/web/staff/applications/${appId}/approve`,
+    { expectedVersion: version(form), staffRole: text(form, "staffRole"), ...(note ? { note } : {}) },
+    `/staff/applications/${appId}`,
+    "Identity and role approved.",
+  );
+}
+
+export async function staffActivateApplication(_p: ActionState, form: FormData) {
+  const appId = id(form, "applicationId");
+  if (!appId) return { error: "Application not found." };
+  if (form.get("confirm") !== "yes") return { error: "Confirm the activation." };
+  return call(`/web/staff/applications/${appId}/activate`, { expectedVersion: version(form) }, `/staff/applications/${appId}`, "Activated. The bot is granting the Discord role.");
+}
+
+export async function staffTemplateStatus(_p: ActionState, form: FormData) {
+  const templateId = id(form, "templateId");
+  if (!templateId) return { error: "Template not found." };
+  const status = text(form, "status") === "retired" ? "retired" : "active";
+  if (status === "active" && form.get("confirm") !== "yes")
+    return { error: "Confirm you have reviewed this text and approve it for signing." };
+  return call(`/web/staff/agreement-templates/${templateId}/status`, { status }, "/staff/agreements", status === "active" ? "This version can now be issued." : "Version retired.");
+}

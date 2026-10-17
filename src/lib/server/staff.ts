@@ -19,7 +19,10 @@ export type Permission =
   | "commissions.manage"
   | "commissions.assign"
   | "team.view"
-  | "audit.view";
+  | "audit.view"
+  | "applications.review"
+  | "applications.decide"
+  | "agreements.manage";
 
 export interface StaffMe {
   roles: StaffRole[];

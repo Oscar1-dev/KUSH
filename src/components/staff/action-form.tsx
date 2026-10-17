@@ -10,6 +10,13 @@ import {
   staffCommissionUpdate,
   staffMessage,
   staffTicketStatus,
+  staffApplicationStatus,
+  staffApplicationMessage,
+  staffApplicationNote,
+  staffIssueNda,
+  staffApproveApplication,
+  staffActivateApplication,
+  staffTemplateStatus,
 } from "@/app/staff/actions";
 import { FormMessage } from "@/components/account/form-message";
 import styles from "@/components/account/account.module.css";
@@ -21,6 +28,13 @@ const actions = {
   assignTicket: staffAssignTicket,
   commission: staffCommissionUpdate,
   assignCommission: staffAssignCommission,
+  applicationStatus: staffApplicationStatus,
+  applicationMessage: staffApplicationMessage,
+  applicationNote: staffApplicationNote,
+  issueNda: staffIssueNda,
+  approveApplication: staffApproveApplication,
+  activateApplication: staffActivateApplication,
+  templateStatus: staffTemplateStatus,
 };
 
 /**

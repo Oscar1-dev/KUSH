@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
+  BadgeCheck,
   Bell,
   CreditCard,
   Download,
@@ -35,6 +36,7 @@ const groups = [
       { href: "/account/commissions", label: "My Commissions", icon: PenTool },
       { href: "/account/support", label: "Support Tickets", icon: LifeBuoy },
       { href: "/account/billing", label: "Orders & Billing", icon: CreditCard },
+      { href: "/account/applications", label: "Staff Applications", icon: BadgeCheck },
     ],
   },
   {
@@ -59,7 +61,7 @@ export default function AccountNav() {
               key={href}
               href={href}
               className={styles.navLink}
-              aria-current={pathname === href ? "page" : undefined}
+              aria-current={pathname === href || (href !== "/account" && pathname.startsWith(`${href}/`)) ? "page" : undefined}
             >
               <Icon size={16} aria-hidden="true" />
               {label}
