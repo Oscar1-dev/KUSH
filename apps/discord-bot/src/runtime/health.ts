@@ -10,6 +10,8 @@ export interface HealthSnapshot {
     state: ComponentState;
     readyAt: string | null;
     reconnects: number;
+    /** Most recent gateway close, to tell routine resumes from real faults. */
+    lastDisconnect: { at: string; code: number } | null;
   };
   guild: { state: ComponentState; id: string };
   api: {
@@ -48,6 +50,7 @@ export class HealthMonitor {
     state: "unknown",
     readyAt: null,
     reconnects: 0,
+    lastDisconnect: null,
   };
   #guild: ComponentState = "unknown";
   #api: HealthSnapshot["api"] = {
@@ -80,8 +83,15 @@ export class HealthMonitor {
       readyAt: new Date(this.now()).toISOString(),
     };
   }
-  gatewayDisconnected() {
-    this.#gateway = { ...this.#gateway, state: "down" };
+  gatewayDisconnected(code?: number) {
+    this.#gateway = {
+      ...this.#gateway,
+      state: "down",
+      lastDisconnect:
+        code === undefined
+          ? this.#gateway.lastDisconnect
+          : { at: new Date(this.now()).toISOString(), code },
+    };
   }
   gatewayReconnecting() {
     this.#gateway = {

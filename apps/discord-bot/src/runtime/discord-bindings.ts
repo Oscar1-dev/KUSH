@@ -8,6 +8,7 @@ import {
   type ModalSubmitInteraction,
   type StringSelectMenuInteraction,
 } from "discord.js";
+import { isTransient, retryInBackground } from "./retry.js";
 import { ApiError, requestUuid } from "../api-client.js";
 import {
   HONEYPOT_CHANNEL_KEY,
@@ -184,6 +185,32 @@ export async function mirrorTicketMessage(
         channelId: message.channelId,
         status: error instanceof ApiError ? error.status : "error",
       });
+      // The request ID is derived from the Discord message, so retrying an
+      // API outage can never record the message twice.
+      if (isTransient(error))
+        retryInBackground(
+          async () => {
+            const ticket = await services.api.ticketByChannel(
+              actor,
+              message.channelId,
+            );
+            await services.api.message(actor, ticket.id, {
+              requestId: requestUuid(`message:${message.id}`),
+              expectedVersion: ticket.version,
+              kind: "reply",
+              content: content.slice(0, 10_000),
+            });
+            services.log.info("ticket.mirror.recovered", {
+              channelId: message.channelId,
+            });
+          },
+          (final) =>
+            services.log.error("ticket.mirror.lost", {
+              channelId: message.channelId,
+              messageId: message.id,
+              status: final instanceof ApiError ? final.status : "error",
+            }),
+        );
       return;
     }
   }

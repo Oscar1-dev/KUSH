@@ -6,6 +6,7 @@ import {
 } from "../blueprint.js";
 import type { ResolvedOverwrite } from "../provisioning.js";
 import type { Logger } from "../runtime/logger.js";
+import { isTransient, retryInBackground } from "../runtime/retry.js";
 
 /**
  * Private Discord channels for staff applications. Visible only to the
@@ -165,6 +166,21 @@ export class ApplicationChannels {
         channelId: message.channelId,
         error: error instanceof Error ? error.message : "unknown",
       });
+      // Idempotent on the Discord message ID: safe to retry an outage.
+      if (isTransient(error))
+        retryInBackground(
+          () =>
+            this.api.applicationMessage(message.channelId, {
+              discordUserId: message.authorId,
+              messageId: message.id,
+              content: content.slice(0, 5000),
+            }),
+          () =>
+            this.log.error("application.mirror.lost", {
+              channelId: message.channelId,
+              messageId: message.id,
+            }),
+        );
     }
     return true;
   }

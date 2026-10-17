@@ -646,20 +646,57 @@ export const channels: DesiredChannel[] = [
   // ------------------------------------------- adopted legacy channels
   // Approved 18 Oct 2026 (docs/discord/LEGACY-AUDIT.md). Each is an existing
   // empty channel renamed and re-permissioned in place (history kept).
-  text("community", "off-topic", "Anything that doesn't fit elsewhere. Keep it friendly.", community),
-  text("community", "media", "Images and clips. Credit other people's work.", community),
-  text("studio", "portfolio", "Completed KUSH work, shared with the client's permission.", { publish: ["administrator", "developer"] }),
-  text("partnerships", "applications", "How to apply to join KUSH. Applications are made privately on the website.", { publish: ["administrator"] }),
-  text("support", "support-information", "Troubleshooting guides and how to get help.", { publish: ["support-lead", "administrator"] }),
-  text("staff", "commission-management", "Commission coordination. Customer details stay in the dashboard.", { view: ["administrator", "developer"] }),
-  text("staff", "recruitment-review", "Recruitment coordination. Applicant details stay in application channels and the dashboard.", { view: ["administrator"] }),
+  text(
+    "community",
+    "off-topic",
+    "Anything that doesn't fit elsewhere. Keep it friendly.",
+    community,
+  ),
+  text(
+    "community",
+    "media",
+    "Images and clips. Credit other people's work.",
+    community,
+  ),
+  text(
+    "studio",
+    "portfolio",
+    "Completed KUSH work, shared with the client's permission.",
+    { publish: ["administrator", "developer"] },
+  ),
+  text(
+    "partnerships",
+    "applications",
+    "How to apply to join KUSH. Applications are made privately on the website.",
+    { publish: ["administrator"] },
+  ),
+  text(
+    "support",
+    "support-information",
+    "Troubleshooting guides and how to get help.",
+    { publish: ["support-lead", "administrator"] },
+  ),
+  text(
+    "staff",
+    "commission-management",
+    "Commission coordination. Customer details stay in the dashboard.",
+    { view: ["administrator", "developer"] },
+  ),
+  text(
+    "staff",
+    "recruitment-review",
+    "Recruitment coordination. Applicant details stay in application channels and the dashboard.",
+    { view: ["administrator"] },
+  ),
 
   // ----------------------------------------------------------- archive
   // Redundant legacy channels, kept (not deleted) in an owner-only category
   // so they can be restored. The bot keeps access only to manage them.
   category("archive", "🗄 ARCHIVE", { view: [] }),
   ...archived.map(([name, type]) =>
-    type === "voice" ? archivedVoice(name) : text("archive", name, "Archived.", { view: [] }),
+    type === "voice"
+      ? archivedVoice(name)
+      : text("archive", name, "Archived.", { view: [] }),
   ),
 ];
 

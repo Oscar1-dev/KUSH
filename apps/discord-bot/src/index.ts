@@ -360,13 +360,18 @@ export async function startBot(): Promise<{
   };
   if (client.isReady()) onReady();
   client.on(Events.ClientReady, onReady);
-  client.on(Events.ShardResume, () => health.gatewayReady());
+  client.on(Events.ShardResume, (_shard, replayed) => {
+    health.gatewayReady();
+    // A resume replays missed events, so nothing is lost; log it to see
+    // how often Discord (or this machine's network) drops the connection.
+    log.info("gateway.resumed", { replayedEvents: replayed });
+  });
   client.on(Events.ShardReconnecting, () => {
     health.gatewayReconnecting();
     log.warn("gateway.reconnecting");
   });
   client.on(Events.ShardDisconnect, (event) => {
-    health.gatewayDisconnected();
+    health.gatewayDisconnected(event.code);
     log.warn("gateway.disconnected", { code: event.code });
   });
   client.on(Events.GuildDelete, (removed) => {
