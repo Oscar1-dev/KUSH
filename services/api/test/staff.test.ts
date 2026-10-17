@@ -10,6 +10,8 @@ import { tokenHash } from "../src/password.js";
 
 const databaseUrl = process.env.KUSH_TEST_DATABASE_URL;
 const WEBSITE = "test-website-secret-at-least-32-chars!!";
+const BOT_SECRET = "test-integration-secret-32-characters!!";
+const STAFF_GUILD = "923456789012345672";
 const ROLE = {
   support: "523456789012345601",
   developer: "523456789012345602",
@@ -74,6 +76,7 @@ describe.skipIf(!databaseUrl)("staff dashboard (real PostgreSQL)", () => {
     website: process.env.KUSH_WEBSITE_SECRET,
     tenant: process.env.KUSH_SUPPORT_TENANT_ID,
     key: process.env.KUSH_MFA_KEY,
+    integration: process.env.KUSH_DISCORD_INTEGRATION_SECRET,
   };
 
   const web = (
@@ -164,6 +167,7 @@ describe.skipIf(!databaseUrl)("staff dashboard (real PostgreSQL)", () => {
   beforeAll(async () => {
     process.env.KUSH_WEBSITE_SECRET = WEBSITE;
     process.env.KUSH_MFA_KEY = "test-mfa-key-that-is-at-least-32-characters";
+    process.env.KUSH_DISCORD_INTEGRATION_SECRET = BOT_SECRET;
     pool = createDatabase(databaseUrl!).pool;
     app = await buildApp(databaseUrl!, false, {
       oauth: () => discord,
@@ -174,7 +178,7 @@ describe.skipIf(!databaseUrl)("staff dashboard (real PostgreSQL)", () => {
         "INSERT INTO support_tenants(name,guild_id,config) VALUES($1,$2,$3) RETURNING id",
         [
           "TEST staff",
-          "923456789012345672",
+          STAFF_GUILD,
           JSON.stringify({
             categories: [
               { key: "technical", label: "Technical" },
@@ -208,6 +212,7 @@ describe.skipIf(!databaseUrl)("staff dashboard (real PostgreSQL)", () => {
       ["KUSH_WEBSITE_SECRET", previous.website],
       ["KUSH_SUPPORT_TENANT_ID", previous.tenant],
       ["KUSH_MFA_KEY", previous.key],
+      ["KUSH_DISCORD_INTEGRATION_SECRET", previous.integration],
     ] as const)
       if (value === undefined) delete process.env[key];
       else process.env[key] = value;
@@ -516,6 +521,182 @@ describe.skipIf(!databaseUrl)("staff dashboard (real PostgreSQL)", () => {
     const events = (await web("GET", "/web/staff/audit", admin.token)).json()
       .events as { action: string }[];
     expect(events.some((e) => e.action.startsWith("staff."))).toBe(true);
+  });
+
+  describe("Discord notification outbox", () => {
+    const botCall = (
+      method: "GET" | "POST",
+      path: string,
+      payload?: object,
+      guild = STAFF_GUILD,
+      secret = BOT_SECRET,
+    ) =>
+      app.inject({
+        method,
+        url: `/discord/integration/tenants/${tenantId}/notifications${path}`,
+        headers: {
+          "x-kush-discord-secret": secret,
+          "x-kush-discord-guild-id": guild,
+        },
+        ...(payload ? { payload } : {}),
+      });
+    type Job = { id: string; kind: string; delivery: Record<string, string> };
+    /** Claims everything due and confirms it, returning what was delivered. */
+    const drain = async () => {
+      const jobs = (await botCall("GET", "/jobs")).json().jobs as Job[];
+      for (const job of jobs)
+        await botCall("POST", `/jobs/${job.id}`, { ok: true });
+      return jobs;
+    };
+
+    it("announces website tickets to the right channel, billing without detail", async () => {
+      await drain();
+      const customer = await person([], { mfa: false });
+      const technical = await openTicket(customer, "technical");
+      const billing = await openTicket(customer, "billing");
+      const report = await openTicket(customer, "member-report");
+      const jobs = await drain();
+      const by = (id: string) =>
+        jobs.find((j) => j.delivery.content?.includes(id))!.delivery;
+      expect(by(technical.id)).toMatchObject({
+        target: "channel",
+        channelKey: "staff:ticket-queue",
+      });
+      expect(by(billing.id).content).toMatch(/confidential billing/);
+      expect(by(report.id)).toMatchObject({
+        channelKey: "staff:moderation-log",
+      });
+      // Ticket text never goes to the staff channel, only a link.
+      expect(
+        jobs.some((j) => j.delivery.content?.includes("TEST technical ticket")),
+      ).toBe(false);
+      // Delivered jobs are done: nothing more to claim.
+      expect(await drain()).toEqual([]);
+    });
+
+    it("mirrors staff replies and DMs the customer, but never internal notes", async () => {
+      const customer = await person([], { mfa: false });
+      const ticket = await openTicket(customer, "technical");
+      const manager = await person([ROLE.manager]);
+      await drain();
+      const send = async (kind: string, content: string) =>
+        web("POST", `/web/staff/tickets/${ticket.id}/messages`, manager.token, {
+          requestId: randomUUID(),
+          expectedVersion: await version(manager, ticket.id),
+          kind,
+          content,
+        });
+      await send("note", "TEST secret internal note");
+      expect(await drain()).toEqual([]);
+      // Give the ticket a Discord channel so the mirror has somewhere to go.
+      const channelId = `7${Date.now()}`.padEnd(18, "1").slice(0, 18);
+      await pool.query(
+        "INSERT INTO discord_ticket_channels(tenant_id,ticket_id,guild_id,channel_id,queue) VALUES($1,$2,$3,$4,'support')",
+        [tenantId, ticket.id, STAFF_GUILD, channelId],
+      );
+      await send("reply", "TEST public answer");
+      const jobs = await drain();
+      const channel = jobs.find(
+        (j) => j.delivery.target === "ticket_channel",
+      )!.delivery;
+      expect(channel).toMatchObject({ channelId });
+      expect(channel.content).toContain("TEST public answer");
+      const dm = jobs.find((j) => j.delivery.target === "dm")!.delivery;
+      expect(dm.discordUserId).toBe(customer.discordId);
+      // The DM only says there is a reply; the content stays on KUSH.
+      expect(dm.content).not.toContain("TEST public answer");
+      expect(JSON.stringify(jobs)).not.toContain("secret internal note");
+    });
+
+    it("announces commissions without customer data, and DMs status changes", async () => {
+      await drain();
+      const customer = await person([], { mfa: false });
+      const created = (
+        await web("POST", "/web/workspace/commissions", customer.token, {
+          requestId: randomUUID(),
+          category: "creative",
+          title: "TEST private brand refresh",
+          details: "TEST: refresh the logo and colours for a private client.",
+          approximateBudget: null,
+          preferredTimeframe: null,
+        })
+      ).json().commission;
+      const [announced] = await drain();
+      expect(announced!.delivery).toMatchObject({
+        channelKey: "staff:staff-chat",
+      });
+      expect(announced!.delivery.content).not.toContain("private brand");
+      const manager = await person([ROLE.manager]);
+      const v = (
+        await web("GET", `/web/staff/commissions/${created.id}`, manager.token)
+      ).json().commission.version;
+      await web("POST", `/web/staff/commissions/${created.id}`, manager.token, {
+        expectedVersion: v,
+        status: "reviewing",
+      });
+      const [dm] = await drain();
+      expect(dm!.delivery).toMatchObject({
+        target: "dm",
+        discordUserId: customer.discordId,
+      });
+      expect(dm!.delivery.content).toContain("under review");
+    });
+
+    it("leases jobs, retries with backoff and gives up after 8 attempts", async () => {
+      await drain();
+      const customer = await person([], { mfa: false });
+      await openTicket(customer, "technical");
+      const [job] = (await botCall("GET", "/jobs")).json().jobs as Job[];
+      // Leased: a second poll does not hand out the same job.
+      const again = (await botCall("GET", "/jobs")).json().jobs as Job[];
+      expect(again.map((j) => j.id)).not.toContain(job!.id);
+      await botCall("POST", `/jobs/${job!.id}`, {
+        ok: false,
+        error: "Discord 503",
+      });
+      const row = (
+        await pool.query(
+          "SELECT status,attempts,next_attempt_at > now() AS later,last_error FROM notification_jobs WHERE id=$1",
+          [job!.id],
+        )
+      ).rows[0];
+      expect(row).toMatchObject({
+        status: "pending",
+        attempts: 1,
+        later: true,
+        last_error: "Discord 503",
+      });
+      await pool.query("UPDATE notification_jobs SET attempts=8 WHERE id=$1", [
+        job!.id,
+      ]);
+      await botCall("POST", `/jobs/${job!.id}`, {
+        ok: false,
+        error: "still down",
+      });
+      const final = await pool.query(
+        "SELECT status FROM notification_jobs WHERE id=$1",
+        [job!.id],
+      );
+      expect(final.rows[0].status).toBe("failed");
+    });
+
+    it("rejects the wrong bot secret or guild", async () => {
+      expect(
+        (
+          await botCall(
+            "GET",
+            "/jobs",
+            undefined,
+            STAFF_GUILD,
+            "x".repeat(BOT_SECRET.length),
+          )
+        ).statusCode,
+      ).toBe(401);
+      expect(
+        (await botCall("GET", "/jobs", undefined, "999999999999999999"))
+          .statusCode,
+      ).toBe(404);
+    });
   });
 
   it("never grants product ownership for being staff", async () => {

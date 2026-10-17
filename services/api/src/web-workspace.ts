@@ -5,6 +5,7 @@ import type { WebSession } from "./account-service.js";
 import type { WebHelpers } from "./accounts.js";
 import { CommercialService } from "./commercial-service.js";
 import { SupportError, SupportService } from "./support-service.js";
+import { enqueueNotification } from "./notifications.js";
 
 /**
  * Customer workspace for the website: the signed-in customer's own
@@ -121,6 +122,16 @@ export async function registerWorkspace(
           productUrl: null,
         },
       );
+      // Enqueued after the commit; the dedupe key makes a retried request
+      // (same requestId -> same record) a no-op.
+      await enqueueNotification(
+        pool,
+        tenantId(),
+        "commission.created",
+        created.id,
+        {},
+        `commission.created:${created.id}`,
+      );
       return { commission: publicCommission(created) };
     }),
   );
@@ -186,15 +197,22 @@ export async function registerWorkspace(
   app.post(
     "/web/workspace/tickets",
     { schema: { body: body(ticketSchema) } },
-    signedIn(async (session, request) => ({
-      ticket: publicTicket(
-        await support.createTicket(
-          await customer(session),
-          tenantId(),
-          ticketSchema.parse(request.body),
-        ),
-      ),
-    })),
+    signedIn(async (session, request) => {
+      const ticket = await support.createTicket(
+        await customer(session),
+        tenantId(),
+        ticketSchema.parse(request.body),
+      );
+      await enqueueNotification(
+        pool,
+        tenantId(),
+        "ticket.created",
+        ticket.id,
+        {},
+        `ticket.created:${ticket.id}`,
+      );
+      return { ticket: publicTicket(ticket) };
+    }),
   );
 
   app.post(
@@ -202,16 +220,29 @@ export async function registerWorkspace(
     { schema: { params: uuidParam("ticketId"), body: body(replySchema) } },
     signedIn(async (session, request) => {
       const input = replySchema.parse(request.body);
-      return {
-        ticket: publicTicket(
-          await support.message(
-            await customer(session),
-            tenantId(),
-            params<{ ticketId: string }>(request).ticketId,
-            { ...input, kind: "reply" },
-          ),
-        ),
-      };
+      const user = await customer(session);
+      const ticketId = params<{ ticketId: string }>(request).ticketId;
+      const ticket = await support.message(user, tenantId(), ticketId, {
+        ...input,
+        kind: "reply",
+      });
+      // Mirror the customer's website reply into the Discord ticket channel.
+      const message = (
+        await pool.query<{ id: string }>(
+          "SELECT id FROM support_messages WHERE tenant_id=$1 AND ticket_id=$2 AND author_id=$3 AND request_id=$4",
+          [tenantId(), ticketId, user.id, input.requestId],
+        )
+      ).rows[0];
+      if (message)
+        await enqueueNotification(
+          pool,
+          tenantId(),
+          "ticket.message",
+          ticketId,
+          { messageId: message.id, audience: "channel" },
+          `ticket.message:${message.id}:channel`,
+        );
+      return { ticket: publicTicket(ticket) };
     }),
   );
 }

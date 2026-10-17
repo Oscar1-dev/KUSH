@@ -1,5 +1,6 @@
 import type { Pool, PoolClient } from "@kush/database";
 import { transitions as commissionTransitions } from "./commercial-service.js";
+import { enqueueNotification } from "./notifications.js";
 import {
   can,
   demand,
@@ -297,8 +298,8 @@ export class StaffService {
       if (ticket.status === "closed")
         fail(409, "Closed tickets cannot receive messages");
       await this.ensureMember(c, staff);
-      await c.query(
-        "INSERT INTO support_messages(tenant_id,ticket_id,author_id,kind,content,request_id) VALUES($1,$2,$3,$4,$5,$6)",
+      const inserted = await c.query<{ id: string }>(
+        "INSERT INTO support_messages(tenant_id,ticket_id,author_id,kind,content,request_id) VALUES($1,$2,$3,$4,$5,$6) RETURNING id",
         [
           staff.tenantId,
           ticketId,
@@ -308,6 +309,20 @@ export class StaffService {
           input.requestId,
         ],
       );
+      // Public replies reach Discord: mirrored into the ticket channel and a
+      // DM to the customer. Internal notes are never announced.
+      if (input.kind === "reply") {
+        const messageId = inserted.rows[0]!.id;
+        for (const audience of ["channel", "customer"])
+          await enqueueNotification(
+            c,
+            staff.tenantId,
+            "ticket.message",
+            ticketId,
+            { messageId, audience },
+            `ticket.message:${messageId}:${audience}`,
+          );
+      }
       const updated = await c.query<{ version: number }>(
         "UPDATE support_tickets SET version=version+1,updated_at=now() WHERE tenant_id=$1 AND id=$2 RETURNING version",
         [staff.tenantId, ticketId],
@@ -361,6 +376,14 @@ export class StaffService {
           { reason: input.reason },
           "public",
         );
+        await enqueueNotification(
+          c,
+          staff.tenantId,
+          "ticket.status",
+          ticketId,
+          { status: "closed" },
+          `ticket.status:${ticketId}:${ticket.version + 1}`,
+        );
         return { status: "closed" };
       }
       if (!ticketTransitions[ticket.status]?.includes(input.status))
@@ -376,6 +399,14 @@ export class StaffService {
         "ticket.updated",
         { status: input.status },
         "public",
+      );
+      await enqueueNotification(
+        c,
+        staff.tenantId,
+        "ticket.status",
+        ticketId,
+        { status: input.status },
+        `ticket.status:${ticketId}:${ticket.version + 1}`,
       );
       return { status: input.status };
     });
@@ -551,6 +582,15 @@ export class StaffService {
           input.reviewNote ?? null,
         ],
       );
+      if (input.status)
+        await enqueueNotification(
+          c,
+          staff.tenantId,
+          "commission.status",
+          id,
+          { status: input.status },
+          `commission.status:${id}:${row!.version + 1}`,
+        );
       await this.audit(
         c,
         staff,
