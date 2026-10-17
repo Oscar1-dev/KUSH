@@ -10,30 +10,30 @@ Evidence: the bot read up to 100 messages and the pins of every channel outside 
 
 ### Public channels (visible to members today)
 
-| Channel                  | Category      | Proposal                               | Reason                                                                         |
-| ------------------------ | ------------- | -------------------------------------- | ------------------------------------------------------------------------------ |
-| `#off-topic`             | COMMUNITY     | **Adopt** (community)                  | Normal community chat; directive keeps general chat areas                      |
-| `#media`                 | COMMUNITY     | **Adopt** (community)                  | Image/clip sharing separate from showcases                                     |
-| `#feedback`              | COMMUNITY     | **Archive**                            | Duplicate of `#suggestions` (rename that to `#suggestions-and-feedback`)       |
-| `#polls`                 | COMMUNITY     | **Archive**                            | Polls work in any community channel                                            |
-| `#feature-requests`      | PRODUCTS      | **Archive**                            | Duplicate of suggestions                                                       |
-| `#bug-reports`           | PRODUCTS      | **Archive**                            | Bugs go to a private *Product bug* ticket; public confirmed bugs → known-issues |
-| `#product-announcements` | PRODUCTS      | **Archive**                            | Duplicate of `#releases`                                                       |
-| `#development-progress`  | PRODUCTS      | **Archive**                            | Covered by `#releases` and `#development`                                      |
-| `#commission-information`| KUSH STUDIO   | **Archive**                            | Duplicate of `#services` + `#commission-enquiries`                             |
-| `#pricing-and-quotes`    | KUSH STUDIO   | **Archive**                            | Pricing is not validated; quotes are private                                   |
-| `#commission-showcase`   | KUSH STUDIO   | **Adopt → `#portfolio`**               | Directive asks for "Portfolio and completed work"                              |
-| `#customer-reviews`      | KUSH STUDIO   | **Archive**                            | No genuine reviews exist; fabricating any is not acceptable                    |
-| `#marketplace`           | PARTNERSHIPS  | **Archive**                            | Marketplace does not exist yet                                                 |
-| `#featured-products`     | PARTNERSHIPS  | **Archive**                            | No products yet                                                                |
-| `#marketplace-support`   | PARTNERSHIPS  | **Archive**                            | Support goes through tickets                                                   |
-| `#seller-applications`   | PARTNERSHIPS  | **Archive**                            | Applications are private forms, not a public channel                           |
-| `#partner-applications`  | PARTNERSHIPS  | **Adopt → `#applications`** (read-only)| Directive asks for an applications area: info + apply panel                   |
-| `#support-centre`        | SUPPORT       | **Adopt → `#support-information`**     | Directive asks for support information / troubleshooting                       |
-| `#resolved-issues`       | SUPPORT       | **Archive**                            | Resolution lives in private tickets                                            |
-| `#roles`                 | INFORMATION   | **Archive**                            | No self-assignable roles exist in v2                                           |
-| `#faq` (old)             | INFORMATION   | **Archive**                            | Duplicate of SUPPORT `#faq`                                                    |
-| `Text channels`          | (category)    | **Archive**                            | Discord default category, now empty                                            |
+| Channel                   | Category     | Proposal                                | Reason                                                                          |
+| ------------------------- | ------------ | --------------------------------------- | ------------------------------------------------------------------------------- |
+| `#off-topic`              | COMMUNITY    | **Adopt** (community)                   | Normal community chat; directive keeps general chat areas                       |
+| `#media`                  | COMMUNITY    | **Adopt** (community)                   | Image/clip sharing separate from showcases                                      |
+| `#feedback`               | COMMUNITY    | **Archive**                             | Duplicate of `#suggestions` (rename that to `#suggestions-and-feedback`)        |
+| `#polls`                  | COMMUNITY    | **Archive**                             | Polls work in any community channel                                             |
+| `#feature-requests`       | PRODUCTS     | **Archive**                             | Duplicate of suggestions                                                        |
+| `#bug-reports`            | PRODUCTS     | **Archive**                             | Bugs go to a private _Product bug_ ticket; public confirmed bugs → known-issues |
+| `#product-announcements`  | PRODUCTS     | **Archive**                             | Duplicate of `#releases`                                                        |
+| `#development-progress`   | PRODUCTS     | **Archive**                             | Covered by `#releases` and `#development`                                       |
+| `#commission-information` | KUSH STUDIO  | **Archive**                             | Duplicate of `#services` + `#commission-enquiries`                              |
+| `#pricing-and-quotes`     | KUSH STUDIO  | **Archive**                             | Pricing is not validated; quotes are private                                    |
+| `#commission-showcase`    | KUSH STUDIO  | **Adopt → `#portfolio`**                | Directive asks for "Portfolio and completed work"                               |
+| `#customer-reviews`       | KUSH STUDIO  | **Archive**                             | No genuine reviews exist; fabricating any is not acceptable                     |
+| `#marketplace`            | PARTNERSHIPS | **Archive**                             | Marketplace does not exist yet                                                  |
+| `#featured-products`      | PARTNERSHIPS | **Archive**                             | No products yet                                                                 |
+| `#marketplace-support`    | PARTNERSHIPS | **Archive**                             | Support goes through tickets                                                    |
+| `#seller-applications`    | PARTNERSHIPS | **Archive**                             | Applications are private forms, not a public channel                            |
+| `#partner-applications`   | PARTNERSHIPS | **Adopt → `#applications`** (read-only) | Directive asks for an applications area: info + apply panel                     |
+| `#support-centre`         | SUPPORT      | **Adopt → `#support-information`**      | Directive asks for support information / troubleshooting                        |
+| `#resolved-issues`        | SUPPORT      | **Archive**                             | Resolution lives in private tickets                                             |
+| `#roles`                  | INFORMATION  | **Archive**                             | No self-assignable roles exist in v2                                            |
+| `#faq` (old)              | INFORMATION  | **Archive**                             | Duplicate of SUPPORT `#faq`                                                     |
+| `Text channels`           | (category)   | **Archive**                             | Discord default category, now empty                                             |
 
 ### Voice — needs your decision
 
@@ -44,16 +44,16 @@ Evidence: the bot read up to 100 messages and the pins of every channel outside 
 
 ### Staff and owner (already private — only you and the bot can see them)
 
-| Channel                  | Proposal                                     | Reason                                                   |
-| ------------------------ | -------------------------------------------- | -------------------------------------------------------- |
-| `#commission-management` | **Adopt** (staff: Commission Manager scope)  | Directive asks for staff commission management           |
-| `#partner-management`    | **Adopt → `#recruitment-review`**            | Directive asks for recruitment review                    |
-| `#staff-announcements`   | **Archive**                                  | `#staff-chat` covers it                                  |
-| `#staff-tasks`           | **Archive**                                  | Only test commands                                       |
-| `#marketplace-review`    | **Archive**                                  | No marketplace yet                                       |
-| `#audit-log`             | **Archive**                                  | Duplicate of `#bot-log`                                  |
-| `#financial-planning`    | **Adopt → `#financial-operations`** (owner)  | Directive asks for financial operations                  |
-| `#business-planning`     | **Adopt → `#agreement-administration`** (owner) | Directive asks for agreement administration           |
+| Channel                  | Proposal                                        | Reason                                         |
+| ------------------------ | ----------------------------------------------- | ---------------------------------------------- |
+| `#commission-management` | **Adopt** (staff: Commission Manager scope)     | Directive asks for staff commission management |
+| `#partner-management`    | **Adopt → `#recruitment-review`**               | Directive asks for recruitment review          |
+| `#staff-announcements`   | **Archive**                                     | `#staff-chat` covers it                        |
+| `#staff-tasks`           | **Archive**                                     | Only test commands                             |
+| `#marketplace-review`    | **Archive**                                     | No marketplace yet                             |
+| `#audit-log`             | **Archive**                                     | Duplicate of `#bot-log`                        |
+| `#financial-planning`    | **Adopt → `#financial-operations`** (owner)     | Directive asks for financial operations        |
+| `#business-planning`     | **Adopt → `#agreement-administration`** (owner) | Directive asks for agreement administration    |
 
 ## Effect
 
