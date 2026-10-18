@@ -1,4 +1,11 @@
-import { PermissionFlagsBits as P } from "discord.js";
+import {
+  ActionRowBuilder,
+  ButtonBuilder,
+  ButtonStyle,
+  type EmbedBuilder,
+  PermissionFlagsBits as P,
+} from "discord.js";
+import { card } from "../panels.js";
 import type {
   DiscordApiClient,
   Ticket,
@@ -14,6 +21,17 @@ import type { ResolvedOverwrite } from "../provisioning.js";
 import type { Logger } from "../runtime/logger.js";
 import { ticketCategory } from "./categories.js";
 
+export interface TicketMessage {
+  content?: string;
+  embeds?: EmbedBuilder[];
+  components?: ActionRowBuilder<ButtonBuilder>[];
+  mentionUserIds?: string[];
+}
+
+/** Public button in every ticket channel; the API decides who may close. */
+export const TICKET_CLOSE_BUTTON = "ticket:close";
+export const TICKET_CLOSE_MODAL = "ticket:close-modal";
+
 /** Minimal Discord surface for ticket channels (discord.js or a test fake). */
 export interface TicketDiscord {
   createChannel(input: {
@@ -28,10 +46,7 @@ export interface TicketDiscord {
     overwrites: ResolvedOverwrite[],
   ): Promise<void>;
   rename(channelId: string, name: string): Promise<void>;
-  send(
-    channelId: string,
-    message: { content: string; mentionUserIds?: string[] },
-  ): Promise<void>;
+  send(channelId: string, message: TicketMessage): Promise<void>;
 }
 
 export interface TicketManagerConfig {
@@ -166,12 +181,49 @@ export class TicketManager {
       queue,
     );
     this.channels.set(channelId, { ticketId: ticket.id, queue });
+    const category = ticketCategory(ticket.category);
+    const isReport = queue === "reports";
     await this.discord.send(channelId, {
-      content: [
-        `<@${creatorId}> your ${queue === "reports" ? "report" : "ticket"} **#${ticket.number}** (${label}) is open. Only you and authorised ${queue === "reports" ? "moderators" : "support staff"} can see this channel.`,
-        "Reply here and staff will respond. Type `!close <reason>` when you are done.",
-      ].join("\n"),
+      content: `<@${creatorId}>`,
       mentionUserIds: [creatorId],
+      embeds: [
+        card({
+          emoji: isReport ? "🚩" : "🎫",
+          title: isReport ? "Report received" : "Ticket created",
+          tone: "success",
+          description: [
+            `Thanks <@${creatorId}>, your ${isReport ? "report" : "ticket"} is open.`,
+            `Only you and authorised ${isReport ? "moderators" : "KUSH staff"} can see this channel.`,
+            "",
+            "💬 **Reply here** with any details, screenshots or files.",
+            "🌐 You can also follow it on the KUSH website.",
+            "🔒 **Close it** with the button below when you're done.",
+          ].join("\n"),
+          fields: [
+            { name: "Ticket", value: `#${ticket.number}`, inline: true },
+            {
+              name: "Category",
+              value: `${category?.emoji ?? "📝"} ${label}`,
+              inline: true,
+            },
+            {
+              name: "Priority",
+              value: ticket.priority ?? "normal",
+              inline: true,
+            },
+          ],
+          timestamp: true,
+        }),
+      ],
+      components: [
+        new ActionRowBuilder<ButtonBuilder>().addComponents(
+          new ButtonBuilder()
+            .setCustomId(TICKET_CLOSE_BUTTON)
+            .setLabel("Close ticket")
+            .setEmoji("🔒")
+            .setStyle(ButtonStyle.Danger),
+        ),
+      ],
     });
     await this.notify(queue, ticket, label);
     return channelId;
@@ -186,9 +238,37 @@ export class TicketManager {
         : (this.config.channelIds["staff:ticket-queue"] ??
           this.config.channelIds["08-staff-operations:ticket-management"]);
     if (!target) return;
+    const category = ticketCategory(ticket.category);
     await this.discord
       .send(target, {
-        content: `New ${queue === "reports" ? "report" : "ticket"} **#${ticket.number}** · ${label} · priority ${ticket.priority}. Claim with \`!claim ${ticket.number}\`.`,
+        embeds: [
+          card({
+            emoji: queue === "reports" ? "🚩" : "📥",
+            title:
+              queue === "reports"
+                ? `New report #${ticket.number}`
+                : `New ticket #${ticket.number}`,
+            tone: queue === "reports" ? "danger" : "info",
+            fields: [
+              {
+                name: "Category",
+                value: `${category?.emoji ?? "📝"} ${label}`,
+                inline: true,
+              },
+              {
+                name: "Priority",
+                value: ticket.priority ?? "normal",
+                inline: true,
+              },
+              {
+                name: "Claim",
+                value: `\`!claim ${ticket.number}\``,
+                inline: true,
+              },
+            ],
+            timestamp: true,
+          }),
+        ],
       })
       .catch((error: unknown) =>
         this.log.warn("ticket.notify.failed", {

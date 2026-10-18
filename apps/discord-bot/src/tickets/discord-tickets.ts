@@ -1,3 +1,4 @@
+import type { TicketMessage } from "./manager.js";
 import { ChannelType, OverwriteType, type Guild } from "discord.js";
 import type { ResolvedOverwrite } from "../provisioning.js";
 import type { TicketDiscord } from "./manager.js";
@@ -55,14 +56,13 @@ export class DiscordTicketChannels implements TicketDiscord {
     await channel.setName(name, "KUSH ticket state");
   }
 
-  async send(
-    channelId: string,
-    message: { content: string; mentionUserIds?: string[] },
-  ) {
+  async send(channelId: string, message: TicketMessage) {
     const channel = await this.guild().channels.fetch(channelId);
     if (!channel?.isSendable()) throw new Error("Channel is not sendable");
     await channel.send({
-      content: message.content,
+      ...(message.content ? { content: message.content } : {}),
+      ...(message.embeds ? { embeds: message.embeds } : {}),
+      ...(message.components ? { components: message.components } : {}),
       allowedMentions: { parse: [], users: message.mentionUserIds ?? [] },
     });
   }

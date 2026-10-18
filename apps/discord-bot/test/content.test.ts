@@ -1,3 +1,4 @@
+import { ticketCategories } from "../src/tickets/categories.js";
 import { describe, expect, it } from "vitest";
 import { blueprint } from "../src/blueprint.js";
 import { channelContent } from "../src/content/channel-content.js";
@@ -81,8 +82,9 @@ describe("official channel content", () => {
   it("only uses buttons that have working handlers", () => {
     const handled = [
       "ticket:open",
-      "ticket:open:commission",
       "onboarding:accept",
+      // Every category button (handled by the ticket:open:<key> route).
+      ...ticketCategories.map((c) => `ticket:open:${c.key}`),
     ];
     for (const message of channelContent)
       for (const row of message.build().components ?? []) {

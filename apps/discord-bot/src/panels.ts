@@ -7,18 +7,92 @@ import {
 import { onboardingButton } from "./runtime/components.js";
 
 export const kushColours = {
-  green: 0x22c55e,
-  purple: 0x7c3aed,
+  green: 0xa7fa43, // KUSH lime (matches the website)
+  purple: 0x7c3aed, // KUSH violet
+  blue: 0x3b82f6,
   obsidian: 0x111318,
   warning: 0xf59e0b,
+  danger: 0xef4444,
+  success: 0x22c55e,
 } as const;
 
-export const embed = (title: string, description: string) =>
-  new EmbedBuilder()
-    .setColor(kushColours.green)
-    .setTitle(title)
-    .setDescription(description)
-    .setFooter({ text: "KUSH · Software, development and creative services" });
+export type Tone =
+  "brand" | "info" | "success" | "warning" | "danger" | "staff";
+const toneColour: Record<Tone, number> = {
+  brand: kushColours.purple,
+  info: kushColours.blue,
+  success: kushColours.success,
+  warning: kushColours.warning,
+  danger: kushColours.danger,
+  staff: kushColours.green,
+};
+
+/**
+ * House style for every official post: an emoji heading and a colour per
+ * kind of message. Unlisted titles fall back to the brand style.
+ */
+const titleStyle: Record<string, { emoji: string; tone: Tone }> = {
+  "Welcome to KUSH": { emoji: "👋", tone: "brand" },
+  "Community rules": { emoji: "📜", tone: "warning" },
+  "Joining the community": { emoji: "✅", tone: "success" },
+  "Getting started": { emoji: "🚀", tone: "brand" },
+  "Service status": { emoji: "🟢", tone: "success" },
+  "Do not post here": { emoji: "⚠️", tone: "danger" },
+  "Introduce yourself": { emoji: "🙋", tone: "brand" },
+  Showcases: { emoji: "🎨", tone: "brand" },
+  Suggestions: { emoji: "💡", tone: "info" },
+  "KUSH services": { emoji: "🛠️", tone: "brand" },
+  "Request a commission": { emoji: "✏️", tone: "brand" },
+  "KUSH products": { emoji: "📦", tone: "info" },
+  Downloads: { emoji: "⬇️", tone: "info" },
+  "Setup guides": { emoji: "🧭", tone: "info" },
+  "Known issues": { emoji: "🐞", tone: "warning" },
+  "Beta programme": { emoji: "🧪", tone: "info" },
+  "KUSH support": { emoji: "🛟", tone: "info" },
+  "Frequently asked questions": { emoji: "❓", tone: "info" },
+  "Join the KUSH team": { emoji: "🧑‍💼", tone: "brand" },
+  "Partner programmes": { emoji: "🤝", tone: "brand" },
+  "Staff guide": { emoji: "🛡️", tone: "staff" },
+  "Ticket queue": { emoji: "🎫", tone: "staff" },
+  "Moderation log": { emoji: "🚨", tone: "staff" },
+  "Bot log": { emoji: "🤖", tone: "staff" },
+};
+
+export const FOOTER = "KUSH • Software, development & creative services";
+
+/** A house-style embed. `title` may already include an emoji. */
+export const card = (input: {
+  title: string;
+  description?: string;
+  tone?: Tone;
+  emoji?: string;
+  fields?: { name: string; value: string; inline?: boolean }[];
+  footer?: string;
+  thumbnail?: string | null;
+  timestamp?: boolean;
+}) => {
+  const built = new EmbedBuilder()
+    .setColor(toneColour[input.tone ?? "brand"])
+    .setTitle(
+      `${input.emoji ? `${input.emoji} ` : ""}${input.title}`.slice(0, 256),
+    )
+    .setFooter({ text: input.footer ?? FOOTER });
+  if (input.description) built.setDescription(input.description.slice(0, 4096));
+  if (input.fields?.length) built.addFields(input.fields.slice(0, 25));
+  if (input.thumbnail) built.setThumbnail(input.thumbnail);
+  if (input.timestamp) built.setTimestamp(new Date());
+  return built;
+};
+
+export const embed = (title: string, description: string) => {
+  const style = titleStyle[title];
+  return card({
+    title,
+    description,
+    emoji: style?.emoji,
+    tone: style?.tone ?? "brand",
+  });
+};
 
 /** Public persistent button IDs (not user-scoped; the clicker is the actor). */
 export const PUBLIC_TICKET_BUTTON = "ticket:open";
@@ -110,4 +184,41 @@ export function unavailablePanel(area: string, reason?: string) {
       ).setColor(kushColours.warning),
     ],
   };
+}
+
+/** Public ticket buttons: `ticket:open:<category>` opens that form. */
+export const ticketButtonId = (key: string) => `ticket:open:${key}`;
+
+const buttonStyle = {
+  primary: ButtonStyle.Primary,
+  secondary: ButtonStyle.Secondary,
+  success: ButtonStyle.Success,
+  danger: ButtonStyle.Danger,
+} as const;
+
+/** The coloured category grid for #create-ticket (max 5 per row). */
+export function ticketCategoryGrid(
+  categories: readonly {
+    key: string;
+    label: string;
+    emoji: string;
+    style: keyof typeof buttonStyle;
+  }[],
+) {
+  const rows: ActionRowBuilder<ButtonBuilder>[] = [];
+  for (let i = 0; i < categories.length; i += 4)
+    rows.push(
+      new ActionRowBuilder<ButtonBuilder>().addComponents(
+        ...categories
+          .slice(i, i + 4)
+          .map((c) =>
+            new ButtonBuilder()
+              .setCustomId(ticketButtonId(c.key))
+              .setLabel(c.label)
+              .setEmoji(c.emoji)
+              .setStyle(buttonStyle[c.style]),
+          ),
+      ),
+    );
+  return rows;
 }

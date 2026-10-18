@@ -8,8 +8,10 @@ import {
   embed,
   kushColours,
   rulesText,
-  PUBLIC_TICKET_BUTTON,
+  card,
+  ticketCategoryGrid,
 } from "../panels.js";
+import { ticketCategories } from "../tickets/categories.js";
 import { onboardingButton } from "../runtime/components.js";
 import type { BotReply } from "../runtime/command.js";
 
@@ -38,14 +40,6 @@ const page = (...embeds: EmbedBuilder[]): BotReply => ({
   embeds,
   components: [],
 });
-
-const ticketRow = (label = "Open a private ticket") =>
-  new ActionRowBuilder<ButtonBuilder>().addComponents(
-    new ButtonBuilder()
-      .setCustomId(PUBLIC_TICKET_BUTTON)
-      .setLabel(label)
-      .setStyle(ButtonStyle.Primary),
-  );
 
 const notYet = (feature: string) => `_${feature} — not available yet._`;
 
@@ -308,16 +302,21 @@ export const channelContent: ChannelMessage[] = [
     pin: true,
     build: () => ({
       embeds: [
-        embed(
-          "KUSH support",
-          [
-            "Open a **private ticket** for general support, purchases, installation, technical issues, bugs, billing, commissions, partnerships or anything else. Only you and authorised staff can see it — no account or purchase needed.",
+        card({
+          emoji: "🎫",
+          title: "Create a ticket",
+          tone: "info",
+          description: [
+            "**Pick the category that best matches your issue.** A private channel opens that only you and the right KUSH team can see. No account or purchase needed.",
             "",
-            "To report a member, choose **Member report**: reports are handled by moderators only.",
+            "🔒 **Billing** is handled confidentially by managers.",
+            "🚩 **Member reports** go to moderators only.",
+            "",
+            "You can also follow and reply to your tickets on the KUSH website.",
           ].join("\n"),
-        ),
+        }),
       ],
-      components: [ticketRow()],
+      components: ticketCategoryGrid(ticketCategories),
     }),
   },
   {

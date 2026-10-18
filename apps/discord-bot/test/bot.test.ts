@@ -84,7 +84,7 @@ describe("Discord bot foundation", () => {
 
   it("builds an accessible support panel without fake live data", () => {
     const json = supportPanel().embeds[0]?.toJSON();
-    expect(json?.title).toBe("KUSH support");
+    expect(json?.title).toContain("KUSH support");
     expect(JSON.stringify(json)).not.toMatch(/online|uptime|customers served/i);
     expect(supportPanel().components).toHaveLength(1);
   });

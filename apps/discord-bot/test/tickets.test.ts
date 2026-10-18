@@ -17,7 +17,11 @@ import { HealthMonitor } from "../src/runtime/health.js";
 import { createLogger } from "../src/runtime/logger.js";
 import { tokenise } from "../src/runtime/prefix.js";
 import { commands } from "../src/runtime/registry.js";
-import { TicketManager, type TicketDiscord } from "../src/tickets/manager.js";
+import {
+  TicketManager,
+  type TicketDiscord,
+  type TicketMessage,
+} from "../src/tickets/manager.js";
 import { formatTranscript } from "../src/tickets/transcript.js";
 
 const GUILD = "100000000000000000";
@@ -42,8 +46,7 @@ class FakeDiscord implements TicketDiscord {
     string,
     { name: string; parentId: string | null; overwrites: ResolvedOverwrite[] }
   >();
-  sent: { channelId: string; content: string; mentionUserIds?: string[] }[] =
-    [];
+  sent: (TicketMessage & { channelId: string })[] = [];
   #next = 500000000000000000n;
   async createChannel(input: {
     name: string;
@@ -68,10 +71,7 @@ class FakeDiscord implements TicketDiscord {
   async rename(id: string, name: string) {
     this.channels.get(id)!.name = name;
   }
-  async send(
-    channelId: string,
-    message: { content: string; mentionUserIds?: string[] },
-  ) {
+  async send(channelId: string, message: TicketMessage) {
     this.sent.push({ channelId, ...message });
   }
 }
@@ -213,7 +213,8 @@ describe("ticket channels", () => {
     const queueMessage = discord.sent.find(
       (item) => item.channelId === channelIds["staff:ticket-queue"],
     );
-    expect(queueMessage?.content).toContain("#7");
+    // The queue card carries the number and category, never the description.
+    expect(JSON.stringify(queueMessage)).toContain("#7");
     expect(JSON.stringify(discord.sent)).not.toContain(
       "SECRET CUSTOMER DESCRIPTION",
     );

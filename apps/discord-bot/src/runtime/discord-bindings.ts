@@ -14,6 +14,14 @@ import {
   NDA_SUBMIT_PREFIX,
   ndaModal,
 } from "../automation/nda.js";
+import { TICKET_CLOSE_BUTTON, TICKET_CLOSE_MODAL } from "../tickets/manager.js";
+import { card } from "../panels.js";
+import {
+  ActionRowBuilder as Row,
+  ModalBuilder,
+  TextInputBuilder,
+  TextInputStyle,
+} from "discord.js";
 import { ApiError, requestUuid } from "../api-client.js";
 import {
   HONEYPOT_CHANNEL_KEY,
@@ -347,15 +355,46 @@ async function handleComponent(
       );
       return;
     }
-    if (interaction.customId === PUBLIC_COMMISSION_BUTTON) {
-      const category = ticketCategory("commission")!;
+    // Category buttons in #create-ticket (and the commission button).
+    const categoryKey = /^ticket:open:([a-z-]+)$/.exec(
+      interaction.customId,
+    )?.[1];
+    if (categoryKey || interaction.customId === PUBLIC_COMMISSION_BUTTON) {
+      const category = ticketCategory(categoryKey ?? "commission");
+      if (!category) return;
       await interaction.showModal(
-        ticketModal(signerFor(services), userId, category.key, category.label),
+        ticketModal(
+          signerFor(services),
+          userId,
+          category.key,
+          `${category.emoji} ${category.label}`,
+        ),
       );
       return;
     }
     if (interaction.customId === ONBOARDING_ACCEPT) {
       await acceptRules(interaction, services);
+      return;
+    }
+    if (interaction.customId === TICKET_CLOSE_BUTTON) {
+      if (!services.tickets.channels.has(interaction.channelId)) return;
+      await interaction.showModal(
+        new ModalBuilder()
+          .setCustomId(TICKET_CLOSE_MODAL)
+          .setTitle("Close this ticket")
+          .addComponents(
+            new Row<TextInputBuilder>().addComponents(
+              new TextInputBuilder()
+                .setCustomId("reason")
+                .setLabel("Why are you closing it?")
+                .setPlaceholder("e.g. Resolved, thanks!")
+                .setStyle(TextInputStyle.Short)
+                .setMinLength(2)
+                .setMaxLength(300)
+                .setRequired(true),
+            ),
+          ),
+      );
       return;
     }
     // Staff NDA: anyone can open the form, but the API only accepts a
@@ -367,6 +406,50 @@ async function handleComponent(
       await interaction.showModal(ndaModal(ndaId));
       return;
     }
+  }
+  // Close from the ticket card: same path and permissions as `!close`.
+  if (
+    interaction.isModalSubmit() &&
+    interaction.customId === TICKET_CLOSE_MODAL
+  ) {
+    const channelId = interaction.channelId;
+    if (!channelId || !services.tickets.channels.has(channelId)) return;
+    await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+    const actor = { discordUserId: userId };
+    const reason = interaction.fields.getTextInputValue("reason").trim();
+    const ticket = await services.api.ticketByChannel(actor, channelId);
+    const closed = await services.api.close(
+      actor,
+      ticket.id,
+      ticket.version,
+      reason.slice(0, 2_000),
+    );
+    const records = await services.api.ticketChannels("active");
+    const record = records.find((item) => item.ticketId === closed.id);
+    if (record) {
+      const { accessFromRecord } = await import("../tickets/manager.js");
+      await services.tickets.sync(accessFromRecord(record));
+    }
+    await respond(interaction, {
+      content: `🔒 Ticket #${closed.number} closed.`,
+    });
+    if (interaction.channel?.isSendable())
+      await interaction.channel
+        .send({
+          embeds: [
+            card({
+              emoji: "🔒",
+              title: "Ticket closed",
+              tone: "danger",
+              description: `Closed by <@${userId}>. The channel is now read-only; type \`!reopen\` if you need more help.`,
+              fields: [{ name: "Reason", value: reason.slice(0, 1_000) }],
+              timestamp: true,
+            }),
+          ],
+          allowedMentions: { parse: [] },
+        })
+        .catch(() => undefined);
+    return;
   }
   if (
     interaction.isModalSubmit() &&
