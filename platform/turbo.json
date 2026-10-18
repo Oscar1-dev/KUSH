@@ -1,0 +1,21 @@
+{
+  "$schema": "https://turbo.build/schema.json",
+  "tasks": {
+    "build": {
+      "dependsOn": ["^build"],
+      "outputs": ["dist/**"]
+    },
+    "typecheck": {
+      "dependsOn": ["^typecheck"]
+    },
+    "test": {
+      "dependsOn": ["^build"],
+      "outputs": [],
+      "cache": false,
+      "passThroughEnv": ["KUSH_TEST_DATABASE_URL"]
+    },
+    "@kush/api#build": {
+      "outputs": []
+    }
+  }
+}

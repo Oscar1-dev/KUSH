@@ -1,0 +1,30 @@
+{
+  "name": "kush",
+  "version": "0.0.0",
+  "private": true,
+  "packageManager": "pnpm@12.9.1",
+  "engines": {
+    "node": ">=24 <25"
+  },
+  "scripts": {
+    "dev:api": "pnpm --filter @kush/api dev",
+    "dev:desktop": "pnpm --filter @kush/developer tauri dev",
+    "build": "turbo run build",
+    "typecheck": "turbo run typecheck",
+    "test": "turbo run test",
+    "lint": "eslint .",
+    "format:check": "prettier --check .",
+    "local": "node scripts/local.mjs"
+  },
+  "devDependencies": {
+    "@axe-core/playwright": "^4.13.0",
+    "@playwright/test": "^1.64.1",
+    "@types/node": "^24.0.0",
+    "embedded-postgres": "18.4.0-beta.17",
+    "eslint": "10.12.0",
+    "prettier": "3.9.10",
+    "turbo": "2.11.8",
+    "typescript": "~5.9.3",
+    "typescript-eslint": "^8.46.0"
+  }
+}

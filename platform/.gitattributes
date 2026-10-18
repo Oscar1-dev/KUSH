@@ -1,0 +1,2 @@
+# Migration files are checksummed; keep their bytes stable across platforms.
+*.sql text eol=lf

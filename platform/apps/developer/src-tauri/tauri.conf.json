@@ -1,0 +1,30 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "KUSH Developer",
+  "version": "0.1.0",
+  "identifier": "studio.kush.developer",
+  "build": {
+    "beforeDevCommand": "pnpm dev",
+    "beforeBuildCommand": "pnpm build",
+    "devUrl": "http://127.0.0.1:5173",
+    "frontendDist": "../dist"
+  },
+  "app": {
+    "windows": [
+      {
+        "label": "main",
+        "title": "KUSH Developer",
+        "width": 1024,
+        "height": 800,
+        "minWidth": 440,
+        "minHeight": 520,
+        "decorations": false
+      }
+    ],
+    "security": {
+      "csp": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src ipc: http://ipc.localhost http://127.0.0.1:4310 http://localhost:4310; object-src 'none'; frame-src 'none'; base-uri 'self'",
+      "devCsp": "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src ipc: http://ipc.localhost http://127.0.0.1:4310 http://localhost:4310 ws://127.0.0.1:5173; object-src 'none'; frame-src 'none'; base-uri 'self'"
+    }
+  },
+  "bundle": { "active": true, "targets": ["nsis"], "icon": [] }
+}
