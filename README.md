@@ -1,5 +1,16 @@
 # KUSH® — Visual-first website starter
 
+## Repository layout
+
+| Path | What it is |
+| --- | --- |
+| `/` (root) | The KUSH website (Next.js): public site, customer account and staff dashboard. |
+| `platform/services/api` | The KUSH API (Fastify + PostgreSQL). The single source of truth the website and bot both call. |
+| `platform/apps/discord-bot` | The KUSH Discord bot: tickets, moderation, vouches, NDA signing, role sync, uptime alerts. |
+| `platform/packages/database` | Database migrations and access. |
+
+Secrets are never committed. Locally they live outside git (`platform/.local/`, `.env.local`); see `.env.example` and the platform docs. Hosting (website, API, database and bot on one VPS) is still to be set up.
+
 Standalone Next.js website for KUSH. Does not modify the KUSH Developer/Tauri monorepo.
 
 ## Run on Windows
