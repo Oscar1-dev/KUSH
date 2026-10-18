@@ -100,6 +100,16 @@ export class CommissionWorkflow {
       "UPDATE commercial_requests SET ticket_id=$3 WHERE tenant_id=$1 AND id=$2 AND ticket_id IS NULL",
       [tenantId, commission.id, ticket.id],
     );
+    // Same as a website ticket: the bot opens its private Discord channel,
+    // so the commission conversation is live in Discord from the start.
+    await enqueueNotification(
+      this.pool,
+      tenantId,
+      "ticket.created",
+      ticket.id,
+      {},
+      `ticket.created:${ticket.id}`,
+    );
     return ticket.id;
   }
 
@@ -330,7 +340,8 @@ export class CommissionWorkflow {
       if (!quote.rowCount) fail(409, "That quote is no longer open");
       if (row.status !== "quoted")
         fail(409, "This commission is not waiting on a quote");
-      const status = decision === "accept" ? "accepted" : "reviewing";
+      // Accepted quotes wait for the deposit; staff confirm it by hand.
+      const status = decision === "accept" ? "payment_pending" : "reviewing";
       await this.bump(c, tenantId, requestId, status);
       await this.audit(
         c,

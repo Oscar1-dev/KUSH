@@ -23,6 +23,10 @@ type RequestRow = {
   approximate_budget: string | null;
   preferred_timeframe: string | null;
   product_url: string | null;
+  service_tier: CommercialRequest["serviceTier"];
+  reference_links: string | null;
+  contact_preference: string | null;
+  origin: CommercialRequest["origin"];
   assigned_user_id: string | null;
   review_note: string | null;
   version: number;
@@ -50,6 +54,10 @@ const view = (
   approximateBudget: row.approximate_budget,
   preferredTimeframe: row.preferred_timeframe,
   productUrl: row.product_url,
+  serviceTier: row.service_tier,
+  referenceLinks: row.reference_links,
+  contactPreference: row.contact_preference,
+  origin: row.origin,
   assignedUserId: row.assigned_user_id,
   reviewNote: includeReviewNote ? row.review_note : null,
   version: row.version,
@@ -65,8 +73,11 @@ export const transitions: Record<
     submitted: ["reviewing", "cancelled"],
     reviewing: ["awaiting_customer", "quoted", "cancelled"],
     awaiting_customer: ["reviewing", "cancelled"],
-    quoted: ["accepted", "cancelled"],
-    accepted: ["in_progress", "cancelled"],
+    // Accepting a quote moves straight to payment_pending; staff confirm
+    // the deposit by hand (moving to in_progress). Nothing is charged here.
+    quoted: ["accepted", "payment_pending", "cancelled"],
+    accepted: ["payment_pending", "in_progress", "cancelled"],
+    payment_pending: ["in_progress", "cancelled"],
     in_progress: ["awaiting_review", "cancelled"],
     awaiting_review: ["in_progress", "completed", "cancelled"],
     completed: [],
@@ -190,15 +201,17 @@ export class CommercialService {
           row.category === input.category &&
           row.approximate_budget === input.approximateBudget &&
           row.preferred_timeframe === input.preferredTimeframe &&
-          row.product_url === input.productUrl;
+          row.product_url === input.productUrl &&
+          row.service_tier === input.serviceTier &&
+          row.reference_links === input.referenceLinks;
         if (!same)
           fail(409, "Request ID was already used with different content");
         return view(row, member.role !== "customer");
       }
       const assigned = member.role === "staff" ? user.id : null;
       const result = await client.query<RequestRow>(
-        `INSERT INTO commercial_requests(tenant_id,requester_id,kind,title,details,category,approximate_budget,preferred_timeframe,product_url,assigned_user_id,create_request_id)
-         VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) RETURNING *`,
+        `INSERT INTO commercial_requests(tenant_id,requester_id,kind,title,details,category,approximate_budget,preferred_timeframe,product_url,assigned_user_id,create_request_id,service_tier,reference_links,contact_preference,origin)
+         VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15) RETURNING *`,
         [
           tenantId,
           user.id,
@@ -211,6 +224,10 @@ export class CommercialService {
           input.productUrl,
           assigned,
           input.requestId,
+          input.serviceTier,
+          input.referenceLinks,
+          input.contactPreference,
+          input.origin,
         ],
       );
       await this.audit(

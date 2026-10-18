@@ -119,6 +119,7 @@ const commissionLabels: Record<string, string> = {
   awaiting_customer: "waiting for you",
   quoted: "quote ready",
   accepted: "accepted",
+  payment_pending: "quote accepted, waiting for your deposit",
   in_progress: "in progress",
   awaiting_review: "ready for your review",
   completed: "delivered",

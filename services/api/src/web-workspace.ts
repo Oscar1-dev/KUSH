@@ -7,6 +7,10 @@ import { CommercialService } from "./commercial-service.js";
 import { SupportError, SupportService } from "./support-service.js";
 import { enqueueNotification } from "./notifications.js";
 import { CommissionWorkflow } from "./commission-workflow.js";
+import {
+  commissionIntakeSchema,
+  createCommission,
+} from "./commission-intake.js";
 
 /**
  * Customer workspace for the website: the signed-in customer's own
@@ -16,7 +20,6 @@ import { CommissionWorkflow } from "./commission-workflow.js";
  * Discord and one opened on the website are the same record.
  */
 
-const commissionCategories = ["website", "software", "creative"] as const;
 const uuidParam = (name: string) => ({
   type: "object",
   properties: { [name]: { type: "string", format: "uuid" } },
@@ -74,16 +77,7 @@ export async function registerWorkspace(
 
   // ------------------------------------------------------------ commissions
 
-  const commissionSchema = z
-    .object({
-      requestId: z.uuid(),
-      category: z.enum(commissionCategories),
-      title: z.string().trim().min(3).max(200),
-      details: z.string().trim().min(20).max(10_000),
-      approximateBudget: z.string().trim().max(120).nullable(),
-      preferredTimeframe: z.string().trim().max(200).nullable(),
-    })
-    .strict();
+  const commissionSchema = commissionIntakeSchema;
 
   app.get(
     "/web/workspace/commissions",
@@ -156,23 +150,12 @@ export async function registerWorkspace(
     signedIn(async (session, request) => {
       const input = commissionSchema.parse(request.body);
       const user = await customer(session);
-      const created = await commercial.create(user, tenantId(), {
-        ...input,
-        kind: "commission",
-        productUrl: null,
-      });
-      // A linked ticket carries the conversation (website + Discord). Retries
-      // reuse the same ticket (deterministic request ID).
-      await workflow.linkTicket(user, tenantId(), created);
-      // Enqueued after the commit; the dedupe key makes a retried request
-      // (same requestId -> same record) a no-op.
-      await enqueueNotification(
+      const { created } = await createCommission(
         pool,
+        user,
         tenantId(),
-        "commission.created",
-        created.id,
-        {},
-        `commission.created:${created.id}`,
+        input,
+        "website",
       );
       return { commission: publicCommission(created) };
     }),

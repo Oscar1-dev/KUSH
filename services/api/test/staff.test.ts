@@ -651,7 +651,10 @@ describe.skipIf(!databaseUrl)("staff dashboard (real PostgreSQL)", () => {
           preferredTimeframe: null,
         })
       ).json().commission;
-      const [announced] = await drain();
+      const jobs = await drain();
+      // The commission's conversation ticket gets its private channel too.
+      expect(jobs.some((job) => job.kind === "ticket.created")).toBe(true);
+      const announced = jobs.find((job) => job.kind === "commission.created");
       expect(announced!.delivery).toMatchObject({
         channelKey: "staff:staff-chat",
       });
@@ -915,7 +918,8 @@ describe.skipIf(!databaseUrl)("staff dashboard (real PostgreSQL)", () => {
         customer.token,
         {},
       );
-      expect(accepted.json()).toEqual({ status: "accepted" });
+      // Accepting waits for the deposit; staff confirm it by hand.
+      expect(accepted.json()).toEqual({ status: "payment_pending" });
       expect(
         (
           await web(

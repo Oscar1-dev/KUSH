@@ -86,9 +86,7 @@ describe.skipIf(!databaseUrl)("moderation cases (real PostgreSQL)", () => {
 
   it("lists a member's history newest first and fetches one case", async () => {
     const history = (await bot("GET", `?target=${TARGET}`)).json().cases;
-    expect(history.map((c: { number: number }) => c.number)).toEqual([
-      3, 2, 1,
-    ]);
+    expect(history.map((c: { number: number }) => c.number)).toEqual([3, 2, 1]);
     // The three were recorded concurrently, so #2 can be any of them.
     const second = history.find((c: { number: number }) => c.number === 2);
     const single = await bot("GET", "/2");
