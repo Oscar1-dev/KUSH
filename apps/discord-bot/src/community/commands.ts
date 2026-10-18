@@ -1,4 +1,5 @@
 import { ApiError } from "../api-client.js";
+import { offboardInDiscord } from "./offboard.js";
 import { configuredRoleId, staffRoles } from "../blueprint.js";
 import { card } from "../panels.js";
 import {
@@ -179,14 +180,7 @@ export const communityCommands: CommandDefinition[] = [
           "Only the server owner can offboard an administrator.",
         );
 
-      await gateway.removeRoles(
-        targetId,
-        held.map((key) => configuredRoleId(roleIds, key)!),
-        `Offboarded by ${context.actor.displayName || context.actor.userId}: ${reason}`.slice(
-          0,
-          500,
-        ),
-      );
+      // Record first (hands open work back), then the shared Discord half.
       const record = await context.services.api
         .offboard(targetId, reason, context.actor.userId)
         .catch((error: unknown) => {
@@ -195,48 +189,17 @@ export const communityCommands: CommandDefinition[] = [
           });
           return null;
         });
-      const notified = await gateway
-        .notify(
-          targetId,
-          card({
-            emoji: "👋",
-            title: "You've been offboarded from the KUSH team",
-            tone: "info",
-            description: [
-              "Your staff roles and staff dashboard access have been removed.",
-              "",
-              "Your signed agreements (including any NDA) remain in effect.",
-              "Thank you for your work with KUSH.",
-            ].join("\n"),
-            timestamp: true,
-          }),
-        )
-        .catch(() => false);
-      const summary = card({
-        emoji: "📤",
-        title: "Staff offboarded",
-        tone: "warning",
-        fields: [
-          {
-            name: "Member",
-            value: `<@${targetId}>\n\`${targetId}\``,
-            inline: true,
-          },
-          { name: "By", value: `<@${context.actor.userId}>`, inline: true },
-          { name: "Roles removed", value: held.join(", "), inline: true },
-          {
-            name: "Work handed back",
-            value: record
-              ? `${record.ticketsUnassigned} ticket(s), ${record.commissionsUnassigned} commission(s) returned to the queue`
-              : "⚠️ Not recorded on the website; check the API logs",
-          },
-          { name: "Reason", value: reason },
-        ],
-        footer: "KUSH • Team",
-        timestamp: true,
-      });
-      const logChannel = context.services.config.channelIds["staff:bot-log"];
-      if (logChannel) await gateway.post(logChannel, summary).catch(() => null);
+      const { notified } = await offboardInDiscord(
+        gateway,
+        context.services.config,
+        {
+          discordUserId: targetId,
+          reason,
+          byDiscordUserId: context.actor.userId,
+          via: "discord",
+          record,
+        },
+      );
       await context.reply({
         content: `📤 <@${targetId}> offboarded (${held.join(", ")} removed).${notified ? " They were told by DM." : " Their DMs are closed."}${record && !record.recorded ? " They had no website staff record." : ""}`,
       });

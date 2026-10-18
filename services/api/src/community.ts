@@ -119,6 +119,18 @@ export class CommunityService {
     return { hidden: true, messageId: row.messageId };
   }
 
+  /** Staff view: every vouch, including removed ones, with who posted it. */
+  async staffVouches(tenantId: string) {
+    const result = await this.pool.query(
+      `SELECT ${vouchColumns}, discord_user_id AS "discordUserId",
+              hidden_at AS "hiddenAt", hidden_by_discord_id AS "hiddenBy",
+              message_id IS NOT NULL AS "inDiscord"
+       FROM vouches WHERE tenant_id=$1 ORDER BY number DESC LIMIT 200`,
+      [tenantId],
+    );
+    return result.rows;
+  }
+
   async publicVouches(tenantId: string, limit: number) {
     const [items, stats] = await Promise.all([
       this.pool.query<Vouch>(

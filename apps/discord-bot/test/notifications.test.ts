@@ -64,6 +64,19 @@ class FakeGateway implements NotificationGateway {
     this.sent.push({ to: `dm:${userId}`, content });
     return this.result;
   }
+  async deleteMessage(channelId: string, messageId: string) {
+    if (this.fail) throw this.fail;
+    this.sent.push({ to: `delete:${channelId}:${messageId}`, content: "" });
+    return this.result;
+  }
+  async offboard(delivery: { discordUserId: string; reason: string }) {
+    if (this.fail) throw this.fail;
+    this.sent.push({
+      to: `offboard:${delivery.discordUserId}`,
+      content: delivery.reason,
+    });
+    return this.result;
+  }
 }
 
 const setup = () => {
@@ -72,7 +85,10 @@ const setup = () => {
   const worker = new NotificationWorker(
     api,
     gateway,
-    () => ({ "staff:ticket-queue": "111111111111111111" }),
+    () => ({
+      "staff:ticket-queue": "111111111111111111",
+      "community:vouches": "444444444444444444",
+    }),
     createLogger(() => undefined),
   );
   return { api, gateway, worker };
@@ -212,6 +228,50 @@ describe("notification worker", () => {
       "ticket:t-a",
       "channel:111111111111111111",
     ]);
+    expect(api.finished.every((f) => f.ok)).toBe(true);
+  });
+
+  it("carries out website staff actions: removing a vouch and offboarding", async () => {
+    const { api, gateway, worker } = setup();
+    api.jobs = [
+      {
+        id: "v",
+        kind: "vouch.hidden",
+        delivery: {
+          target: "delete_message",
+          channelKey: "community:vouches",
+          messageId: "555555555555555555",
+        },
+      },
+      {
+        id: "o",
+        kind: "staff.offboarded",
+        delivery: {
+          target: "offboard",
+          discordUserId: "666666666666666666",
+          reason: "TEST moved on",
+          byDiscordUserId: null,
+          ticketsUnassigned: 1,
+          commissionsUnassigned: 0,
+        },
+      },
+      {
+        id: "x",
+        kind: "vouch.hidden",
+        delivery: {
+          target: "delete_message",
+          channelKey: "community:unknown",
+          messageId: "555555555555555556",
+        },
+      },
+    ];
+    expect(await worker.tick()).toBe(3);
+    expect(gateway.sent.map((s) => s.to)).toEqual([
+      "delete:444444444444444444:555555555555555555",
+      "offboard:666666666666666666",
+    ]);
+    // A vouches channel that isn't configured can never succeed: not retried.
+    expect(worker.stats.undeliverable).toBe(1);
     expect(api.finished.every((f) => f.ok)).toBe(true);
   });
 

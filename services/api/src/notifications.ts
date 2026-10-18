@@ -26,7 +26,9 @@ export type NotificationKind =
   | "application.message"
   | "application.status"
   | "agreement.issued"
-  | "staff.role_grant";
+  | "staff.role_grant"
+  | "vouch.hidden"
+  | "staff.offboarded";
 
 type Queryable = Pick<PoolClient, "query">;
 
@@ -81,6 +83,19 @@ export type Delivery =
       version: string;
       body: string;
       websiteUrl: string;
+    }
+  | {
+      target: "delete_message";
+      channelKey: string;
+      messageId: string;
+    }
+  | {
+      target: "offboard";
+      discordUserId: string;
+      reason: string;
+      byDiscordUserId: string | null;
+      ticketsUnassigned: number;
+      commissionsUnassigned: number;
     }
   | { target: "none"; reason: string };
 
@@ -142,6 +157,24 @@ export class NotificationService {
       job.kind === "staff.role_grant"
     )
       return this.renderRecruitment(job);
+    // Website-initiated staff actions: the bot does the Discord side.
+    if (job.kind === "vouch.hidden")
+      return job.detail.messageId
+        ? {
+            target: "delete_message",
+            channelKey: "community:vouches",
+            messageId: job.detail.messageId,
+          }
+        : { target: "none", reason: "vouch was never posted in Discord" };
+    if (job.kind === "staff.offboarded")
+      return {
+        target: "offboard",
+        discordUserId: job.detail.discordUserId!,
+        reason: job.detail.reason ?? "Offboarded on the website",
+        byDiscordUserId: job.detail.byDiscordUserId ?? null,
+        ticketsUnassigned: Number(job.detail.ticketsUnassigned ?? 0),
+        commissionsUnassigned: Number(job.detail.commissionsUnassigned ?? 0),
+      };
     if (
       job.kind === "commission.quote" ||
       job.kind === "commission.milestone"
