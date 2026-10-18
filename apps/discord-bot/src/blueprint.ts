@@ -87,6 +87,8 @@ export const participation =
   P.SendPolls |
   P.UseApplicationCommands |
   P.UseExternalApps;
+/** Voice participation: Members get it in the lounge, Restricted lose it. */
+export const voice = P.Connect | P.Speak | P.Stream | P.UseVAD;
 const post =
   P.SendMessages | P.SendMessagesInThreads | P.EmbedLinks | P.AttachFiles;
 const threadCreation = P.CreatePublicThreads | P.CreatePrivateThreads;
@@ -108,6 +110,7 @@ export const requiredBotPermissions =
   P.ModerateMembers |
   // Reads Discord's audit log to post the moderation log (owner must grant).
   P.ViewAuditLog |
+  voice |
   P.ChangeNickname;
 
 // ------------------------------------------------------------------- roles
@@ -324,6 +327,35 @@ const text = (
   topic,
   botAccess: access.bot === "observe" ? "observe" : "manage",
   overwrites: compileAccess(access),
+  ...(legacyKeys ? { legacyKeys } : {}),
+});
+
+/**
+ * A community voice channel. Everyone can see it, only Members can join and
+ * talk; Restricted members lose voice and chat participation.
+ */
+const voiceChannel = (
+  parentKey: string,
+  slug: string,
+  name: string,
+  legacyKeys?: string[],
+): DesiredChannel => ({
+  key: `${parentKey}:${slug}`,
+  name,
+  type: ChannelType.GuildVoice,
+  parentKey,
+  botAccess: "manage",
+  overwrites: [
+    { principal: "everyone", allow: 0n, deny: voice },
+    { principal: "member", allow: voice, deny: 0n },
+    ...communityModerators.map((principal) => ({
+      principal,
+      allow: read | voice | moderation,
+      deny: 0n,
+    })),
+    { principal: "kush-bot", allow: read | voice, deny: 0n },
+    { principal: "restricted", allow: 0n, deny: voice | participation },
+  ],
   ...(legacyKeys ? { legacyKeys } : {}),
 });
 
@@ -681,6 +713,9 @@ export const channels: DesiredChannel[] = [
     ["archive:feedback"],
   ),
   text("community", "polls", "Community polls.", community, ["archive:polls"]),
+  voiceChannel("community", "general-lounge", "General Lounge", [
+    "voice:general",
+  ]),
   text(
     "products",
     "product-announcements",
