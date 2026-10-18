@@ -6,6 +6,7 @@ import { agreementPdf } from "./agreements/pdf.js";
 import type { WebHelpers } from "./accounts.js";
 import { verifyIntegrationSecret } from "./discord-service.js";
 import { RecruitmentService } from "./recruitment-service.js";
+import { ACCEPTANCE_STATEMENT } from "./agreements/staff-nda.js";
 import { permissionsFor } from "./staff-access.js";
 import { SupportError } from "./support-service.js";
 import type { StaffHelpers } from "./web-staff.js";
@@ -386,6 +387,68 @@ export async function registerRecruitment(
           [tenantId, params<{ id: string }>(request).id, channelId],
         );
         return { recorded: true };
+      }),
+  );
+
+  // The NDA signed from Discord: the clicker must be the agreement's owner
+  // (verified Discord link). Same record and checks as the website.
+  const discordSignSchema = z
+    .object({
+      discordUserId: z.string().regex(/^[0-9]{17,20}$/),
+      legalName: z.string().trim().min(2).max(120),
+      email: z.email().max(254),
+      signature: z.string().trim().min(2).max(120),
+      confirmation: z.string().trim().max(40),
+    })
+    .strict();
+  app.post(
+    `${base}/agreements/:id/sign`,
+    {
+      schema: {
+        params: tenantParams({ id: { type: "string", format: "uuid" } }),
+        body: body(discordSignSchema),
+      },
+    },
+    async (request, reply) =>
+      handle(reply, async () => {
+        const tenantId = await bot(request);
+        const input = discordSignSchema.parse(request.body);
+        if (input.confirmation.toUpperCase() !== "I ACCEPT")
+          throw new SupportError(
+            400,
+            'Type "I ACCEPT" to confirm you agree to the NDA',
+          );
+        const owner = (
+          await pool.query<{ user_id: string }>(
+            "SELECT user_id FROM discord_account_links WHERE tenant_id=$1 AND discord_user_id=$2 AND state='verified'",
+            [tenantId, input.discordUserId],
+          )
+        ).rows[0];
+        if (!owner)
+          throw new SupportError(
+            403,
+            "Your Discord account is not linked to a KUSH account",
+          );
+        const id = params<{ id: string }>(request).id;
+        const current = (
+          await pool.query<{ sha: string }>(
+            `SELECT t.body_sha256 AS sha FROM agreements g JOIN agreement_templates t ON t.id=g.template_id
+             WHERE g.tenant_id=$1 AND g.id=$2 AND g.user_id=$3`,
+            [tenantId, id, owner.user_id],
+          )
+        ).rows[0];
+        // Someone else's NDA looks exactly like a missing one.
+        if (!current) throw new SupportError(404, "Agreement not found");
+        return service.sign({ userId: owner.user_id, via: "discord" }, id, {
+          legalName: input.legalName,
+          email: input.email,
+          signature: input.signature,
+          accept: true,
+          statement: ACCEPTANCE_STATEMENT,
+          bodySha256: current.sha,
+          ipHash: null,
+          userAgent: "Discord (bot modal)",
+        });
       }),
   );
 

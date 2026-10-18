@@ -379,11 +379,16 @@ describe.skipIf(!databaseUrl)(
       const notice = (await drain()).find(
         (j) => j.kind === "agreement.issued",
       )!;
+      // The NDA arrives in the applicant's channel as a full text + choice
+      // of signing in Discord or on the website.
       expect(notice.delivery).toMatchObject({
-        target: "ticket_channel",
+        target: "nda_prompt",
         channelId,
+        discordUserId: applicant.discordId,
+        agreementId,
       });
-      expect(notice.delivery.content).toContain(
+      expect(notice.delivery.body).toContain("NON-DISCLOSURE AGREEMENT");
+      expect(notice.delivery.websiteUrl).toContain(
         `/account/agreements/${agreementId}`,
       );
 
@@ -528,6 +533,140 @@ describe.skipIf(!databaseUrl)(
       expect(mine.events.map((e: { status: string }) => e.status)).toContain(
         "nda_signed",
       );
+    });
+
+    it("lets moderators skip the NDA but requires it for every role above", async () => {
+      const applicant = await person([], { mfa: false });
+      const admin = await person([ROLE.admin]);
+      const created = (
+        await web(
+          "POST",
+          "/web/recruitment/applications",
+          applicant.token,
+          application(),
+        )
+      ).json().application;
+      await move(admin, created.id, "reviewing");
+      await move(admin, created.id, "conditionally_accepted");
+      const approve = async (staffRole: string) =>
+        web(
+          "POST",
+          `/web/staff/applications/${created.id}/approve`,
+          admin.token,
+          {
+            expectedVersion: (await detail(admin, created.id)).application
+              .version,
+            staffRole,
+          },
+        );
+      // Support (above Moderator) without an NDA: refused.
+      const refused = await approve("support");
+      expect(refused.statusCode).toBe(409);
+      expect(refused.json().error).toMatch(/above Moderator need a signed NDA/);
+      expect((await detail(admin, created.id)).actions.approvableRoles).toEqual(
+        ["moderator"],
+      );
+      // Moderator: allowed straight from conditional acceptance.
+      expect((await approve("moderator")).statusCode).toBe(200);
+      const activated = await web(
+        "POST",
+        `/web/staff/applications/${created.id}/activate`,
+        admin.token,
+        {
+          expectedVersion: (await detail(admin, created.id)).application
+            .version,
+        },
+      );
+      expect(activated.statusCode).toBe(200); // moderator role granted with no NDA
+    });
+
+    it("signs the NDA from Discord into the same record, and adds the team member", async () => {
+      await drain();
+      const applicant = await person([], { mfa: false });
+      const admin = await person([ROLE.admin]);
+      const stranger = await person([], { mfa: false });
+      const created = (
+        await web(
+          "POST",
+          "/web/recruitment/applications",
+          applicant.token,
+          application(),
+        )
+      ).json().application;
+      await move(admin, created.id, "reviewing");
+      await move(admin, created.id, "conditionally_accepted");
+      const { agreementId } = (
+        await web(
+          "POST",
+          `/web/staff/applications/${created.id}/issue-nda`,
+          admin.token,
+          {
+            expectedVersion: (await detail(admin, created.id)).application
+              .version,
+          },
+        )
+      ).json();
+      const sign = (discordUserId: string, overrides: object = {}) =>
+        bot("POST", `/agreements/${agreementId}/sign`, {
+          discordUserId,
+          legalName: "Discord Signer",
+          email: "discord-signer@test.invalid",
+          signature: "Discord Signer",
+          confirmation: "I ACCEPT",
+          ...overrides,
+        });
+      // Someone else cannot sign it; the exact confirmation is required.
+      expect((await sign(stranger.discordId)).statusCode).toBe(404);
+      expect(
+        (await sign(applicant.discordId, { confirmation: "yes" })).statusCode,
+      ).toBe(400);
+      expect(
+        (await sign(applicant.discordId, { signature: "Somebody Else" }))
+          .statusCode,
+      ).toBe(400);
+      expect((await sign(applicant.discordId)).statusCode).toBe(200);
+      // Shows on the website as signed, with how it was signed.
+      const onSite = (
+        await web("GET", `/web/agreements/${agreementId}`, applicant.token)
+      ).json();
+      expect(onSite).toMatchObject({
+        status: "signed",
+        legalName: "Discord Signer",
+      });
+      const via = await pool.query(
+        "SELECT signed_via FROM agreements WHERE id=$1",
+        [agreementId],
+      );
+      expect(via.rows[0].signed_via).toBe("discord");
+      expect((await detail(admin, created.id)).application.status).toBe(
+        "nda_signed",
+      );
+
+      // Approve + activate: the person is on the team straight away.
+      await web(
+        "POST",
+        `/web/staff/applications/${created.id}/approve`,
+        admin.token,
+        {
+          expectedVersion: (await detail(admin, created.id)).application
+            .version,
+          staffRole: "support",
+        },
+      );
+      await web(
+        "POST",
+        `/web/staff/applications/${created.id}/activate`,
+        admin.token,
+        {
+          expectedVersion: (await detail(admin, created.id)).application
+            .version,
+        },
+      );
+      const team = (await web("GET", "/web/staff/team", admin.token)).json()
+        .team as { userId: string; roles: string[] }[];
+      expect(team.find((m) => m.userId === applicant.userId)?.roles).toEqual([
+        "support",
+      ]);
     });
 
     it("lets an applicant withdraw, voiding an unsigned NDA", async () => {

@@ -66,6 +66,9 @@ const moves: Record<
   nda_signed: [{ to: "rejected", needs: "decide" }],
   approved: [{ to: "rejected", needs: "decide" }],
 };
+/** Owner rule (18 Oct 2026): every staff role above Moderator signs the NDA. */
+export const ndaRequiredFor = (staffRole: string) => staffRole !== "moderator";
+
 const FINAL: ApplicationStatus[] = ["activated", "rejected", "withdrawn"];
 const NDA_DAYS = 14;
 const tenantOf = () =>
@@ -559,7 +562,16 @@ export class RecruitmentService {
           .filter((m) => m.needs === "review" || decide)
           .map((m) => m.to),
         issueNda: decide && status === "conditionally_accepted",
-        approve: decide && status === "nda_signed",
+        approve:
+          decide &&
+          (status === "nda_signed" ||
+            ((status === "conditionally_accepted" || status === "nda_issued") &&
+              !ndaRequiredFor(String(application.positionStaffRole)))),
+        // Roles allowed at approval: without a signed NDA, Moderator only.
+        approvableRoles:
+          status === "nda_signed"
+            ? ["support", "developer", "moderator", "manager", "administrator"]
+            : ["moderator"],
         activate: decide && status === "approved",
       },
     };
@@ -744,13 +756,22 @@ export class RecruitmentService {
     demand(staff, "applications.decide");
     return this.tx(async (c) => {
       const app = await this.lock(c, staff, id, input.expectedVersion);
-      if (app.status !== "nda_signed")
-        fail(409, "The NDA must be signed first");
-      const signed = await c.query(
-        "SELECT 1 FROM agreements WHERE application_id=$1 AND status='signed'",
-        [id],
-      );
-      if (!signed.rowCount) fail(409, "No signed NDA on record");
+      // Owner rule: Moderators do not need the NDA; every role above does.
+      const ndaRequired = ndaRequiredFor(input.staffRole);
+      if (ndaRequired) {
+        if (app.status !== "nda_signed")
+          fail(409, "Roles above Moderator need a signed NDA first");
+        const signed = await c.query(
+          "SELECT 1 FROM agreements WHERE application_id=$1 AND status='signed'",
+          [id],
+        );
+        if (!signed.rowCount) fail(409, "No signed NDA on record");
+      } else if (
+        !["conditionally_accepted", "nda_issued", "nda_signed"].includes(
+          app.status,
+        )
+      )
+        fail(409, "Conditionally accept the application first");
       await c.query(
         "UPDATE staff_applications SET approved_staff_role=$2 WHERE id=$1",
         [id, input.staffRole],
@@ -787,6 +808,20 @@ export class RecruitmentService {
       if (!role.discord_role_id)
         fail(409, "No Discord role is mapped to that staff role");
       await this.setStatus(c, staff, id, app.status, "activated");
+      // On the team from now on (the roster refreshes from live Discord roles
+      // whenever they use the staff dashboard).
+      await c.query(
+        `INSERT INTO staff_members(tenant_id,user_id,discord_user_id,roles,application_id) VALUES($1,$2,$3,$4,$5)
+         ON CONFLICT (tenant_id,user_id) DO UPDATE SET discord_user_id=EXCLUDED.discord_user_id,
+           roles=EXCLUDED.roles,application_id=EXCLUDED.application_id,last_verified_at=now()`,
+        [
+          staff.tenantId,
+          app.user_id,
+          app.discord_user_id,
+          [role.approved_staff_role],
+          id,
+        ],
+      );
       await enqueueNotification(
         c,
         staff.tenantId,
@@ -817,8 +852,9 @@ export class RecruitmentService {
       : notFound();
   }
 
+  /** `signer.via`: the website form or the Discord modal (same record). */
   async sign(
-    session: WebSession,
+    signer: { userId: string; via?: "website" | "discord" },
     agreementId: string,
     input: {
       legalName: string;
@@ -850,7 +886,7 @@ export class RecruitmentService {
           `SELECT g.status,(g.expires_at < now()) AS expired,g.application_id,t.body_sha256 AS sha
            FROM agreements g JOIN agreement_templates t ON t.id=g.template_id
            WHERE g.tenant_id=$1 AND g.id=$2 AND g.user_id=$3 FOR UPDATE OF g`,
-          [tenantId, agreementId, session.userId],
+          [tenantId, agreementId, signer.userId],
         )
       ).rows[0];
       if (!g) notFound();
@@ -863,7 +899,7 @@ export class RecruitmentService {
         fail(409, "The agreement text changed; reload and read it again");
       await c.query(
         `UPDATE agreements SET status='signed',signed_at=now(),legal_name=$2,email=$3,signature=$4,
-           accepted_statement=$5,signed_body_sha256=$6,signer_ip_hash=$7,signer_user_agent=$8 WHERE id=$1`,
+           accepted_statement=$5,signed_body_sha256=$6,signer_ip_hash=$7,signer_user_agent=$8,signed_via=$9 WHERE id=$1`,
         [
           agreementId,
           input.legalName.trim(),
@@ -873,9 +909,15 @@ export class RecruitmentService {
           g!.sha,
           input.ipHash,
           input.userAgent.slice(0, 300),
+          signer.via ?? "website",
         ],
       );
-      await this.audit(c, session.userId, "agreement.signed", tenantId);
+      await this.audit(
+        c,
+        signer.userId,
+        `agreement.signed.${signer.via ?? "website"}`,
+        tenantId,
+      );
       if (g!.application_id) {
         const app = (
           await c.query<{ status: string }>(
@@ -891,7 +933,7 @@ export class RecruitmentService {
           await this.event(
             c,
             g!.application_id,
-            session.userId,
+            signer.userId,
             "nda_issued",
             "nda_signed",
           );

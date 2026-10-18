@@ -72,6 +72,16 @@ export type Delivery =
       customerDiscordId: string;
       fallback: Delivery;
     }
+  | {
+      target: "nda_prompt";
+      channelId: string | null;
+      discordUserId: string;
+      agreementId: string;
+      title: string;
+      version: string;
+      body: string;
+      websiteUrl: string;
+    }
   | { target: "none"; reason: string };
 
 const MAX_ATTEMPTS = 8;
@@ -402,10 +412,31 @@ export class NotificationService {
           content: `**${m.from_applicant ? "Applicant" : "KUSH recruitment"}** (via the website):\n${clip(m.content)}`,
         };
       }
-      case "agreement.issued":
-        return toApplicant(
-          `you've been conditionally accepted. 🎉 Please read and sign the KUSH Staff NDA on the website (sign in with this Discord account): ${site()}/account/agreements/${job.detail.agreementId}`,
-        );
+      case "agreement.issued": {
+        const g = (
+          await this.pool.query<{
+            title: string;
+            version: string;
+            body: string;
+          }>(
+            `SELECT t.title,t.version,t.body FROM agreements g JOIN agreement_templates t ON t.id=g.template_id
+             WHERE g.tenant_id=$1 AND g.id=$2 AND g.status='issued'`,
+            [job.tenant_id, job.detail.agreementId],
+          )
+        ).rows[0];
+        if (!g) return { target: "none", reason: "agreement no longer open" };
+        // Full text as a file + "sign in Discord" / "sign on the website".
+        return {
+          target: "nda_prompt",
+          channelId: a.discord_channel_id,
+          discordUserId: a.discord_user_id,
+          agreementId: job.detail.agreementId!,
+          title: g.title,
+          version: g.version,
+          body: g.body,
+          websiteUrl: `${site()}/account/agreements/${job.detail.agreementId}`,
+        };
+      }
       case "staff.role_grant":
         return {
           target: "grant_role",
