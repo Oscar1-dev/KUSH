@@ -7,7 +7,17 @@ export default async function StaffTeam() {
   const gate = await requireStaff();
   if (!gate) return null;
   if (!has(gate.me, "team.view")) return <p className={styles.lede}>Your roles don&apos;t include team management.</p>;
-  const { team } = await kushApi<{ team: { userId: string; name: string; roles: StaffRole[]; lastVerifiedAt: string }[] }>(
+  const { team } = await kushApi<{
+    team: {
+      userId: string;
+      name: string;
+      roles: StaffRole[];
+      lastVerifiedAt: string;
+      applicationNumber: number | null;
+      ndaSignedAt: string | null;
+      ndaSignedVia: "website" | "discord" | null;
+    }[];
+  }>(
     "/web/staff/team",
     { token: gate.token },
   );
@@ -25,7 +35,15 @@ export default async function StaffTeam() {
         <div key={m.userId} className={styles.row}>
           <div className={styles.rowMain}>
             <p className={styles.rowTitle}>{m.name}</p>
-            <p className={styles.rowMeta}>Last verified {dateTime.format(new Date(m.lastVerifiedAt))}</p>
+            <p className={styles.rowMeta}>
+              {m.ndaSignedAt
+                ? `NDA signed ${dateTime.format(new Date(m.ndaSignedAt))} ${m.ndaSignedVia === "discord" ? "in Discord" : "on the website"}`
+                : m.roles.every((r) => r === "moderator")
+                  ? "No NDA needed (Moderator)"
+                  : "No NDA on record"}
+              {m.applicationNumber ? ` · joined via application #${m.applicationNumber}` : ""} · roles verified{" "}
+              {dateTime.format(new Date(m.lastVerifiedAt))}
+            </p>
           </div>
           <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
             {m.roles.map((r) => (

@@ -19,7 +19,13 @@ interface Detail {
   messages: { id: string; kind: "message" | "note"; content: string; createdAt: string; fromApplicant: boolean; authorName: string }[];
   events: { from: string | null; to: ApplicationStatus; note: string | null; createdAt: string; actorName: string | null }[];
   agreements: { id: string; status: string; issuedAt: string; signedAt: string | null; legalName: string | null; version: string }[];
-  actions: { moves: ApplicationStatus[]; issueNda: boolean; approve: boolean; activate: boolean };
+  actions: {
+    moves: ApplicationStatus[];
+    issueNda: boolean;
+    approve: boolean;
+    activate: boolean;
+    approvableRoles: StaffRole[];
+  };
 }
 
 const answers: [keyof Application, string][] = [
@@ -149,15 +155,23 @@ export default async function StaffApplication({ params }: { params: Promise<{ i
             <div className={styles.card} key={`approve-${a.version}`}>
               <p className={styles.cardLabel}>NEXT: IDENTITY &amp; ROLE APPROVAL</p>
               <ActionForm action="approveApplication" hidden={v} submit="APPROVE" tone="plain">
-                <select name="staffRole" className={styles.input} defaultValue={a.positionStaffRole} aria-label="Role to grant">
-                  {(["support", "developer", "moderator", "manager", "administrator"] as StaffRole[]).map((r) => (
+                {d.actions.approvableRoles.length === 1 ? (
+                  <p className={styles.rowMeta}>Moderators don&apos;t need the NDA. Any role above Moderator needs a signed NDA first.</p>
+                ) : null}
+                <select
+                  name="staffRole"
+                  className={styles.input}
+                  defaultValue={d.actions.approvableRoles.includes(a.positionStaffRole) ? a.positionStaffRole : d.actions.approvableRoles[0]}
+                  aria-label="Role to grant"
+                >
+                  {d.actions.approvableRoles.map((r) => (
                     <option key={r} value={r}>
                       {roleLabel[r]}
                     </option>
                   ))}
                 </select>
                 <label className={styles.rowMeta}>
-                  <input type="checkbox" name="confirm" value="yes" /> I have verified this person&apos;s identity against their signed NDA
+                  <input type="checkbox" name="confirm" value="yes" /> I have verified this person&apos;s identity
                 </label>
               </ActionForm>
             </div>
