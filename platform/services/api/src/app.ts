@@ -282,10 +282,11 @@ export async function buildApp(
             "0019_nda_channels",
             "0020_moderation_cases",
             "0021_vouches_offboarding",
+            "0022_staff_parity",
           ],
         ],
       );
-      if (readiness.rows[0]?.applied !== 21)
+      if (readiness.rows[0]?.applied !== 22)
         throw new Error("Database migrations pending");
       await pool.query(
         "SELECT disabled FROM users LIMIT 0; SELECT created_at FROM sessions LIMIT 0; SELECT ip_hash FROM login_attempts LIMIT 0; SELECT endpoint FROM connection_profiles LIMIT 0; SELECT version FROM clients LIMIT 0; SELECT document FROM projects LIMIT 0; SELECT tenant_id FROM audit_events LIMIT 0; SELECT id FROM support_tenants LIMIT 0; SELECT create_category FROM support_tickets LIMIT 0; SELECT version FROM commercial_requests LIMIT 0; SELECT state FROM discord_account_links LIMIT 0; SELECT failed_attempts FROM discord_link_attempts LIMIT 0; SELECT kind FROM users LIMIT 0; SELECT user_id FROM discord_identities LIMIT 0; SELECT channel_id FROM discord_ticket_channels LIMIT 0; SELECT status FROM entitlements LIMIT 0; SELECT status FROM role_sync_jobs LIMIT 0; SELECT result FROM purchase_events LIMIT 0; SELECT subject FROM user_identities LIMIT 0; SELECT kind FROM sessions LIMIT 0; SELECT enabled_at FROM mfa_totp LIMIT 0; SELECT staff_role FROM staff_role_mappings LIMIT 0; SELECT status FROM notification_jobs LIMIT 0; SELECT status FROM staff_applications LIMIT 0; SELECT status FROM agreements LIMIT 0",

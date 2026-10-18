@@ -1,4 +1,5 @@
 import { ApiError } from "../api-client.js";
+import { offboardInDiscord } from "./offboard.js";
 import { configuredRoleId, staffRoles } from "../blueprint.js";
 import { card } from "../panels.js";
 import {
@@ -179,14 +180,7 @@ export const communityCommands: CommandDefinition[] = [
           "Only the server owner can offboard an administrator.",
         );
 
-      await gateway.removeRoles(
-        targetId,
-        held.map((key) => configuredRoleId(roleIds, key)!),
-        `Offboarded by ${context.actor.displayName || context.actor.userId}: ${reason}`.slice(
-          0,
-          500,
-        ),
-      );
+      // Record first (hands open work back), then the shared Discord half.
       const record = await context.services.api
         .offboard(targetId, reason, context.actor.userId)
         .catch((error: unknown) => {
@@ -195,51 +189,132 @@ export const communityCommands: CommandDefinition[] = [
           });
           return null;
         });
-      const notified = await gateway
-        .notify(
-          targetId,
-          card({
-            emoji: "👋",
-            title: "You've been offboarded from the KUSH team",
-            tone: "info",
-            description: [
-              "Your staff roles and staff dashboard access have been removed.",
-              "",
-              "Your signed agreements (including any NDA) remain in effect.",
-              "Thank you for your work with KUSH.",
-            ].join("\n"),
-            timestamp: true,
-          }),
-        )
-        .catch(() => false);
-      const summary = card({
-        emoji: "📤",
-        title: "Staff offboarded",
-        tone: "warning",
-        fields: [
-          {
-            name: "Member",
-            value: `<@${targetId}>\n\`${targetId}\``,
-            inline: true,
-          },
-          { name: "By", value: `<@${context.actor.userId}>`, inline: true },
-          { name: "Roles removed", value: held.join(", "), inline: true },
-          {
-            name: "Work handed back",
-            value: record
-              ? `${record.ticketsUnassigned} ticket(s), ${record.commissionsUnassigned} commission(s) returned to the queue`
-              : "⚠️ Not recorded on the website; check the API logs",
-          },
-          { name: "Reason", value: reason },
-        ],
-        footer: "KUSH • Team",
-        timestamp: true,
-      });
-      const logChannel = context.services.config.channelIds["staff:bot-log"];
-      if (logChannel) await gateway.post(logChannel, summary).catch(() => null);
+      const { notified } = await offboardInDiscord(
+        gateway,
+        context.services.config,
+        {
+          discordUserId: targetId,
+          reason,
+          byDiscordUserId: context.actor.userId,
+          via: "discord",
+          record,
+        },
+      );
       await context.reply({
         content: `📤 <@${targetId}> offboarded (${held.join(", ")} removed).${notified ? " They were told by DM." : " Their DMs are closed."}${record && !record.recorded ? " They had no website staff record." : ""}`,
       });
+    },
+  },
+  {
+    path: ["report"],
+    group: "Community",
+    authority: "member",
+    allowRestricted: true,
+    summary: "Privately report a member or message to the moderators",
+    usage: "!report <@member | user ID | message link> <what happened>",
+    options: [
+      {
+        name: "arguments",
+        description: "Who or which message, then what happened",
+        required: true,
+      },
+    ],
+    run: async (context) => {
+      // Reports are private: remove the public trigger message first.
+      await context.deleteTrigger?.().catch(() => undefined);
+      const [subject, ...rest] = context.args;
+      const details = rest.join(" ").trim();
+      const user = userIdFrom(subject);
+      const link =
+        subject &&
+        /^https:\/\/(?:ptb\.|canary\.)?discord(?:app)?\.com\/channels\/\d+\/\d+\/\d+$/.test(
+          subject,
+        )
+          ? subject
+          : null;
+      if ((!user && !link) || details.length < 5)
+        throw new CommandError(
+          "Usage: `!report <@member | user ID | message link> <what happened>`. Reports go only to moderators.",
+        );
+      const created = await context.services.api.create({
+        discordUserId: context.actor.userId,
+        guildId: context.guildId,
+        interactionId: `report:${context.actor.userId}:${context.services.now()}`,
+        category: "member-report",
+        description: [
+          user
+            ? `Reported member: <@${user}> (${user})`
+            : `Reported message: ${link}`,
+          `Reported from: <#${context.channelId}>`,
+          "",
+          details.slice(0, 1_800),
+        ].join("\n"),
+      });
+      const channelId = await context.services.tickets.open({
+        ticket: created.ticket,
+        queue: created.queue,
+        creatorId: context.actor.userId,
+        existingChannelId: created.channel?.channel_id ?? null,
+      });
+      await context.replyPrivately({
+        content: `🚩 Thanks, your report (${created.reference}) is with the moderators in <#${channelId}>. Only you and the moderators can see it.`,
+      });
+      if (context.source === "prefix")
+        await context.reply({
+          content: "🚩 Report sent privately to the moderators.",
+        });
+    },
+  },
+  {
+    path: ["downloads"],
+    group: "Customers",
+    authority: "member",
+    summary: "What you own, and where to download it (sent privately)",
+    usage: "!downloads",
+    run: async (context) => {
+      const site = process.env.KUSH_PUBLIC_SITE_URL;
+      const where = site
+        ? `${site}/account/downloads`
+        : "your KUSH account → Downloads";
+      const owned = await context.services.api.memberEntitlements(
+        context.actor.userId,
+      );
+      if (!owned.linked) {
+        await context.replyPrivately({
+          content:
+            "Your Discord isn't linked to a KUSH account yet. Type `!account` to link it, then try again.",
+        });
+        return;
+      }
+      const active = owned.entitlements.filter(
+        (item) => item.status === "active",
+      );
+      // Files are only served from the website: links there are signed,
+      // expire in minutes, and re-check that you still own the product.
+      await context.replyPrivately({
+        embeds: [
+          card({
+            emoji: "⬇️",
+            title: "Your downloads",
+            tone: active.length ? "success" : "info",
+            description: active.length
+              ? [
+                  ...active.map(
+                    (item) =>
+                      `• **${item.productName}**${item.expiresAt ? ` (until <t:${Math.floor(Date.parse(item.expiresAt) / 1_000)}:d>)` : ""}`,
+                  ),
+                  "",
+                  `Download them from ${where}. Links there are signed and expire after a few minutes, for your security.`,
+                ].join("\n")
+              : `You don't own any KUSH products yet. Anything you buy shows up here and in ${where}.`,
+            timestamp: true,
+          }),
+        ],
+      });
+      if (context.source === "prefix")
+        await context.reply({
+          content: "I've sent your downloads to you privately.",
+        });
     },
   },
 ];

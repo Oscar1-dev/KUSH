@@ -45,6 +45,15 @@ export type Delivery =
       body: string;
       websiteUrl: string;
     }
+  | { target: "delete_message"; channelKey: string; messageId: string }
+  | {
+      target: "offboard";
+      discordUserId: string;
+      reason: string;
+      byDiscordUserId: string | null;
+      ticketsUnassigned: number;
+      commissionsUnassigned: number;
+    }
   | { target: "none"; reason: string };
 
 export interface NotificationJob {
@@ -80,6 +89,11 @@ export interface NotificationGateway {
   ): Promise<SendResult>;
   sendNdaPrompt(
     delivery: Extract<Delivery, { target: "nda_prompt" }>,
+  ): Promise<SendResult>;
+  deleteMessage(channelId: string, messageId: string): Promise<SendResult>;
+  /** Website-initiated offboarding: remove staff roles, DM, log. */
+  offboard(
+    delivery: Extract<Delivery, { target: "offboard" }>,
   ): Promise<SendResult>;
   /** "absent": the customer is not a member, so post the fallback. */
   createTicketChannel(
@@ -148,6 +162,13 @@ export class NotificationWorker {
           delivery.roleId,
           delivery.reason,
         );
+      case "delete_message": {
+        const channelId = this.channelIds()[delivery.channelKey];
+        if (!channelId) return "undeliverable";
+        return this.gateway.deleteMessage(channelId, delivery.messageId);
+      }
+      case "offboard":
+        return this.gateway.offboard(delivery);
       case "ticket_channel":
         return this.gateway.sendToChannel(delivery.channelId, delivery.content);
       case "channel": {

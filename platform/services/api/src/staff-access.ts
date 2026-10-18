@@ -44,13 +44,16 @@ export const permissions = [
   "agreements.manage", // NDA templates and signed agreements
   "customers.view", // customer accounts list
   "operations.view", // bot/outbox health, catalogue, orders, settings
+  "moderation.view", // moderation cases (also recorded from Discord)
+  "vouches.manage", // remove fake or abusive vouches
+  "team.offboard", // remove someone from the staff team
 ] as const;
 export type Permission = (typeof permissions)[number];
 
 const grants: Record<StaffRole, Permission[]> = {
   support: ["tickets.assigned", "tickets.queue"],
   developer: ["commissions.assigned"],
-  moderator: ["reports.handle"],
+  moderator: ["reports.handle", "moderation.view", "vouches.manage"],
   manager: [
     "tickets.assigned",
     "tickets.queue",
@@ -64,6 +67,7 @@ const grants: Record<StaffRole, Permission[]> = {
     "team.view",
     "applications.review",
     "customers.view",
+    "moderation.view",
   ],
   administrator: [
     "tickets.assigned",
@@ -82,6 +86,9 @@ const grants: Record<StaffRole, Permission[]> = {
     "agreements.manage",
     "customers.view",
     "operations.view",
+    "moderation.view",
+    "vouches.manage",
+    "team.offboard",
   ],
   owner: [...permissions],
 };

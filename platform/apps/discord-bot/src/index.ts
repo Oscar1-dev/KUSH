@@ -45,6 +45,7 @@ import { DiscordAPIError } from "discord.js";
 import { ApplicationChannels } from "./automation/applications.js";
 import { ndaPrompt } from "./automation/nda.js";
 import { registerModLog } from "./moderation/mod-log.js";
+import { offboardInDiscord } from "./community/offboard.js";
 import { UptimeWatcher } from "./runtime/uptime.js";
 import { RuleWatchTracker } from "./moderation/rule-watch.js";
 import { DiscordTicketChannels } from "./tickets/discord-tickets.js";
@@ -439,6 +440,32 @@ export async function startBot(): Promise<{
           });
         });
       },
+      deleteMessage: (channelId, messageId) =>
+        deliver(async () => {
+          const channel = guild().channels.cache.get(channelId);
+          if (!channel?.isTextBased()) return "undeliverable";
+          await channel.messages.delete(messageId).catch((error: unknown) => {
+            // 10008: already gone, which is the goal anyway.
+            if ((error as { code?: number }).code !== 10008) throw error;
+          });
+        }),
+      offboard: (delivery) =>
+        deliver(async () => {
+          const result = await offboardInDiscord(services.moderation!, config, {
+            discordUserId: delivery.discordUserId,
+            reason: delivery.reason,
+            byDiscordUserId: delivery.byDiscordUserId,
+            via: "website",
+            record: {
+              ticketsUnassigned: delivery.ticketsUnassigned,
+              commissionsUnassigned: delivery.commissionsUnassigned,
+            },
+          });
+          log.info("staff.offboarded", {
+            discordUserId: delivery.discordUserId,
+            removed: result.removed.length,
+          });
+        }),
       grantRole: (discordUserId, roleId, reason) =>
         deliver(async () => {
           // Only on an administrator's explicit activation (see the API).

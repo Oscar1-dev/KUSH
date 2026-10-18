@@ -12,6 +12,10 @@ import {
 } from "./staff-access.js";
 import { StaffService } from "./staff-service.js";
 import { CommissionWorkflow } from "./commission-workflow.js";
+import { CommunityService } from "./community.js";
+import { ModerationService } from "./moderation.js";
+import { enqueueNotification } from "./notifications.js";
+import { SupportError } from "./support-service.js";
 
 const uuidParam = (name: string) => ({
   type: "object",
@@ -326,6 +330,147 @@ export async function registerStaff(
   app.get(
     "/web/staff/team",
     asStaff(async (ctx) => ({ team: await staff.team(ctx) })),
+  );
+
+  // ------------------------------------------- Discord parity: moderation
+  // The same services the bot uses; the website never keeps its own copy.
+  const moderation = new ModerationService(pool);
+  const community = new CommunityService(pool);
+  const guildOf = async (tenantId: string) => {
+    const row = (
+      await pool.query<{ guild_id: string }>(
+        "SELECT guild_id FROM support_tenants WHERE id=$1",
+        [tenantId],
+      )
+    ).rows[0];
+    if (!row) throw new SupportError(404, "Support resource not found");
+    return row.guild_id;
+  };
+  const audit = (ctx: StaffContext, action: string) =>
+    pool.query(
+      "INSERT INTO audit_events(tenant_id, actor_id, action) VALUES($1,$2,$3)",
+      [ctx.tenantId, ctx.userId, action],
+    );
+
+  app.get(
+    "/web/staff/moderation/cases",
+    asStaff(async (ctx, request) => {
+      demand(ctx, "moderation.view");
+      const { target } = z
+        .object({
+          target: z
+            .string()
+            .regex(/^[0-9]{17,20}$/)
+            .optional(),
+        })
+        .parse(request.query);
+      return {
+        cases: await moderation.list(
+          ctx.tenantId,
+          await guildOf(ctx.tenantId),
+          target,
+          25,
+        ),
+      };
+    }),
+  );
+
+  app.get(
+    "/web/staff/vouches",
+    asStaff(async (ctx) => {
+      demand(ctx, "vouches.manage");
+      return { vouches: await community.staffVouches(ctx.tenantId) };
+    }),
+  );
+
+  app.post(
+    "/web/staff/vouches/:number/hide",
+    {
+      schema: {
+        params: {
+          type: "object",
+          properties: { number: { type: "string", pattern: "^[0-9]{1,9}$" } },
+          required: ["number"],
+        },
+      },
+    },
+    asStaff(async (ctx, request) => {
+      demand(ctx, "vouches.manage");
+      const number = Number(params<{ number: string }>(request).number);
+      const result = await community.hideVouch(
+        ctx.tenantId,
+        await guildOf(ctx.tenantId),
+        number,
+        ctx.discordUserId,
+      );
+      // The bot deletes the Discord message (retried until it's gone).
+      await enqueueNotification(
+        pool,
+        ctx.tenantId,
+        "vouch.hidden",
+        ctx.userId,
+        { messageId: result.messageId ?? "" },
+        `vouch.hidden:${number}`,
+      );
+      await audit(ctx, "staff.vouch.hidden");
+      return { hidden: true };
+    }),
+  );
+
+  const offboardSchema = z
+    .object({ reason: z.string().trim().min(3).max(1_000) })
+    .strict();
+  app.post(
+    "/web/staff/team/:userId/offboard",
+    { schema: { params: uuidParam("userId"), body: body(offboardSchema) } },
+    asStaff(async (ctx, request) => {
+      demand(ctx, "team.offboard");
+      const { userId } = params<{ userId: string }>(request);
+      const { reason } = offboardSchema.parse(request.body);
+      if (userId === ctx.userId)
+        throw new SupportError(400, "You can't offboard yourself");
+      const member = (
+        await pool.query<{ discord_user_id: string; roles: string[] }>(
+          "SELECT discord_user_id, roles FROM staff_members WHERE tenant_id=$1 AND user_id=$2 AND offboarded_at IS NULL",
+          [ctx.tenantId, userId],
+        )
+      ).rows[0];
+      if (!member) throw new SupportError(404, "That person isn't on the team");
+      // Same rule as Discord: only the owner removes administrators or owners.
+      if (
+        member.roles.some(
+          (role) => role === "administrator" || role === "owner",
+        ) &&
+        !ctx.roles.includes("owner")
+      )
+        throw new SupportError(
+          403,
+          "Only the owner can offboard an administrator",
+        );
+      const result = await community.offboard(
+        ctx.tenantId,
+        await guildOf(ctx.tenantId),
+        member.discord_user_id,
+        { reason, byDiscordUserId: ctx.discordUserId },
+      );
+      // The bot removes the Discord roles, DMs them and logs it.
+      await enqueueNotification(
+        pool,
+        ctx.tenantId,
+        "staff.offboarded",
+        userId,
+        {
+          discordUserId: member.discord_user_id,
+          reason,
+          byDiscordUserId: ctx.discordUserId,
+          ticketsUnassigned: String(result.ticketsUnassigned),
+          commissionsUnassigned: String(result.commissionsUnassigned),
+        },
+        `staff.offboarded:${userId}:${Date.now()}`,
+      );
+      await audit(ctx, "staff.offboarded.web");
+      return result;
+    }),
   );
 
   app.get(

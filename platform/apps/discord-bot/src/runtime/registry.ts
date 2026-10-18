@@ -203,15 +203,6 @@ export const commands: CommandDefinition[] = [
     "!products",
     "The product catalogue is not connected yet. No products are listed until KUSH publishes verified product records.",
   ),
-  pending(
-    ["report"],
-    "Community",
-    "member",
-    "Privately report a member or message",
-    "!report",
-    "Use !ticket and choose *Member report* — reports are visible only to moderators.",
-    { allowRestricted: true },
-  ),
 
   // ------------------------------------------------------------ customers
   {
@@ -266,14 +257,6 @@ export const commands: CommandDefinition[] = [
       });
     },
   },
-  pending(
-    ["downloads"],
-    "Customers",
-    "member",
-    "Your downloads (sent privately)",
-    "!downloads",
-    ENTITLEMENTS,
-  ),
   pending(
     ["guide"],
     "Customers",

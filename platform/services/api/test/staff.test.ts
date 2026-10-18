@@ -61,7 +61,11 @@ describe("permission sets", () => {
       "tickets.assigned",
       "tickets.queue",
     ]);
-    expect(permissionsFor(["moderator"])).toEqual(["reports.handle"]);
+    expect(permissionsFor(["moderator"])).toEqual([
+      "moderation.view",
+      "reports.handle",
+      "vouches.manage",
+    ]);
     expect(permissionsFor([])).toEqual([]);
   });
 });
@@ -1154,6 +1158,105 @@ describe.skipIf(!databaseUrl)("staff dashboard (real PostgreSQL)", () => {
       );
       expect((await redeem(expired)).statusCode).toBe(403);
     });
+  });
+
+  it("gives the website the same moderation, vouch and offboarding actions as Discord", async () => {
+    const mod = await person([ROLE.moderator]);
+    const support = await person([ROLE.support]);
+    const admin = await person([ROLE.admin]);
+    const leaver = await person([ROLE.support]);
+    // Touch the staff dashboard so each is on the team roster.
+    for (const who of [mod, support, admin, leaver])
+      expect((await web("GET", "/web/staff/me", who.token)).statusCode).toBe(
+        200,
+      );
+
+    // Moderation cases: moderators yes, support no.
+    expect(
+      (await web("GET", "/web/staff/moderation/cases", mod.token)).statusCode,
+    ).toBe(200);
+    expect(
+      (await web("GET", "/web/staff/moderation/cases", support.token))
+        .statusCode,
+    ).toBe(403);
+
+    // Vouches: removing one queues the Discord message deletion for the bot.
+    const vouch = (
+      await pool.query<{ number: number }>(
+        `WITH n AS (UPDATE support_tenants SET next_vouch_number=next_vouch_number+1 WHERE id=$1 RETURNING next_vouch_number-1 AS number)
+         INSERT INTO vouches(tenant_id,number,discord_user_id,author_name,rating,body,message_id)
+         SELECT $1,n.number,$2,'TEST Customer',5,'TEST a genuinely great job','723456789012345601' FROM n RETURNING number`,
+        [tenantId, discordId()],
+      )
+    ).rows[0]!.number;
+    expect(
+      (await web("GET", "/web/staff/vouches", support.token)).statusCode,
+    ).toBe(403);
+    const listed = await web("GET", "/web/staff/vouches", mod.token);
+    expect(
+      listed.json().vouches.some((v: { number: number }) => v.number === vouch),
+    ).toBe(true);
+    expect(
+      (await web("POST", `/web/staff/vouches/${vouch}/hide`, mod.token))
+        .statusCode,
+    ).toBe(200);
+    const deletion = await pool.query(
+      "SELECT detail FROM notification_jobs WHERE tenant_id=$1 AND kind='vouch.hidden' AND dedupe_key=$2",
+      [tenantId, `vouch.hidden:${vouch}`],
+    );
+    expect(deletion.rows[0]?.detail).toMatchObject({
+      messageId: "723456789012345601",
+    });
+
+    // Offboarding: admins only, never yourself, and the bot gets a job.
+    const reason = { reason: "TEST moved on" };
+    expect(
+      (
+        await web(
+          "POST",
+          `/web/staff/team/${leaver.userId}/offboard`,
+          mod.token,
+          reason,
+        )
+      ).statusCode,
+    ).toBe(403);
+    expect(
+      (
+        await web(
+          "POST",
+          `/web/staff/team/${admin.userId}/offboard`,
+          admin.token,
+          reason,
+        )
+      ).statusCode,
+    ).toBe(400);
+    const done = await web(
+      "POST",
+      `/web/staff/team/${leaver.userId}/offboard`,
+      admin.token,
+      reason,
+    );
+    expect(done.statusCode).toBe(200);
+    expect(done.json()).toMatchObject({ recorded: true });
+    const job = await pool.query(
+      "SELECT detail FROM notification_jobs WHERE tenant_id=$1 AND kind='staff.offboarded' AND subject_id=$2",
+      [tenantId, leaver.userId],
+    );
+    expect(job.rows[0]?.detail).toMatchObject({
+      discordUserId: leaver.discordId,
+      reason: "TEST moved on",
+    });
+    // Already offboarded: a second attempt is refused.
+    expect(
+      (
+        await web(
+          "POST",
+          `/web/staff/team/${leaver.userId}/offboard`,
+          admin.token,
+          reason,
+        )
+      ).statusCode,
+    ).toBe(404);
   });
 
   it("never grants product ownership for being staff", async () => {
