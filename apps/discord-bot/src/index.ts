@@ -3,6 +3,7 @@ import {
   Events,
   GatewayIntentBits,
   PermissionFlagsBits,
+  type EmbedBuilder,
   type Guild,
 } from "discord.js";
 import { DiscordApiClient } from "./api-client.js";
@@ -44,6 +45,7 @@ import { DiscordAPIError } from "discord.js";
 import { ApplicationChannels } from "./automation/applications.js";
 import { ndaPrompt } from "./automation/nda.js";
 import { registerModLog } from "./moderation/mod-log.js";
+import { UptimeWatcher } from "./runtime/uptime.js";
 import { DiscordTicketChannels } from "./tickets/discord-tickets.js";
 import { configuredRoleId } from "./blueprint.js";
 import { TicketManager } from "./tickets/manager.js";
@@ -281,6 +283,24 @@ export async function startBot(): Promise<{
       } catch {
         return false;
       }
+    },
+    removeRoles: async (userId, roleIds, reason) => {
+      const member = await guild().members.fetch(userId);
+      await member.roles.remove(roleIds, reason);
+    },
+    post: async (channelId, message) => {
+      const channel = guild().channels.cache.get(channelId);
+      if (!channel?.isSendable()) return null;
+      const sent = await channel.send({
+        embeds: [message],
+        allowedMentions: { parse: [] },
+      });
+      return sent.id;
+    },
+    deleteMessage: async (channelId, messageId) => {
+      const channel = guild().channels.cache.get(channelId);
+      if (channel?.isTextBased())
+        await channel.messages.delete(messageId).catch(() => undefined);
     },
     log: async (message) => {
       const id = config.channelIds["staff:moderation-log"];
@@ -561,7 +581,53 @@ export async function startBot(): Promise<{
     }
   };
   await checkApi();
+
+  // ------------------------------------------------------ uptime alerts
+  const alert = async (message: EmbedBuilder) => {
+    const id = config.channelIds["staff:operational-alerts"];
+    const channel = id ? guild().channels.cache.get(id) : undefined;
+    if (channel?.isSendable())
+      await channel.send({ embeds: [message], allowedMentions: { parse: [] } });
+  };
+  const siteUrl =
+    process.env.KUSH_PUBLIC_SITE_URL ??
+    process.env.KUSH_SITE_URL ??
+    "http://localhost:3000";
+  const uptime = new UptimeWatcher(
+    [
+      {
+        name: "KUSH API",
+        probe: () => api.health(),
+      },
+      {
+        name: "KUSH website",
+        // Any non-5xx answer means the site is serving pages.
+        probe: async () =>
+          (await fetch(siteUrl, { signal: AbortSignal.timeout(10_000) }))
+            .status < 500,
+      },
+      {
+        // While Discord itself is unreachable the "down" card can't be
+        // posted, but the recovery card (with the downtime) always is.
+        name: "Discord connection",
+        probe: async () => health.snapshot().gateway.state === "ok",
+      },
+    ],
+    alert,
+  );
+  // Every (re)start is announced, so supervisor restarts are visible.
+  void alert(
+    card({
+      emoji: "🤖",
+      title: "KUSH bot online",
+      tone: "staff",
+      description: `Watching the API, the website and the Discord connection. Alerts post here.`,
+      footer: "KUSH • Uptime",
+      timestamp: true,
+    }),
+  ).catch(() => undefined);
   const timers = [
+    setInterval(() => void uptime.tick(), 60_000),
     setInterval(() => void checkApi(), 60_000),
     setInterval(() => {
       router.sweep();

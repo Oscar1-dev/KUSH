@@ -158,6 +158,24 @@ export const channelContent: ChannelMessage[] = [
       ),
   },
   {
+    id: "vouches.guide",
+    channelKey: "community:vouches",
+    pin: true,
+    build: () =>
+      page(
+        embed(
+          "Vouches",
+          [
+            "Reviews from verified KUSH customers. Every vouch here also appears on the KUSH website.",
+            "",
+            "⭐ **Leave yours:** type `!vouch <1-5> <your review>` in any channel, e.g. `!vouch 5 Fast, friendly and exactly what I asked for.`",
+            "✅ Only members with the Verified Customer role can vouch (link your Discord on the website after a purchase).",
+            "🕐 One vouch per day. Fake, abusive or spam vouches are removed.",
+          ].join("\n"),
+        ),
+      ),
+  },
+  {
     id: "suggestions.guide",
     channelKey: "community:suggestions",
     legacyChannelKeys: ["02-community:suggestions"],

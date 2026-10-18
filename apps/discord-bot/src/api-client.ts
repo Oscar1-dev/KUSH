@@ -1,6 +1,14 @@
 import { createHash } from "node:crypto";
 
 /** Non-2xx API response; `message` comes from the API and is safe to show. */
+export interface Vouch {
+  number: number;
+  authorName: string;
+  rating: number;
+  body: string;
+  createdAt: string;
+}
+
 export type CaseKind =
   "warn" | "timeout" | "untimeout" | "kick" | "ban" | "unban" | "note";
 
@@ -396,6 +404,46 @@ export class DiscordApiClient {
       `${this.#tenant}/ticket-channels/${channelId}`,
       { state },
     );
+  }
+
+  // ------------------------------------------------ vouches, offboarding
+
+  async vouch(input: {
+    discordUserId: string;
+    authorName: string;
+    rating: number;
+    body: string;
+  }) {
+    return this.#request<Vouch>("POST", `${this.#tenant}/vouches`, input);
+  }
+
+  async setVouchMessage(number: number, messageId: string) {
+    await this.#request("POST", `${this.#tenant}/vouches/${number}/message`, {
+      messageId,
+    });
+  }
+
+  async hideVouch(number: number, byDiscordUserId: string) {
+    return this.#request<{ hidden: boolean; messageId: string | null }>(
+      "POST",
+      `${this.#tenant}/vouches/${number}/hide`,
+      { byDiscordUserId },
+    );
+  }
+
+  async offboard(
+    discordUserId: string,
+    reason: string,
+    byDiscordUserId: string,
+  ) {
+    return this.#request<{
+      recorded: boolean;
+      ticketsUnassigned: number;
+      commissionsUnassigned: number;
+    }>("POST", `${this.#tenant}/staff/${discordUserId}/offboard`, {
+      reason,
+      byDiscordUserId,
+    });
   }
 
   // --------------------------------------------------- moderation cases

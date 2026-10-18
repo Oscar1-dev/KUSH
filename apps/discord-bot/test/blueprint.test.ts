@@ -52,7 +52,10 @@ const informational = channelsWhere(
       "products:known-issues",
     ].includes(key),
 );
-const communityChannels = channelsWhere((key) => key.startsWith("community:"));
+// #vouches is read-only: only the bot posts, from !vouch.
+const communityChannels = channelsWhere(
+  (key) => key.startsWith("community:") && key !== "community:vouches",
+);
 
 describe("blueprint v2 structure", () => {
   it("defines the requested role hierarchy with unique keys and names", () => {

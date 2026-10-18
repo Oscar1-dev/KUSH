@@ -646,6 +646,7 @@ export class StaffService {
     const rows = await this.pool.query(
       `SELECT s.user_id AS "userId", COALESCE(u.display_name, i.username, 'Staff') AS name,
               s.roles, s.last_verified_at AS "lastVerifiedAt",
+              s.offboarded_at AS "offboardedAt", s.offboarded_reason AS "offboardedReason",
               a.number AS "applicationNumber",
               (SELECT g.signed_at FROM agreements g WHERE g.user_id=s.user_id AND g.status='signed'
                ORDER BY g.signed_at DESC LIMIT 1) AS "ndaSignedAt",
@@ -654,7 +655,7 @@ export class StaffService {
        FROM staff_members s JOIN users u ON u.id=s.user_id AND NOT u.disabled
        LEFT JOIN staff_applications a ON a.id=s.application_id
        LEFT JOIN user_identities i ON i.user_id=s.user_id AND i.provider='discord'
-       WHERE s.tenant_id=$1 ORDER BY name`,
+       WHERE s.tenant_id=$1 ORDER BY s.offboarded_at IS NOT NULL, name`,
       [staff.tenantId],
     );
     return rows.rows;

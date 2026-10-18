@@ -38,6 +38,11 @@ export interface ModerationGateway {
   notify(userId: string, message: EmbedBuilder): Promise<boolean>;
   /** Posts to the staff moderation log. */
   log(message: EmbedBuilder): Promise<void>;
+  /** Removes these roles from a member (offboarding). */
+  removeRoles(userId: string, roleIds: string[], reason: string): Promise<void>;
+  /** Posts a card to a channel; returns the message ID. */
+  post(channelId: string, message: EmbedBuilder): Promise<string | null>;
+  deleteMessage(channelId: string, messageId: string): Promise<void>;
 }
 
 const MENTION = /^<@!?(\d{17,20})>$|^(\d{17,20})$/;

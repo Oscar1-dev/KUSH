@@ -359,7 +359,7 @@ const voiceChannel = (
   ...(legacyKeys ? { legacyKeys } : {}),
 });
 
-const staffRoles: RoleKey[] = [
+export const staffRoles: RoleKey[] = [
   "administrator",
   "developer",
   "support-lead",
@@ -713,6 +713,12 @@ export const channels: DesiredChannel[] = [
     ["archive:feedback"],
   ),
   text("community", "polls", "Community polls.", community, ["archive:polls"]),
+  text(
+    "community",
+    "vouches",
+    "Reviews from KUSH customers. Bought something? Leave yours with !vouch.",
+    { moderate: communityModerators },
+  ),
   voiceChannel("community", "general-lounge", "General Lounge", [
     "voice:general",
   ]),

@@ -20,6 +20,8 @@ const MOD = "11111111111111111";
 const TARGET = "44444444444444444";
 const STAFF = "55555555555555555";
 const MOD_ROLE = "66666666666666666";
+const SUPPORT = "77777777777777777";
+const SUPPORT_ROLE = "66666666666666667";
 
 const actor = (roles: RoleKey[]): Actor => ({
   userId: MOD,
@@ -33,13 +35,17 @@ function harness(options: { canBan?: boolean } = {}) {
   const cases: CaseInput[] = [];
   const logged: EmbedBuilder[] = [];
   const dms: string[] = [];
+  const posted: { channelId: string; title: string }[] = [];
+  const api: string[] = [];
   const moderation: ModerationGateway = {
     member: async (id) =>
       id === TARGET
         ? { roleIds: [], isOwner: false, isBot: false }
         : id === STAFF
           ? { roleIds: [MOD_ROLE], isOwner: false, isBot: false }
-          : null,
+          : id === SUPPORT
+            ? { roleIds: [SUPPORT_ROLE], isOwner: false, isBot: false }
+            : null,
     permitted: (kind) => (kind === "ban" ? Boolean(options.canBan) : true),
     timeout: async (id, ms) => void calls.push(`timeout ${id} ${ms}`),
     kick: async (id) => void calls.push(`kick ${id}`),
@@ -47,6 +53,14 @@ function harness(options: { canBan?: boolean } = {}) {
     unban: async (id) => void calls.push(`unban ${id}`),
     notify: async (id) => (dms.push(id), true),
     log: async (embed) => void logged.push(embed),
+    removeRoles: async (id, roleIds) =>
+      void calls.push(`remove ${id} ${roleIds.join(",")}`),
+    post: async (channelId, embed) => {
+      posted.push({ channelId, title: String(embed.data.title) });
+      return "777777777777777777";
+    },
+    deleteMessage: async (channelId, messageId) =>
+      void calls.push(`delete ${channelId} ${messageId}`),
   };
   const services = {
     config: {
@@ -54,8 +68,11 @@ function harness(options: { canBan?: boolean } = {}) {
       guildId: "22345678901234567",
       apiBaseUrl: "http://127.0.0.1:4310",
       supportTenantId: "11111111-1111-4111-8111-111111111111",
-      roleIds: { moderator: MOD_ROLE },
-      channelIds: {},
+      roleIds: { moderator: MOD_ROLE, "support-staff": SUPPORT_ROLE },
+      channelIds: {
+        "community:vouches": "888888888888888881",
+        "staff:bot-log": "888888888888888882",
+      },
       panelMessages: {},
     },
     componentSecret: "component-secret-with-at-least-32-characters",
@@ -78,6 +95,24 @@ function harness(options: { canBan?: boolean } = {}) {
           createdAt: new Date(0).toISOString(),
         };
       },
+      vouch: async (input: { rating: number }) => {
+        api.push(`vouch ${input.rating}`);
+        return { number: 7, ...input };
+      },
+      setVouchMessage: async (n: number, id: string) =>
+        void api.push(`message ${n} ${id}`),
+      hideVouch: async (n: number) => {
+        api.push(`hide ${n}`);
+        return { hidden: true, messageId: "777777777777777777" };
+      },
+      offboard: async (id: string, reason: string) => {
+        api.push(`offboard ${id} ${reason}`);
+        return {
+          recorded: true,
+          ticketsUnassigned: 2,
+          commissionsUnassigned: 1,
+        };
+      },
     } as unknown as BotServices["api"],
     tickets: { channels: new Map() } as unknown as BotServices["tickets"],
   } satisfies BotServices;
@@ -97,7 +132,7 @@ function harness(options: { canBan?: boolean } = {}) {
     });
     return replies.map((reply) => JSON.stringify(reply)).join("\n");
   };
-  return { run, calls, cases, logged, dms };
+  return { run, calls, cases, logged, dms, posted, api };
 }
 
 describe("moderation commands", () => {
@@ -188,5 +223,66 @@ describe("command names", () => {
   it("has no duplicate command paths", () => {
     const paths = commands.map((command) => command.path.join(" "));
     expect(new Set(paths).size).toBe(paths.length);
+  });
+});
+
+describe("vouches", () => {
+  it("lets verified customers vouch and posts the card", async () => {
+    const h = harness();
+    const reply = await h.run("!vouch 5 Brilliant work, very fast", [
+      "member",
+      "verified-customer",
+    ]);
+    expect(h.api).toEqual(["vouch 5", "message 7 777777777777777777"]);
+    expect(h.posted[0]).toEqual({
+      channelId: "888888888888888881",
+      title: "⭐ Vouch #7",
+    });
+    expect(reply).toContain("#7");
+  });
+
+  it("refuses non-customers, bad ratings and short reviews", async () => {
+    const h = harness();
+    expect(await h.run("!vouch 5 Brilliant work", ["member"])).toContain(
+      "verified customers",
+    );
+    const customer: RoleKey[] = ["member", "verified-customer"];
+    expect(await h.run("!vouch 6 Brilliant work here", customer)).toContain(
+      "Usage",
+    );
+    expect(await h.run("!vouch 4 ok", customer)).toContain("10 to 600");
+    expect(h.api).toEqual([]);
+  });
+
+  it("lets moderators remove a vouch everywhere", async () => {
+    const h = harness();
+    await h.run("!unvouch #7");
+    expect(h.api).toEqual(["hide 7"]);
+    expect(h.calls).toEqual(["delete 888888888888888881 777777777777777777"]);
+  });
+});
+
+describe("offboarding", () => {
+  it("removes staff roles, records it and logs the hand-back", async () => {
+    const h = harness();
+    const reply = await h.run(`!offboard <@${SUPPORT}> moved on`, [
+      "administrator",
+    ]);
+    expect(h.calls).toEqual([`remove ${SUPPORT} ${SUPPORT_ROLE}`]);
+    expect(h.api).toEqual([`offboard ${SUPPORT} moved on`]);
+    expect(h.dms).toEqual([SUPPORT]);
+    expect(h.posted[0]!.channelId).toBe("888888888888888882");
+    expect(reply).toContain("offboarded");
+  });
+
+  it("is admin-only and needs a staff target", async () => {
+    const h = harness();
+    expect(await h.run(`!offboard <@${SUPPORT}> x`)).toContain(
+      "do not have access",
+    );
+    expect(
+      await h.run(`!offboard <@${TARGET}> x`, ["administrator"]),
+    ).toContain("doesn't hold any KUSH staff role");
+    expect(h.calls).toEqual([]);
   });
 });

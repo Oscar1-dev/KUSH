@@ -9,6 +9,7 @@ import { planProvisioning } from "../provisioning.js";
 import { ticketCategories } from "../tickets/categories.js";
 import { ticketCommands } from "../tickets/commands.js";
 import { moderationCommands } from "../moderation/commands.js";
+import { communityCommands } from "../community/commands.js";
 import { hasAuthority } from "./authority.js";
 import {
   CommandError,
@@ -331,6 +332,7 @@ export const commands: CommandDefinition[] = [
 
   // ----------------------------------------------------------- moderation
   ...moderationCommands,
+  ...communityCommands,
 
   // ------------------------------------------------------- administration
   {

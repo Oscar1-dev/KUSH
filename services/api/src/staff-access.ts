@@ -255,7 +255,8 @@ export class StaffAccess {
 
     await this.pool.query(
       `INSERT INTO staff_members(tenant_id,user_id,discord_user_id,roles) VALUES($1,$2,$3,$4)
-       ON CONFLICT (tenant_id,user_id) DO UPDATE SET discord_user_id=EXCLUDED.discord_user_id,roles=EXCLUDED.roles,last_verified_at=now()`,
+       ON CONFLICT (tenant_id,user_id) DO UPDATE SET discord_user_id=EXCLUDED.discord_user_id,roles=EXCLUDED.roles,last_verified_at=now(),
+         offboarded_at=NULL,offboarded_reason=NULL,offboarded_by_discord_id=NULL`,
       [tenantId, session.userId, identity.subject, roles],
     );
     return {
