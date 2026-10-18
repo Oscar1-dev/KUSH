@@ -60,6 +60,29 @@ const titleStyle: Record<string, { emoji: string; tone: Tone }> = {
 
 export const FOOTER = "KUSH • Software, development & creative services";
 
+/**
+ * Brand images, taken from the bot's own Discord profile (avatar = KUSH
+ * logo, banner = KUSH banner) so the URLs are stable Discord CDN links.
+ * Set once the client is logged in; cards fall back to text-only before.
+ */
+const brand: { icon?: string; banner?: string } = {};
+export function setBrand(next: {
+  icon?: string | null;
+  banner?: string | null;
+}) {
+  if (next.icon) brand.icon = next.icon;
+  if (next.banner) brand.banner = next.banner;
+}
+export const brandImages = () => ({ ...brand });
+
+/** Main posts that carry the KUSH banner as their header image. */
+const bannerTitles = new Set([
+  "Welcome to KUSH",
+  "KUSH services",
+  "Join the KUSH team",
+  "Request a commission",
+]);
+
 /** A house-style embed. `title` may already include an emoji. */
 export const card = (input: {
   title: string;
@@ -70,13 +93,20 @@ export const card = (input: {
   footer?: string;
   thumbnail?: string | null;
   timestamp?: boolean;
+  /** Show the KUSH banner as the header image (main posts only). */
+  banner?: boolean;
 }) => {
   const built = new EmbedBuilder()
     .setColor(toneColour[input.tone ?? "brand"])
     .setTitle(
       `${input.emoji ? `${input.emoji} ` : ""}${input.title}`.slice(0, 256),
     )
-    .setFooter({ text: input.footer ?? FOOTER });
+    .setFooter({
+      text: input.footer ?? FOOTER,
+      ...(brand.icon ? { iconURL: brand.icon } : {}),
+    });
+  if (brand.icon) built.setAuthor({ name: "KUSH", iconURL: brand.icon });
+  if (input.banner && brand.banner) built.setImage(brand.banner);
   if (input.description) built.setDescription(input.description.slice(0, 4096));
   if (input.fields?.length) built.addFields(input.fields.slice(0, 25));
   if (input.thumbnail) built.setThumbnail(input.thumbnail);
@@ -91,6 +121,7 @@ export const embed = (title: string, description: string) => {
     description,
     emoji: style?.emoji,
     tone: style?.tone ?? "brand",
+    banner: bannerTitles.has(title),
   });
 };
 
@@ -248,4 +279,23 @@ export function notificationMessage(content: string) {
       }),
     ],
   };
+}
+
+/** Reads the bot's profile images (after login) into the card style. */
+export async function loadBrand(client: {
+  user: {
+    fetch(
+      force?: boolean,
+    ): Promise<{
+      displayAvatarURL(o: object): string;
+      bannerURL(o: object): string | null | undefined;
+    }>;
+  } | null;
+}) {
+  if (!client.user) return;
+  const user = await client.user.fetch(true);
+  setBrand({
+    icon: user.displayAvatarURL({ size: 256, extension: "png" }),
+    banner: user.bannerURL({ size: 1024, extension: "png" }) ?? null,
+  });
 }

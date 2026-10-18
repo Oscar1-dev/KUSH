@@ -19,7 +19,7 @@ import {
 import { HealthMonitor, startHealthServer } from "./runtime/health.js";
 import { createLogger, type Logger } from "./runtime/logger.js";
 import { commands } from "./runtime/registry.js";
-import { card, notificationMessage } from "./panels.js";
+import { card, loadBrand, notificationMessage } from "./panels.js";
 import { HoneypotTracker } from "./moderation/honeypot.js";
 import {
   DiscordMemberGateway,
@@ -417,6 +417,12 @@ export async function startBot(): Promise<{
       })();
     }
   };
+  // KUSH logo + banner (from the bot's profile) on every card.
+  await loadBrand(client).catch((error: unknown) =>
+    log.warn("brand.load.failed", {
+      error: error instanceof Error ? error.message : "unknown",
+    }),
+  );
   if (client.isReady()) onReady();
   client.on(Events.ClientReady, onReady);
   client.on(Events.ShardResume, (_shard, replayed) => {

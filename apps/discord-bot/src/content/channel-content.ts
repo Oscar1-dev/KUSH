@@ -306,6 +306,7 @@ export const channelContent: ChannelMessage[] = [
           emoji: "🎫",
           title: "Create a ticket",
           tone: "info",
+          banner: true,
           description: [
             "**Pick the category that best matches your issue.** A private channel opens that only you and the right KUSH team can see. No account or purchase needed.",
             "",

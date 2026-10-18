@@ -1,3 +1,4 @@
+import { fileURLToPath } from "node:url";
 import { copyFile, mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { blueprint } from "./blueprint.js";
@@ -129,6 +130,43 @@ async function main() {
     });
     return;
   }
+  if (operation === "branding") {
+    // Sets the bot's avatar (KUSH logo) and profile banner from assets/.
+    // Discord rate-limits avatar changes, so this is run rarely and on purpose.
+    const { Client, GatewayIntentBits } = await import("discord.js");
+    const assets = new URL("../assets/", import.meta.url);
+    const client = new Client({ intents: [GatewayIntentBits.Guilds] });
+    await client.login(await readBotToken());
+    try {
+      if (!flag(args, "--apply")) {
+        console.log(
+          "Dry run: would set the bot avatar to assets/kush-logo.jpg and banner to assets/kush-banner.jpg. Re-run with --apply.",
+        );
+        return;
+      }
+      // fileURLToPath decodes spaces ("ALL PROJECTS") correctly.
+      await client.user!.setAvatar(
+        fileURLToPath(new URL("kush-logo.jpg", assets)),
+      );
+      await client.user!.setBanner(
+        fileURLToPath(new URL("kush-banner.jpg", assets)),
+      );
+      const user = await client.user!.fetch(true);
+      console.log(
+        JSON.stringify(
+          {
+            avatar: user.displayAvatarURL({ size: 256 }),
+            banner: user.bannerURL({ size: 1024 }),
+          },
+          null,
+          2,
+        ),
+      );
+    } finally {
+      await client.destroy();
+    }
+    return;
+  }
   if (operation === "content") {
     const { channelContent } = await import("./content/channel-content.js");
     const { renderContentPreview, publishContent, planContent } =
@@ -148,6 +186,9 @@ async function main() {
       await client.login(await readBotToken());
       try {
         const guild = await client.guilds.fetch(liveConfig.guildId);
+        // Cards carry the KUSH logo and banner from the bot's profile.
+        const { loadBrand } = await import("./panels.js");
+        await loadBrand(client);
         const adapter = new DiscordContentAdapter(guild);
         if (!flag(args, "--publish")) {
           console.log(
