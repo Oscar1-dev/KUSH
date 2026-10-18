@@ -341,6 +341,44 @@ export const channelContent: ChannelMessage[] = [
       ),
   },
 
+  // ------------------------------------------------------ staff careers
+  {
+    id: "applications.main",
+    channelKey: "partnerships:applications",
+    pin: true,
+    build: () => {
+      // Shown only once the website is public (set KUSH_PUBLIC_SITE_URL).
+      const site = process.env.KUSH_PUBLIC_SITE_URL;
+      const apply = site
+        ? `Apply on the KUSH website: ${site.replace(/\/$/, "")}/careers`
+        : notYet("Online applications open when the KUSH website launches");
+      return page(
+        embed(
+          "Join the KUSH team",
+          [
+            "We're looking for people who care about doing things properly.",
+            "",
+            "**Open positions**",
+            "**Support Agent** — help customers through tickets on the website and in Discord.",
+            "**Community Moderator** — keep this server welcoming and handle member reports.",
+            "**Developer** — build websites and software for KUSH commissions (portfolio needed).",
+            "**Commission Manager** — scope projects, prepare quotes and coordinate developers.",
+            "",
+            "**How it works**",
+            "1. Apply with your Discord account on the website.",
+            "2. A private channel opens here between you and the recruitment team.",
+            "3. If you're conditionally accepted, roles above Moderator sign the KUSH staff NDA, in that channel or on the website.",
+            "4. An administrator confirms your role, and your access is switched on.",
+            "",
+            apply,
+            "",
+            "Nobody is ever given a staff role automatically, and KUSH will never ask for your password.",
+          ].join("\n"),
+        ),
+      );
+    },
+  },
+
   // ---------------------------------------------------------- partnerships
   {
     id: "partner-information.main",
