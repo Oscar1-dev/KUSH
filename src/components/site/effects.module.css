@@ -1,0 +1,319 @@
+@keyframes rainbow {
+  to {
+    background-position: -200% 0;
+  }
+}
+
+/* --------------------------------------------------------------- marquee */
+
+.marquee {
+  overflow: hidden;
+  padding: clamp(22px, 3vw, 40px) 0;
+  border-block: 1px solid var(--line);
+  background: rgba(7, 7, 10, 0.55);
+  backdrop-filter: blur(6px);
+}
+.marqueeTrack {
+  display: flex;
+  width: max-content;
+  will-change: transform;
+}
+.marqueeItem {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4em;
+  padding-right: 0.4em;
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-variation-settings: "wdth" 118;
+  font-size: clamp(44px, 7.5vw, 120px);
+  letter-spacing: -0.035em;
+  line-height: 1;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.marqueeOutline {
+  color: transparent;
+  -webkit-text-stroke: 1.5px rgba(243, 242, 239, 0.55);
+}
+.marqueeLeaf {
+  display: inline-block;
+  width: 0.62em;
+  height: 0.56em;
+  background: var(--holo-vivid);
+  background-size: 200% 100%;
+  -webkit-mask: url("/brand/kush-leaf.svg") center / contain no-repeat;
+  mask: url("/brand/kush-leaf.svg") center / contain no-repeat;
+  animation: rainbow 10s linear infinite;
+}
+
+/* ------------------------------------------------------------ split text */
+
+.wordMask {
+  display: inline-block;
+  overflow: hidden;
+  vertical-align: top;
+  /* room for italic overhang and descenders */
+  padding: 0 0.06em 0.08em 0;
+  margin: 0 -0.06em -0.08em 0;
+}
+.word {
+  display: inline-block;
+}
+:global(.js) :global([data-reveal]) .word {
+  transform: translate3d(0, 105%, 0) rotate(4deg);
+  transform-origin: left bottom;
+  transition: transform 1s var(--ease);
+  transition-delay: calc(var(--w, 0) * 60ms + 80ms);
+}
+:global(.js) :global([data-reveal].is-in) .word {
+  transform: none;
+}
+
+/* ------------------------------------------------------- service preview */
+
+.serviceWrap {
+  position: relative;
+}
+.serviceWrap [data-dim="true"] {
+  opacity: 0.35;
+}
+.serviceWrap a {
+  transition: opacity var(--t) var(--ease);
+}
+.preview {
+  position: absolute;
+  left: 0;
+  top: 0;
+  z-index: 3;
+  width: 260px;
+  padding: 22px;
+  border: 1px solid var(--line-2);
+  border-radius: var(--radius-l);
+  background: rgba(12, 12, 16, 0.86);
+  backdrop-filter: blur(14px);
+  box-shadow: 0 30px 80px -30px rgba(0, 0, 0, 0.9);
+  pointer-events: none;
+  opacity: 0;
+  scale: 0.85;
+  transition:
+    opacity var(--t) var(--ease),
+    scale var(--t) var(--ease);
+  will-change: transform;
+}
+.preview[data-on="true"] {
+  opacity: 1;
+  scale: 1;
+}
+.previewIndex {
+  display: block;
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-variation-settings: "wdth" 118;
+  font-size: 72px;
+  line-height: 0.9;
+  letter-spacing: -0.04em;
+}
+.previewLeaf {
+  position: absolute;
+  right: 20px;
+  top: 22px;
+  width: 44px;
+  height: 40px;
+  background: var(--holo-vivid);
+  background-size: 200% 100%;
+  -webkit-mask: url("/brand/kush-leaf.svg") center / contain no-repeat;
+  mask: url("/brand/kush-leaf.svg") center / contain no-repeat;
+  animation: rainbow 8s linear infinite;
+}
+.preview ul {
+  list-style: none;
+  margin: 18px 0 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--text-2);
+}
+.preview li::before {
+  content: "→ ";
+  color: var(--text-3);
+}
+@media (pointer: coarse), (max-width: 900px) {
+  .preview {
+    display: none;
+  }
+  .serviceWrap [data-dim="true"] {
+    opacity: 1;
+  }
+}
+
+/* -------------------------------------------------------- pinned process */
+
+.pin {
+  position: relative;
+  height: 340vh;
+  border-top: 1px solid var(--line);
+}
+.pinStage {
+  position: sticky;
+  top: var(--header-h);
+  height: calc(100svh - var(--header-h));
+  display: grid;
+  grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
+  gap: clamp(32px, 6vw, 110px);
+  align-items: center;
+}
+.pinCounter {
+  position: relative;
+  height: 1em;
+  margin-top: 28px;
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-variation-settings: "wdth" 118;
+  font-size: clamp(90px, 15vw, 240px);
+  line-height: 1;
+  letter-spacing: -0.05em;
+}
+.pinNumber {
+  --on: calc(
+    max(0, min(1, (var(--pin, 0) * 4 - var(--i)) * 4)) * max(0, min(1, (var(--end) - var(--pin, 0) * 4) * 4))
+  );
+  position: absolute;
+  inset: 0;
+  opacity: var(--on);
+  transform: translateY(calc((1 - var(--on)) * 0.18em));
+}
+.pinRail {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: var(--line-2);
+  border-radius: 2px;
+  overflow: hidden;
+}
+.pinRail::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: var(--holo-vivid);
+  background-size: 100% 200%;
+  transform: scaleY(var(--pin, 0));
+  transform-origin: top;
+}
+.pinSteps {
+  position: relative;
+  list-style: none;
+  margin: 0;
+  padding: 0 0 0 clamp(24px, 3vw, 48px);
+  display: grid;
+  gap: clamp(18px, 3vh, 36px);
+}
+.pinStep {
+  --a: max(0, min(1, (var(--pin, 0) * 4 - var(--i)) * 2.5));
+  opacity: calc(0.18 + var(--a) * 0.82);
+  transform: translateX(calc((1 - var(--a)) * 28px));
+}
+.pinStep h3 {
+  margin: 0 0 8px;
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-variation-settings: "wdth" 112;
+  font-size: clamp(24px, 2.6vw, 38px);
+  letter-spacing: -0.03em;
+  line-height: 1;
+  text-transform: uppercase;
+}
+.pinStep p {
+  margin: 0;
+  max-width: 34em;
+  color: var(--text-2);
+}
+.pinStep .mono {
+  display: block;
+  margin-bottom: 10px;
+  color: var(--text-3);
+}
+@media (max-width: 900px), (prefers-reduced-motion: reduce) {
+  .pin {
+    height: auto;
+    padding: clamp(72px, 11vw, 120px) 0;
+  }
+  .pinStage {
+    position: static;
+    height: auto;
+    grid-template-columns: 1fr;
+  }
+  .pinCounter,
+  .pinRail {
+    display: none;
+  }
+  .pinSteps {
+    padding-left: 0;
+  }
+  .pinStep {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* --------------------------------------------------------- page curtain */
+
+.curtain {
+  position: fixed;
+  inset: 0;
+  z-index: 150;
+  display: grid;
+  place-items: center;
+  background: var(--ink-0);
+  pointer-events: none;
+  animation: curtain 1s var(--ease-in-out) 0.25s both;
+}
+.curtain::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 3px;
+  background: var(--holo-vivid);
+  background-size: 200% 100%;
+  animation: rainbow 2s linear infinite;
+}
+.curtainLeaf {
+  width: 64px;
+  height: 58px;
+  background: var(--holo-vivid);
+  background-size: 200% 100%;
+  -webkit-mask: url("/brand/kush-leaf.svg") center / contain no-repeat;
+  mask: url("/brand/kush-leaf.svg") center / contain no-repeat;
+  animation:
+    rainbow 2s linear infinite,
+    leafPop 0.9s var(--ease) both;
+}
+@keyframes curtain {
+  to {
+    transform: translateY(-100%);
+    visibility: hidden;
+  }
+}
+@keyframes leafPop {
+  from {
+    opacity: 0;
+    transform: scale(0.4) rotate(-20deg);
+  }
+  60% {
+    opacity: 1;
+  }
+  to {
+    transform: scale(1) rotate(0deg) translateY(-12px);
+    opacity: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .curtain {
+    display: none;
+  }
+}

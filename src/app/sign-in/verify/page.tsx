@@ -24,7 +24,6 @@ export default async function VerifyPage({
 
   return (
     <main className={styles.signIn}>
-      <div className={styles.signInOrbit} aria-hidden="true" />
       <section className={styles.signInPanel} aria-labelledby="verify-title">
         <p className={styles.kicker}>TWO-FACTOR CHECK</p>
         <h1 id="verify-title" className={styles.title}>

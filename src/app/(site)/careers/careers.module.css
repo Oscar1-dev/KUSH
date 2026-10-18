@@ -1,0 +1,37 @@
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 340px), 1fr));
+  gap: 14px;
+}
+.role {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: clamp(24px, 3vw, 34px);
+  border: 1px solid var(--line-2);
+  border-radius: var(--radius-l);
+  background: rgba(12, 12, 16, 0.8);
+  backdrop-filter: blur(10px);
+}
+.title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-variation-settings: "wdth" 112;
+  font-size: clamp(26px, 2.6vw, 36px);
+  letter-spacing: -0.03em;
+  line-height: 1;
+  text-transform: uppercase;
+}
+.summary {
+  margin: 0;
+  color: var(--text-2);
+}
+.needs {
+  margin: 0;
+  font-size: 14px;
+  color: var(--text-2);
+}
+.needs strong {
+  color: var(--text);
+}

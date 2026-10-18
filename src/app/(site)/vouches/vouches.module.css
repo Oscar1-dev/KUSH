@@ -1,0 +1,51 @@
+.score {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 28px 0 0;
+}
+.score > span:first-child {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-variation-settings: "wdth" 118;
+  font-size: 88px;
+  line-height: 0.9;
+  letter-spacing: -0.04em;
+}
+.score .mono {
+  color: var(--text-3);
+}
+
+/* Masonry-style wall: columns keep short and long vouches tidy. */
+.wall {
+  columns: 3 300px;
+  column-gap: 14px;
+}
+.vouch {
+  break-inside: avoid;
+  margin: 0 0 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 26px;
+  border: 1px solid var(--line-2);
+  border-radius: var(--radius-l);
+  background: rgba(12, 12, 16, 0.8);
+  backdrop-filter: blur(10px);
+}
+.vouch p {
+  margin: 0;
+  font-size: 17px;
+  line-height: 1.5;
+  white-space: pre-line;
+}
+.vouch footer {
+  color: var(--text-3);
+}
+.stars {
+  letter-spacing: 3px;
+  color: var(--holo-butter);
+}
+.stars span {
+  color: var(--ink-4);
+}

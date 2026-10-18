@@ -32,7 +32,6 @@ export default async function SignInPage({
 
   return (
     <main className={styles.signIn}>
-      <div className={styles.signInOrbit} aria-hidden="true" />
       <section className={styles.signInPanel} aria-labelledby="sign-in-title">
         <Link href="/" className={styles.brand} aria-label="KUSH home">
           K<span>U</span>SH

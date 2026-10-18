@@ -1,0 +1,25 @@
+.featureIndex {
+  display: block;
+  margin-bottom: 18px;
+  color: var(--text-3);
+}
+
+.next {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding-block: clamp(56px, 8vw, 110px);
+}
+.nextName {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3em;
+  font-size: clamp(34px, 6vw, 92px);
+  transition: transform var(--t-slow) var(--ease);
+}
+.next:hover .nextName {
+  transform: translateX(18px);
+}
+.next:hover .nextName svg {
+  transform: translateX(8px);
+}

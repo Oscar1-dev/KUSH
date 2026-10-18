@@ -1,7 +1,13 @@
 import Link from "next/link";
 
 import { Arrow, Cta, SectionHead } from "@/components/site/blocks";
+import fx from "@/components/site/effects.module.css";
+import Marquee from "@/components/site/marquee";
+import Scramble from "@/components/site/scramble";
+import ServiceList from "@/components/site/service-list";
 import site from "@/components/site/site.module.css";
+import SplitText from "@/components/site/split-text";
+import SyncDemo from "@/components/site/sync-demo";
 import { kushApi } from "@/lib/server/kush-api";
 import { principles, process, services } from "@/lib/site-content";
 
@@ -24,8 +30,7 @@ export default async function Home() {
   return (
     <>
       {/* ------------------------------------------------------------ hero */}
-      <section className={styles.hero}>
-        <div className={`hex-mesh ${styles.heroMesh}`} aria-hidden="true" />
+      <section className={styles.hero} data-scroll>
         <div className={`container ${styles.heroInner}`}>
           <div className={styles.heroMeta} data-intro>
             <span className="eyebrow">
@@ -35,29 +40,32 @@ export default async function Home() {
           </div>
 
           <h1 className={`display ${styles.heroTitle}`}>
-            <span className={styles.heroLine} data-intro style={delay(1)}>
-              Built
-              <span className={styles.leafWrap} aria-hidden="true">
-                <span className={styles.leaf} />
+            <span className="sr-only">Built different.</span>
+            <span data-intro style={delay(1)} aria-hidden="true">
+              <span className={styles.heroLine}>
+                Built
+                <span className={styles.leafWrap}>
+                  <span className={styles.leaf} />
+                </span>
               </span>
             </span>
-            <span className={`rainbow ${styles.heroAccent}`} data-intro style={delay(2)}>
-              different.
+            <span data-intro style={delay(2)} aria-hidden="true">
+              <span className={`rainbow ${styles.heroAccent}`}>different.</span>
             </span>
           </h1>
 
           <div className={styles.heroFoot}>
             <div data-intro style={delay(3)}>
               <p className={styles.heroLede}>
-                We design and build custom software, websites, web applications and creative work, with the
-                engineering done as carefully as the visuals.
+                We&apos;re a small, independent studio building software, websites and brands for people who want
+                something that&apos;s actually theirs.
               </p>
               <div className={site.heroActions}>
-                <Link href="/commission" className={site.button}>
+                <Link href="/commission" className={site.button} data-magnetic>
                   Start a project <Arrow />
                 </Link>
-                <Link href="/services" className={site.buttonGhost}>
-                  What we do
+                <Link href="/services" className={site.buttonGhost} data-magnetic>
+                  See what we do
                 </Link>
               </div>
             </div>
@@ -66,131 +74,109 @@ export default async function Home() {
                 <Link key={service.slug} href={`/services/${service.slug}`}>
                   <span className="mono">{service.index}</span>
                   {service.name}
+                  <Arrow size={13} />
                 </Link>
               ))}
             </nav>
           </div>
         </div>
+        <a href="#services" className={styles.scrollCue} aria-label="Scroll to services">
+          <span className="mono">Scroll</span>
+          <span className={styles.scrollLine} />
+        </a>
       </section>
 
+      <Marquee words={["Software", "Websites", "Web apps", "Desktop", "UI/UX", "Branding", "Discord bots"]} />
+
       {/* -------------------------------------------------------- services */}
-      <section className={site.section}>
+      <section className={site.section} id="services">
         <div className="container">
-          <SectionHead eyebrow="01 — Services" title="What we" accent="make.">
+          <SectionHead eyebrow="01 — What we do" title="What we" accent="make.">
             <p className={site.lede}>
-              Five disciplines under one roof, so the design, the build and the brand come from the same people and fit
-              together.
+              Five things, done properly. Because design, code and brand all come from the same small team, they
+              actually fit together.
             </p>
           </SectionHead>
-          <ul className={site.serviceList}>
-            {services.map((service, i) => (
-              <li key={service.slug} className={site.serviceItem} data-reveal style={delay(i)}>
-                <Link href={`/services/${service.slug}`} className={site.serviceLink}>
-                  <span className={`mono ${site.serviceIndex}`}>{service.index}</span>
-                  <h3 className={site.serviceName}>{service.name}</h3>
-                  <p className={site.serviceSummary}>{service.summary}</p>
-                  <span className={site.serviceArrow}>
-                    <Arrow up size={20} />
-                  </span>
-                </Link>
-              </li>
-            ))}
-          </ul>
+          <ServiceList services={services} />
         </div>
       </section>
 
-      {/* --------------------------------------------------------- process */}
-      <section className={`${site.section} ${site.sectionRule}`}>
-        <div className="container">
-          <SectionHead eyebrow="02 — Process" title="How it" accent="works.">
-            <p className={site.lede}>
-              This isn&apos;t a diagram for the website. It&apos;s the exact flow your project follows in your KUSH
-              account, from request to delivery.
-            </p>
-          </SectionHead>
-          <ol className={site.process}>
-            {process.map((step, i) => (
-              <li key={step.step} className={site.processStep} data-reveal style={delay(i)}>
-                <span className={`mono ${site.processNumber}`}>{step.step}</span>
-                <h3 className={site.processTitle}>{step.title}</h3>
-                <p className={site.processText}>{step.text}</p>
-              </li>
-            ))}
-          </ol>
+      {/* --------------------------------------------- process (pinned) */}
+      <section className={fx.pin} data-pin aria-labelledby="process-title">
+        <div className={`container ${fx.pinStage}`}>
+          <div>
+            <Scramble className="eyebrow" text="02 — How it works" />
+            <h2 id="process-title" className={`display ${site.sectionTitle}`}>
+              Idea to <em className="holo">delivery.</em>
+            </h2>
+            <div className={fx.pinCounter} aria-hidden="true">
+              {process.map((step, i) => (
+                <span
+                  key={step.step}
+                  className={`rainbow ${fx.pinNumber}`}
+                  style={{ "--i": i, "--end": i === process.length - 1 ? 9 : i + 1 } as React.CSSProperties}
+                >
+                  {step.step}
+                </span>
+              ))}
+            </div>
+          </div>
+          <div style={{ position: "relative" }}>
+            <span className={fx.pinRail} aria-hidden="true" />
+            <ol className={fx.pinSteps}>
+              {process.map((step, i) => (
+                <li key={step.step} className={fx.pinStep} style={{ "--i": i } as React.CSSProperties}>
+                  <span className="mono">Step {step.step}</span>
+                  <h3>{step.title}</h3>
+                  <p>{step.text}</p>
+                </li>
+              ))}
+            </ol>
+          </div>
         </div>
       </section>
 
       {/* -------------------------------------------------------- platform */}
       <section className={`${site.section} ${site.sectionRule}`}>
-        <div className={`container ${styles.platformInner}`}>
-          <div>
-            <p className="eyebrow" data-reveal>
-              03 — Platform
+        <div className="container">
+          <SectionHead eyebrow="03 — The platform" title="One account." accent="Two front doors.">
+            <p className={site.lede}>
+              Talk to us on the website or in our Discord. It&apos;s one system underneath, so a reply in one place
+              shows up in the other. Here&apos;s a support ticket doing exactly that.
             </p>
-            <h2 className={`display ${site.sectionTitle}`} data-reveal>
-              One account.
-              <br />
-              <em className="holo">Two front doors.</em>
-            </h2>
-            <p className={site.lede} data-reveal style={{ marginTop: 24 }}>
-              Work with KUSH from the website or from our Discord. Behind both is one system, so nothing has to be said
-              twice.
-            </p>
-            <dl className={styles.platformList}>
-              {[
-                { title: "One sign-in", text: "Your KUSH account and the KUSH Discord are the same identity. Roles, tickets and purchases stay in sync." },
-                { title: "Commissions you can follow", text: "Quotes, milestones and one conversation per project, all in your account." },
-                { title: "Private support", text: "Open a ticket on the website or in Discord. Both are the same private ticket." },
-                { title: "Secure delivery", text: "Signed, short-lived download links, with access re-checked every time." },
-              ].map((item, i) => (
-                <div key={item.title} data-reveal style={delay(i)}>
-                  <dt>{item.title}</dt>
-                  <dd>{item.text}</dd>
-                </div>
-              ))}
-            </dl>
+          </SectionHead>
+          <div data-reveal>
+            <SyncDemo />
           </div>
-
-          {/* Illustration of the real account UI; no customer data. */}
-          <figure className={styles.mock} data-reveal aria-label="Illustration of a commission in a KUSH account">
-            <div className={styles.mockBar}>
-              <span />
-              <span />
-              <span />
-              <p className="mono">kush / account / commissions</p>
-            </div>
-            <div className={styles.mockBody}>
-              <p className="eyebrow">Commission · Illustration</p>
-              <p className={styles.mockTitle}>Your project</p>
-              <div className={styles.mockQuote}>
-                <span className="mono">Quote</span>
-                <span className={styles.mockPill}>Accepted</span>
+          <dl className={styles.platformList}>
+            {[
+              { title: "One sign-in", text: "Your KUSH account and your Discord are the same identity. Roles and purchases follow you." },
+              { title: "Tickets both ways", text: "Open one on the site or in Discord and reply from either. It's the same private ticket." },
+              { title: "Projects you can follow", text: "Quotes, milestones and the whole conversation, all in your account." },
+              { title: "Safe downloads", text: "Signed links that expire in minutes, with your access checked every time." },
+            ].map((item, i) => (
+              <div key={item.title} data-reveal style={delay(i)}>
+                <dt>{item.title}</dt>
+                <dd>{item.text}</dd>
               </div>
-              <ol className={styles.mockSteps}>
-                <li data-state="done">Discovery &amp; scope</li>
-                <li data-state="done">Design</li>
-                <li data-state="now">Build</li>
-                <li>Review &amp; delivery</li>
-              </ol>
-              <div className={styles.mockMessage}>
-                <span className={styles.mockAvatar}>K</span>
-                <p>Milestone updates and files arrive here, in one thread with your messages.</p>
-              </div>
-            </div>
-            <figcaption className="mono">Illustrative. Your account shows your real project.</figcaption>
-          </figure>
+            ))}
+          </dl>
         </div>
       </section>
 
+      <Marquee reverse words={["Design", "Code", "Culture", "Built different"]} />
+
       {/* ------------------------------------------------------ principles */}
-      <section className={`${site.section} ${site.sectionRule}`}>
+      <section className={site.section}>
         <div className="container">
-          <SectionHead eyebrow="04 — Principles" title="How we" accent="hold ourselves." />
+          <SectionHead eyebrow="04 — How we work" title="House" accent="rules." />
           <div className={styles.principles}>
             {principles.map((item, i) => (
               <article key={item.title} className={styles.principle} data-reveal style={delay(i)}>
                 <span className="mono">/{String(i + 1).padStart(2, "0")}</span>
-                <h3>{item.title}</h3>
+                <h3>
+                  <SplitText text={item.title} />
+                </h3>
                 <p>{item.text}</p>
               </article>
             ))}
@@ -202,10 +188,10 @@ export default async function Home() {
       {wall && wall.count > 0 ? (
         <section className={`${site.section} ${site.sectionRule}`}>
           <div className="container">
-            <SectionHead eyebrow="05 — Vouches" title="In their" accent="words.">
+            <SectionHead eyebrow="05 — Vouches" title="Don't take" accent="our word.">
               <p className={site.lede}>
-                From verified customers, posted in our Discord and shown here unedited.
-                {wall.average !== null ? ` ${wall.average.toFixed(1)} out of 5 across ${wall.count}.` : ""}
+                Straight from verified customers in our Discord, shown here exactly as they wrote them.
+                {wall.average !== null ? ` ${wall.average.toFixed(1)} out of 5 from ${wall.count}.` : ""}
               </p>
             </SectionHead>
             <div className={styles.vouches}>
@@ -221,7 +207,7 @@ export default async function Home() {
               ))}
             </div>
             <Link href="/vouches" className={site.textLink} style={{ marginTop: 32 }}>
-              All vouches <Arrow />
+              Read them all <Arrow />
             </Link>
           </div>
         </section>

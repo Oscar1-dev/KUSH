@@ -75,7 +75,7 @@
   --surface: var(--ink-2);
   --cream: var(--text);
   --muted: var(--text-2);
-  --green: var(--accent);
+  --green: #a7fa43; /* KUSH green, kept for dashboards and status */
   --purple: var(--holo-lilac);
 }
 
@@ -245,6 +245,18 @@ video {
 .hex-mesh {
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='28' height='48.5' viewBox='0 0 28 48.5'%3E%3Cpath d='M14 0l14 8.08v16.17L14 32.33 0 24.25V8.08zM14 32.33l14 8.09v16.16M14 32.33L0 40.42v16.16' fill='none' stroke='%23ffffff' stroke-opacity='.07' stroke-width='1'/%3E%3C/svg%3E");
   background-size: 28px 48.5px;
+}
+
+/* Lenis smooth scrolling owns the scroll position while it's active. */
+html.lenis,
+html.lenis body {
+  height: auto;
+}
+.lenis.lenis-smooth {
+  scroll-behavior: auto !important;
+}
+.lenis.lenis-stopped {
+  overflow: hidden;
 }
 
 /* --------------------------------------------------------------- reveal */

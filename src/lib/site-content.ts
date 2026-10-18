@@ -1,7 +1,7 @@
 /**
- * Public website content. Everything here describes what KUSH offers and
- * how the real commission workflow works. No invented clients, statistics,
- * prices or testimonials: vouches come only from the live vouch system.
+ * Public website copy. Describes what KUSH actually offers and how the real
+ * commission workflow runs. No invented clients, stats, prices or reviews:
+ * vouches only ever come from the live vouch system.
  */
 
 export interface Service {
@@ -22,86 +22,86 @@ export const services: Service[] = [
     slug: "custom-development",
     index: "01",
     name: "Custom Development",
-    summary: "Bespoke systems, integrations, automation and bots built around how you actually work.",
+    summary: "The tool you couldn't find, so we build it. APIs, integrations, automation and bots.",
     headline: ["Built for", "your problem."],
     intro:
-      "When off-the-shelf tools don't fit, we build the thing that does: back-end services, APIs, integrations between the tools you already use, and automation that removes repetitive work.",
+      "Sometimes nothing off the shelf fits how you work. That's where we come in: back-ends, APIs, integrations between the tools you already pay for, and automation that takes the boring jobs off your plate.",
     offerings: [
-      { title: "APIs & back-end services", text: "Reliable services with clear contracts, authentication and audit trails, designed to be maintained, not just shipped." },
-      { title: "Integrations", text: "Connect payment providers, CRMs, storage and internal tools so data moves without copy and paste." },
-      { title: "Automation", text: "Scheduled jobs, workflows and queues that retry safely, so a failure is reported instead of silently lost." },
-      { title: "Discord systems", text: "Ticketing, onboarding, role sync and moderation bots. The KUSH community runs on one we built ourselves." },
+      { title: "APIs & back-ends", text: "Services with proper authentication, logging and audit trails. Built to be looked after, not just launched." },
+      { title: "Integrations", text: "Get your payments, CRM, storage and internal tools talking to each other, so nobody's copying data between tabs." },
+      { title: "Automation", text: "Scheduled jobs and queues that retry when something fails, and tell you about it instead of failing quietly." },
+      { title: "Discord bots", text: "Tickets, onboarding, role sync and moderation. Our own community runs on one we built, so we know the edge cases." },
     ],
-    deliverables: ["Source code you own", "Technical documentation", "Deployment notes", "Handover session"],
-    goodFit: ["You've outgrown spreadsheets or manual steps", "Two tools need to talk to each other", "You need a bot or service that just keeps working"],
+    deliverables: ["Source code that's yours", "Technical docs", "Deployment notes", "A proper handover"],
+    goodFit: ["You've outgrown spreadsheets and manual steps", "Two of your tools need to share data", "You need a bot or service that just keeps running"],
   },
   {
     slug: "websites",
     index: "02",
-    name: "Websites & Web Applications",
-    summary: "Fast, accessible sites and full web apps, from marketing pages to signed-in dashboards.",
+    name: "Websites & Web Apps",
+    summary: "Fast, good-looking sites and full web apps, from a landing page to a signed-in dashboard.",
     headline: ["Sites that", "do the work."],
     intro:
-      "Distinctive websites and web applications with real engineering underneath: accounts, dashboards, payments-ready flows and content you can manage, built to be fast on every device.",
+      "Websites with personality and web apps with real engineering underneath: accounts, dashboards, payments-ready checkout flows and content you can edit yourself. Quick on a phone, not just on our monitors.",
     offerings: [
-      { title: "Marketing & brand sites", text: "Art-directed sites with considered motion that stays out of the way of the content." },
-      { title: "Web applications", text: "Signed-in products with accounts, roles, two-factor authentication and the dashboards behind them." },
-      { title: "Performance & accessibility", text: "Semantic markup, keyboard support, reduced-motion support and pages that load quickly on mobile." },
-      { title: "Content & SEO foundations", text: "Clean structure, metadata and editable content so the site stays current after launch." },
+      { title: "Brand & marketing sites", text: "Art-directed, with motion that adds something rather than getting in the way." },
+      { title: "Web applications", text: "Products people sign in to, with roles, two-factor authentication and the admin side to run them." },
+      { title: "Speed & accessibility", text: "Clean markup, keyboard support, reduced-motion support, and pages that load fast on mobile data." },
+      { title: "Content & SEO basics", text: "Sensible structure and metadata, and content you can update without calling us." },
     ],
-    deliverables: ["Responsive build", "Accessibility review", "Analytics-ready setup", "Launch checklist"],
-    goodFit: ["You need more than a template", "Your site needs accounts or a dashboard", "Speed and polish matter to your brand"],
+    deliverables: ["Responsive build", "Accessibility pass", "Analytics set up", "Launch checklist"],
+    goodFit: ["A template won't cut it", "Your site needs accounts or a dashboard", "Your brand lives or dies on first impressions"],
   },
   {
     slug: "software",
     index: "03",
-    name: "Software & Desktop Applications",
-    summary: "Desktop tools and cross-platform software with installers, updates and licensing.",
+    name: "Software & Desktop Apps",
+    summary: "Desktop tools and cross-platform software, with installers, updates and licensing sorted.",
     headline: ["Software", "with substance."],
     intro:
-      "Desktop and cross-platform applications that feel at home on the machine they run on, with the unglamorous parts done properly: installers, updates, licensing and crash reporting.",
+      "Desktop and cross-platform apps that feel at home on the machine they run on. We handle the dull-but-vital parts too: installers, auto-updates, licence keys and crash reports.",
     offerings: [
-      { title: "Desktop applications", text: "Cross-platform or Windows-first tools, chosen per project for what the software needs to do." },
-      { title: "Licensing & distribution", text: "Licence keys, protected downloads and update channels tied to customer accounts." },
-      { title: "Internal tools", text: "Focused utilities for your team that replace fragile scripts and manual processes." },
-      { title: "Maintenance", text: "Updates, fixes and compatibility work after release, agreed up front." },
+      { title: "Desktop apps", text: "Cross-platform or Windows-first, picked to suit what the software needs to do." },
+      { title: "Licensing & delivery", text: "Licence keys, protected downloads and update channels linked to customer accounts." },
+      { title: "Internal tools", text: "Small, focused utilities that replace the fragile script someone wrote three years ago." },
+      { title: "Ongoing support", text: "Updates, fixes and compatibility work after launch, agreed before we start." },
     ],
-    deliverables: ["Signed builds where applicable", "Installer & update path", "User documentation", "Source code"],
-    goodFit: ["Your users work on the desktop", "You want to sell or license software", "A script has become business-critical"],
+    deliverables: ["Signed builds where it applies", "Installer & update path", "User guide", "Source code"],
+    goodFit: ["Your users live on the desktop", "You want to sell or license software", "A script has quietly become business-critical"],
   },
   {
     slug: "ui-ux-design",
     index: "04",
     name: "UI/UX Design",
-    summary: "Interfaces, flows and design systems that make complex products feel obvious.",
+    summary: "Interfaces and flows that make complicated things feel obvious.",
     headline: ["Clarity,", "by design."],
     intro:
-      "Product and interface design grounded in how people actually use things: flows, wireframes, high-fidelity interfaces and design systems your developers can build from.",
+      "Product and interface design based on how people actually use things. Flows, wireframes, polished screens and design systems your developers can build straight from.",
     offerings: [
-      { title: "Product & flow design", text: "Map the journeys that matter, then remove the steps that don't." },
-      { title: "Interface design", text: "High-fidelity screens with states for loading, empty, error and success, not just the happy path." },
-      { title: "Design systems", text: "Tokens, components and usage rules that keep a product consistent as it grows." },
-      { title: "Prototypes", text: "Clickable prototypes to test an idea before committing to building it." },
+      { title: "Flows & journeys", text: "Map the paths that matter most, then cut the steps that don't need to be there." },
+      { title: "Interface design", text: "Every screen designed for loading, empty and error states too, not just the perfect-day version." },
+      { title: "Design systems", text: "Tokens, components and rules that keep a product consistent as it grows." },
+      { title: "Prototypes", text: "Clickable prototypes so you can test an idea before paying to build it." },
     ],
     deliverables: ["Design files", "Component library", "Interaction notes", "Developer handoff"],
-    goodFit: ["Your product works but feels hard to use", "You're starting a product from scratch", "Your interface has drifted out of consistency"],
+    goodFit: ["Your product works but people find it confusing", "You're starting from a blank page", "Your UI has drifted into ten different styles"],
   },
   {
     slug: "creative",
     index: "05",
-    name: "Creative Services",
-    summary: "Brand identity, motion and visual design with a point of view.",
+    name: "Creative & Branding",
+    summary: "Logos, identity, motion and graphics for brands that refuse to blend in.",
     headline: ["Look", "different."],
     intro:
-      "Identity and visual work for brands that don't want to blend in: logos and visual systems, motion, graphics for launches and community spaces, and art direction across all of it.",
+      "Identity and visual work with a point of view. Logos and full visual systems, motion, launch graphics and community spaces, all art-directed so they feel like one brand.",
     offerings: [
-      { title: "Brand identity", text: "Marks, type, colour and the rules that hold them together." },
-      { title: "Motion design", text: "Animated logos, product motion and short-form visuals." },
-      { title: "Launch & social graphics", text: "Campaign visuals sized and exported for the places they'll actually be used." },
+      { title: "Brand identity", text: "Logo, type, colour and the rules that hold them together." },
+      { title: "Motion", text: "Animated logos, product motion and short-form visuals." },
+      { title: "Launch & social", text: "Campaign graphics sized and exported for where they'll actually be posted." },
       { title: "Community branding", text: "Discord server art, banners, emoji and panels that match your brand." },
     ],
-    deliverables: ["Master artwork files", "Exports for each platform", "Brand guidelines", "Usage rights as agreed"],
-    goodFit: ["You're launching something new", "Your brand looks inconsistent across platforms", "You want a community space that feels yours"],
+    deliverables: ["Master artwork files", "Exports for every platform", "Brand guidelines", "Usage rights as agreed"],
+    goodFit: ["You're launching something new", "Your brand looks different everywhere it appears", "You want a community space that feels like yours"],
   },
 ];
 
@@ -111,31 +111,31 @@ export const serviceBySlug = (slug: string) => services.find((service) => servic
 export const process = [
   {
     step: "01",
-    title: "Request",
-    text: "Tell us what you need from your KUSH account. It takes a few minutes and you can attach references.",
+    title: "Tell us the idea",
+    text: "Send a request from your KUSH account. A few minutes, a few details, any references you've got.",
   },
   {
     step: "02",
-    title: "Scope & quote",
-    text: "We review it, ask questions if needed and send a quote to your account. Nothing starts until you accept it.",
+    title: "Get a quote",
+    text: "We read it properly, ask what we need to, and post a quote to your account. Nothing starts until you say yes.",
   },
   {
     step: "03",
-    title: "Build in milestones",
-    text: "Work is split into milestones you can follow in your account, with every message kept in one thread.",
+    title: "Watch it come together",
+    text: "The work's split into milestones you can track. Every message lives in one thread, so nothing gets lost.",
   },
   {
     step: "04",
-    title: "Review & delivery",
-    text: "You review, we refine, then files and downloads are delivered through your account. Support stays open afterwards.",
+    title: "Sign off & download",
+    text: "You review, we polish, then your files land in your account. Support doesn't stop when the project does.",
   },
 ];
 
 export const principles = [
-  { title: "Original by design.", text: "Every project gets its own identity. We don't reskin templates." },
-  { title: "Function over fiction.", text: "A beautiful interface means nothing if the software behind it doesn't work." },
-  { title: "Detail is everything.", text: "Empty states, error messages, keyboard focus: the small things are the product." },
-  { title: "Honest by default.", text: "Clear quotes, real progress and no invented numbers, on this site or in your project." },
+  { title: "No templates.", text: "Every project gets its own identity. We don't reskin last month's work." },
+  { title: "It has to work.", text: "A beautiful interface is pointless if the thing behind it breaks." },
+  { title: "Details matter.", text: "Empty states, error messages, keyboard focus. The small stuff is the product." },
+  { title: "Straight talk.", text: "Clear quotes, honest progress updates, and no made-up numbers. Here or in your project." },
 ];
 
 export const faqs: { group: string; items: { q: string; a: string }[] }[] = [
@@ -144,19 +144,19 @@ export const faqs: { group: string; items: { q: string; a: string }[] }[] = [
     items: [
       {
         q: "How do I start a project?",
-        a: "Sign in with Discord, then open a commission request from your account. Describe what you need and attach any references. We'll reply in the same thread.",
+        a: "Sign in with Discord, then send a commission request from your account. Tell us what you're after and attach anything useful. We'll reply in the same thread.",
       },
       {
-        q: "How is a project priced?",
-        a: "Every project is quoted individually once we understand the scope. The quote appears in your account and work only begins after you accept it.",
+        q: "How much does it cost?",
+        a: "It depends on the project, so every job gets its own quote once we understand it. You'll see it in your account, and nothing begins until you accept it.",
       },
       {
-        q: "Can I follow progress?",
-        a: "Yes. Commissions are split into milestones you can see in your account, and every message lives in one conversation so nothing gets lost.",
+        q: "Can I see how it's going?",
+        a: "Yes. Projects are broken into milestones you can follow in your account, and all the messages stay in one conversation.",
       },
       {
         q: "Who owns the finished work?",
-        a: "Ownership and usage rights are set out in your quote before you accept it, so there are no surprises at handover.",
+        a: "Ownership and usage rights are written into your quote before you accept it, so you know exactly where you stand at handover.",
       },
     ],
   },
@@ -164,16 +164,16 @@ export const faqs: { group: string; items: { q: string; a: string }[] }[] = [
     group: "Accounts & security",
     items: [
       {
-        q: "Why do I sign in with Discord?",
-        a: "One sign-in links your website account and the KUSH Discord, so tickets, roles and purchases stay in sync. We only receive your Discord username and avatar, never your password.",
+        q: "Why sign in with Discord?",
+        a: "It links your website account to the KUSH Discord, so tickets, roles and purchases stay in sync. We only get your Discord username and avatar, never your password.",
       },
       {
-        q: "Can I protect my account further?",
-        a: "Yes. Turn on two-factor authentication with any authenticator app in Security. It's required for all KUSH staff.",
+        q: "Can I lock my account down further?",
+        a: "Yes. Turn on two-factor authentication with any authenticator app under Security. All KUSH staff have to use it.",
       },
       {
-        q: "Where do I get my files?",
-        a: "Purchased products and delivered work appear in Downloads. Download links are signed and expire after a few minutes, and your access is re-checked each time.",
+        q: "Where do I find my files?",
+        a: "Anything you've bought or had delivered shows up in Downloads. Links are signed, expire after a few minutes, and your access is checked every time.",
       },
     ],
   },
@@ -182,11 +182,11 @@ export const faqs: { group: string; items: { q: string; a: string }[] }[] = [
     items: [
       {
         q: "How do I get help?",
-        a: "Open a support ticket from your account or in the KUSH Discord. Both create the same private ticket, visible only to you and the staff who need it.",
+        a: "Open a support ticket from your account, or in the KUSH Discord. Either way it's the same private ticket, only visible to you and the staff handling it.",
       },
       {
         q: "What are vouches?",
-        a: "Reviews from verified customers, posted in our Discord with !vouch. Only people who've bought from KUSH can leave one, and they appear on the Vouches page unedited.",
+        a: "Reviews from verified customers, posted in our Discord with !vouch. Only people who've actually bought from KUSH can leave one, and they show up here unedited.",
       },
     ],
   },

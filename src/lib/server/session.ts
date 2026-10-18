@@ -111,6 +111,8 @@ export function siteUrl(path: string) {
 
 /** Only same-site account/staff paths may be used as a post-sign-in target. */
 export function safeNext(value: string | null | undefined) {
-  return value && /^\/(staff|account)(\/[A-Za-z0-9/_-]*)?$/.test(value) ? value : null;
+  // Same-site account/staff paths only, with an optional simple query
+  // (e.g. ?position=developer). Never a full URL or protocol-relative path.
+  return value && /^\/(staff|account)(\/[A-Za-z0-9/_-]*)?(\?[A-Za-z0-9=&_-]{1,100})?$/.test(value) ? value : null;
 }
 export const NEXT_COOKIE = `${prefix}kush_next`;

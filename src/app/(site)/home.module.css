@@ -9,13 +9,6 @@
   overflow: hidden;
   border-bottom: 1px solid var(--line);
 }
-.heroMesh {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  -webkit-mask-image: radial-gradient(ellipse 70% 80% at 85% 20%, #000 0%, transparent 70%);
-  mask-image: radial-gradient(ellipse 70% 80% at 85% 20%, #000 0%, transparent 70%);
-}
 .heroInner {
   position: relative;
   width: 100%;
@@ -33,15 +26,22 @@
   font-size: min(11.2vw, 168px);
   line-height: 0.86;
 }
+.heroTitle > span {
+  display: block;
+}
 .heroLine {
   display: flex;
   align-items: center;
   gap: 0.12em;
+  transform: translate3d(calc(var(--c, 0) * 9vw), 0, 0);
+  will-change: transform;
 }
 .heroAccent {
-  display: block;
+  display: inline-block;
   font-style: italic;
   padding-right: 0.08em; /* italic overhang */
+  transform: translate3d(calc(var(--c, 0) * -7vw), 0, 0);
+  will-change: transform;
 }
 
 /* The leaf from inside the KUSH wordmark, in the same living rainbow. */
@@ -56,6 +56,8 @@
 }
 .leaf {
   display: block;
+  rotate: calc(var(--c, 0) * 160deg);
+  scale: calc(1 - var(--c, 0) * 0.35);
   width: 100%;
   height: 100%;
   background: var(--holo-vivid);
@@ -83,6 +85,8 @@
 }
 
 .heroFoot {
+  opacity: calc(1 + var(--c, 0) * 1.3);
+  translate: 0 calc(var(--c, 0) * -50px);
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 340px);
   gap: clamp(32px, 6vw, 120px);
@@ -120,8 +124,66 @@
 .heroIndex .mono {
   color: var(--text-3);
 }
+.heroIndex a > svg {
+  margin-left: auto;
+  opacity: 0;
+  transform: translateX(-6px);
+  transition:
+    opacity var(--t-fast),
+    transform var(--t) var(--ease);
+}
+.heroIndex a:hover > svg {
+  opacity: 1;
+  transform: none;
+}
+
+/* Scroll cue: a line that keeps draining downwards. */
+.scrollCue {
+  position: absolute;
+  left: 50%;
+  bottom: 22px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  color: var(--text-3);
+  translate: -50% 0;
+  opacity: calc(1 + var(--c, 0) * 3);
+}
+.scrollLine {
+  position: relative;
+  width: 1px;
+  height: 44px;
+  overflow: hidden;
+  background: var(--line-2);
+}
+.scrollLine::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: var(--holo-vivid);
+  background-size: 100% 200%;
+  animation: drain 1.8s var(--ease-in-out) infinite;
+}
+@keyframes drain {
+  from {
+    transform: translateY(-100%);
+  }
+  to {
+    transform: translateY(100%);
+  }
+}
+@media (max-width: 860px) {
+  .scrollCue {
+    display: none;
+  }
+}
 
 @media (max-width: 860px) {
+  .hero {
+    min-height: 0;
+    padding: calc(var(--header-h) + 56px) 0 72px;
+  }
   .heroFoot {
     grid-template-columns: 1fr;
   }
@@ -140,176 +202,45 @@
 
 /* -------------------------------------------------------------- platform */
 
-.platformInner {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  gap: clamp(40px, 7vw, 120px);
-  align-items: center;
-}
 .platformList {
-  margin: 40px 0 0;
+  margin: clamp(40px, 5vw, 64px) 0 0;
   display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   border-top: 1px solid var(--line-2);
 }
 .platformList > div {
-  display: grid;
-  grid-template-columns: minmax(0, 180px) minmax(0, 1fr);
-  gap: 20px;
-  padding: 18px 0;
-  border-bottom: 1px solid var(--line);
+  padding: 22px 22px 6px 0;
+}
+.platformList > div + div {
+  padding-left: 22px;
+  border-left: 1px solid var(--line);
 }
 .platformList dt {
   font-weight: 600;
 }
 .platformList dd {
-  margin: 0;
+  margin: 8px 0 0;
   color: var(--text-2);
   font-size: 15px;
 }
 @media (max-width: 960px) {
-  .platformInner {
-    grid-template-columns: 1fr;
+  .platformList {
+    grid-template-columns: 1fr 1fr;
+  }
+  .platformList > div:nth-child(3) {
+    padding-left: 0;
+    border-left: 0;
   }
 }
 @media (max-width: 520px) {
-  .platformList > div {
+  .platformList {
     grid-template-columns: 1fr;
-    gap: 4px;
   }
-}
-
-/* The illustrative account window. */
-.mock {
-  margin: 0;
-  border: 1px solid var(--line-2);
-  border-radius: var(--radius-l);
-  background: var(--ink-1);
-  overflow: hidden;
-  box-shadow: 0 40px 120px -40px rgba(0, 0, 0, 0.8);
-}
-.mock figcaption {
-  padding: 12px 20px;
-  border-top: 1px solid var(--line);
-  color: var(--text-3);
-}
-.mockBar {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  padding: 14px 18px;
-  border-bottom: 1px solid var(--line);
-}
-.mockBar span {
-  width: 9px;
-  height: 9px;
-  border-radius: 50%;
-  background: var(--ink-4);
-}
-.mockBar p {
-  margin: 0 0 0 12px;
-  color: var(--text-3);
-}
-.mockBody {
-  padding: clamp(22px, 3vw, 34px);
-}
-.mockTitle {
-  margin: 10px 0 22px;
-  font-family: var(--font-display);
-  font-weight: 800;
-  font-variation-settings: "wdth" 112;
-  font-size: 30px;
-  letter-spacing: -0.03em;
-  text-transform: uppercase;
-}
-.mockQuote {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 14px 16px;
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
-  color: var(--text-2);
-}
-.mockPill {
-  padding: 4px 10px;
-  border-radius: 999px;
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--ok);
-  background: rgba(143, 227, 185, 0.1);
-}
-.mockSteps {
-  list-style: none;
-  margin: 22px 0;
-  padding: 0;
-  display: grid;
-  gap: 2px;
-}
-.mockSteps li {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 10px 0;
-  color: var(--text-3);
-  font-size: 15px;
-}
-.mockSteps li::before {
-  content: "";
-  width: 14px;
-  height: 14px;
-  border-radius: 50%;
-  border: 1.5px solid var(--line-3);
-  flex: none;
-}
-.mockSteps li[data-state="done"] {
-  color: var(--text-2);
-}
-.mockSteps li[data-state="done"]::before {
-  border-color: var(--ok);
-  background: var(--ok);
-  box-shadow: inset 0 0 0 3px var(--ink-1);
-}
-.mockSteps li[data-state="now"] {
-  color: var(--text);
-  font-weight: 600;
-}
-.mockSteps li[data-state="now"]::before {
-  border: 0;
-  background: var(--holo);
-  background-size: 300% 100%;
-  animation: pulse 2.4s var(--ease-in-out) infinite;
-}
-@keyframes pulse {
-  50% {
-    transform: scale(0.8);
-    opacity: 0.7;
+  .platformList > div,
+  .platformList > div + div {
+    padding: 18px 0 4px;
+    border-left: 0;
   }
-}
-.mockMessage {
-  display: flex;
-  gap: 12px;
-  align-items: flex-start;
-  padding: 14px 16px;
-  border-radius: var(--radius);
-  background: var(--ink-2);
-}
-.mockMessage p {
-  margin: 0;
-  color: var(--text-2);
-  font-size: 14px;
-}
-.mockAvatar {
-  flex: none;
-  display: grid;
-  place-items: center;
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
-  background: var(--text);
-  color: var(--ink-0);
-  font-family: var(--font-display);
-  font-weight: 800;
-  font-size: 13px;
 }
 
 /* ------------------------------------------------------------ principles */
@@ -405,5 +336,11 @@
 @media (max-width: 900px) {
   .vouches {
     grid-template-columns: 1fr;
+  }
+}
+
+@keyframes rainbow {
+  to {
+    background-position: -200% 0;
   }
 }

@@ -1,20 +1,13 @@
 import Link from "next/link";
 
+import Scramble from "./scramble";
 import styles from "./site.module.css";
+import SplitText from "./split-text";
 
 const delay = (i: number) => ({ "--reveal-i": i }) as React.CSSProperties;
 
-export function Arrow({ size = 16, up = false }: { size?: number; up?: boolean }) {
-  return (
-    <svg className={styles.arrow} width={size} height={size} viewBox="0 0 16 16" fill="none" aria-hidden="true">
-      {up ? (
-        <path d="M4.5 11.5l7-7M5.5 4.5h6v6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="square" />
-      ) : (
-        <path d="M2.5 8h11M9 3.5L13.5 8 9 12.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="square" />
-      )}
-    </svg>
-  );
-}
+export { Arrow } from "./arrow";
+import { Arrow } from "./arrow";
 
 /** Standard hero for inner pages: label, two-line title, lede, actions. */
 export function PageHero({
@@ -68,16 +61,19 @@ export function SectionHead({
   accent?: string;
   children?: React.ReactNode;
 }) {
+  const count = title.split(" ").length;
   return (
     <div className={styles.sectionHead}>
       <div data-reveal>
-        <p className="eyebrow">{eyebrow}</p>
+        <Scramble className="eyebrow" text={eyebrow} />
         <h2 className={`display ${styles.sectionTitle}`}>
-          {title}
+          <SplitText text={title} />
           {accent ? (
             <>
               {" "}
-              <em className="holo">{accent}</em>
+              <em>
+                <SplitText text={accent} offset={count} wordClassName="holo" />
+              </em>
             </>
           ) : null}
         </h2>
@@ -94,7 +90,7 @@ export function SectionHead({
 /** Closing call to action used at the foot of most pages. */
 export function Cta({
   title = ["Have something", "in mind?"],
-  text = "Tell us about it. Requests are free, and every project starts with a quote you accept first.",
+  text = "Tell us what you're thinking. Asking costs nothing, and you'll get a proper quote before anything starts.",
 }: {
   title?: [string, string];
   text?: string;
@@ -104,19 +100,21 @@ export function Cta({
       <div className={`hex-mesh ${styles.ctaMesh}`} aria-hidden="true" />
       <div className={`container ${styles.ctaInner}`}>
         <h2 className={`display ${styles.ctaTitle}`} data-reveal>
-          {title[0]}
+          <SplitText text={title[0]} />
           <br />
-          <em className="holo">{title[1]}</em>
+          <em>
+            <SplitText text={title[1]} offset={title[0].split(" ").length} wordClassName="holo" />
+          </em>
         </h2>
         <p className={styles.lede} data-reveal style={delay(1)}>
           {text}
         </p>
         <div className={styles.heroActions} data-reveal style={delay(2)}>
-          <Link href="/commission" className={styles.button}>
+          <Link href="/commission" className={styles.button} data-magnetic>
             Start a project <Arrow />
           </Link>
-          <Link href="/contact" className={styles.buttonGhost}>
-            Ask a question
+          <Link href="/contact" className={styles.buttonGhost} data-magnetic>
+            Ask us something
           </Link>
         </div>
       </div>

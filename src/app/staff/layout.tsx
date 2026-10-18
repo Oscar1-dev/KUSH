@@ -54,7 +54,6 @@ export default async function StaffLayout({ children }: { children: React.ReactN
     const Icon = view.icon;
     return (
       <main className={styles.signIn}>
-        <div className={styles.signInOrbit} aria-hidden="true" />
         <section className={styles.signInPanel} aria-labelledby="denied">
           <Icon size={30} aria-hidden="true" style={{ color: "var(--green)" }} />
           <p className={styles.kicker} style={{ marginTop: 20 }}>

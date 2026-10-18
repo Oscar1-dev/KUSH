@@ -1,0 +1,91 @@
+.grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+.card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-height: 320px;
+  padding: clamp(24px, 3vw, 34px);
+  border: 1px solid var(--line-2);
+  border-radius: var(--radius-l);
+  background: rgba(12, 12, 16, 0.78);
+  backdrop-filter: blur(10px);
+  overflow: hidden;
+  transition:
+    transform var(--t) var(--ease),
+    border-color var(--t) var(--ease);
+}
+/* A rainbow edge sweeps in along the top on hover. */
+.card::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto;
+  height: 2px;
+  background: var(--holo-vivid);
+  background-size: 200% 100%;
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform var(--t-slow) var(--ease);
+}
+a.card:hover {
+  transform: translateY(-4px);
+  border-color: var(--line-3);
+}
+a.card:hover::before {
+  transform: scaleX(1);
+}
+.icon {
+  display: grid;
+  place-items: center;
+  width: 46px;
+  height: 46px;
+  border-radius: 12px;
+  border: 1px solid var(--line-2);
+}
+.title {
+  margin: auto 0 0;
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-variation-settings: "wdth" 112;
+  font-size: clamp(24px, 2.4vw, 32px);
+  letter-spacing: -0.03em;
+  line-height: 1;
+  text-transform: uppercase;
+}
+.text {
+  margin: 0;
+  color: var(--text-2);
+}
+.action {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+}
+.soon {
+  color: var(--text-3);
+}
+.note {
+  margin: 40px 0 0;
+  color: var(--text-2);
+}
+.note a {
+  color: var(--text);
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+@media (max-width: 900px) {
+  .grid {
+    grid-template-columns: 1fr;
+  }
+  .card {
+    min-height: 0;
+  }
+  .title {
+    margin-top: 18px;
+  }
+}
