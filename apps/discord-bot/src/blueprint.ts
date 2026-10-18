@@ -345,42 +345,6 @@ const programme = (holder: RoleKey): Access => ({
 /** The bot is excluded so a bot compromise cannot read these channels. */
 const ownerOnly: Access = { view: [], bot: "observe" };
 
-/** Legacy channels archived on 18 Oct 2026 (see LEGACY-AUDIT.md). */
-const archived: [string, "text" | "voice"][] = [
-  ["roles", "text"],
-  ["faq-old", "text"],
-  ["feedback", "text"],
-  ["polls", "text"],
-  ["product-announcements", "text"],
-  ["development-progress", "text"],
-  ["feature-requests", "text"],
-  ["bug-reports", "text"],
-  ["commission-information", "text"],
-  ["pricing-and-quotes", "text"],
-  ["customer-reviews", "text"],
-  ["marketplace", "text"],
-  ["featured-products", "text"],
-  ["marketplace-support", "text"],
-  ["seller-applications", "text"],
-  ["resolved-issues", "text"],
-  ["staff-announcements", "text"],
-  ["staff-tasks", "text"],
-  ["marketplace-review", "text"],
-  ["audit-log", "text"],
-  ["development-lounge", "voice"],
-  ["community-hangout", "voice"],
-];
-
-/** An archived voice channel: nobody but the owner (and the bot) can see it. */
-const archivedVoice = (name: string): DesiredChannel => ({
-  key: `archive:${name}`,
-  name,
-  type: ChannelType.GuildVoice,
-  parentKey: "archive",
-  botAccess: "manage",
-  overwrites: compileAccess({ view: [] }),
-});
-
 export const channels: DesiredChannel[] = [
   category("information", "📌 INFORMATION", { publish: ["administrator"] }, [
     "01-start-here",
@@ -689,14 +653,143 @@ export const channels: DesiredChannel[] = [
     { view: ["administrator"] },
   ),
 
-  // ----------------------------------------------------------- archive
-  // Redundant legacy channels, kept (not deleted) in an owner-only category
-  // so they can be restored. The bot keeps access only to manage them.
-  category("archive", "🗄 ARCHIVE", { view: [] }),
-  ...archived.map(([name, type]) =>
-    type === "voice"
-      ? archivedVoice(name)
-      : text("archive", name, "Archived.", { view: [] }),
+  // ------------------------------------- restored legacy channels
+  // Owner decision 18 Oct 2026: bring every archived channel back to its
+  // original area with proper access (moved in place, history kept).
+  // legacyKeys find them where they were archived.
+  text(
+    "information",
+    "roles",
+    "What each KUSH role means and how you get it.",
+    { publish: ["administrator"] },
+    ["archive:roles"],
+  ),
+  text(
+    "information",
+    "server-faq",
+    "Quick answers about this server.",
+    { publish: ["administrator"] },
+    ["archive:faq-old"],
+  ),
+  text(
+    "community",
+    "feedback",
+    "Feedback about KUSH, the server and the website.",
+    community,
+    ["archive:feedback"],
+  ),
+  text("community", "polls", "Community polls.", community, ["archive:polls"]),
+  text(
+    "products",
+    "product-announcements",
+    "Announcements about KUSH products.",
+    { publish: ["administrator", "developer"] },
+    ["archive:product-announcements"],
+  ),
+  text(
+    "products",
+    "development-progress",
+    "Progress updates from the KUSH team.",
+    { publish: ["administrator", "developer"] },
+    ["archive:development-progress"],
+  ),
+  text(
+    "products",
+    "feature-requests",
+    "Ideas for KUSH products. One idea per message.",
+    community,
+    ["archive:feature-requests"],
+  ),
+  text(
+    "products",
+    "bug-reports",
+    "Public bug reports. Account or payment problems: open a private ticket instead.",
+    community,
+    ["archive:bug-reports"],
+  ),
+  text(
+    "studio",
+    "commission-information",
+    "How KUSH commissions work, from enquiry to delivery.",
+    { publish: ["administrator"] },
+    ["archive:commission-information"],
+  ),
+  text(
+    "studio",
+    "pricing-and-quotes",
+    "How pricing works. Every quote is personal and sent privately.",
+    { publish: ["administrator"] },
+    ["archive:pricing-and-quotes"],
+  ),
+  text(
+    "studio",
+    "customer-reviews",
+    "Genuine reviews from real KUSH customers, shared with permission.",
+    { publish: ["administrator"] },
+    ["archive:customer-reviews"],
+  ),
+  text(
+    "partnerships",
+    "marketplace",
+    "The KUSH marketplace (coming later).",
+    { publish: ["administrator"] },
+    ["archive:marketplace"],
+  ),
+  text(
+    "partnerships",
+    "featured-products",
+    "Featured partner products.",
+    { publish: ["administrator"] },
+    ["archive:featured-products"],
+  ),
+  text(
+    "partnerships",
+    "seller-applications",
+    "How to apply as a seller. Applications are private.",
+    { publish: ["administrator"] },
+    ["archive:seller-applications"],
+  ),
+  text(
+    "partnerships",
+    "marketplace-support",
+    "General marketplace questions. Account issues: open a ticket.",
+    community,
+    ["archive:marketplace-support"],
+  ),
+  text(
+    "support",
+    "resolved-issues",
+    "Known issues and their fixes.",
+    { publish: ["support-lead", "administrator"] },
+    ["archive:resolved-issues"],
+  ),
+  text(
+    "staff",
+    "staff-announcements",
+    "Announcements for the KUSH team.",
+    { view: staffRoles, publish: ["administrator"] },
+    ["archive:staff-announcements"],
+  ),
+  text(
+    "staff",
+    "staff-tasks",
+    "Shared task list for the team.",
+    { view: staffRoles, write: staffRoles },
+    ["archive:staff-tasks"],
+  ),
+  text(
+    "staff",
+    "marketplace-review",
+    "Reviewing marketplace submissions.",
+    { view: ["administrator"] },
+    ["archive:marketplace-review"],
+  ),
+  text(
+    "staff",
+    "audit-log",
+    "Important staff and security events.",
+    { view: ["administrator"] },
+    ["archive:audit-log"],
   ),
 ];
 

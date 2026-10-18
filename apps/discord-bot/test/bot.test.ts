@@ -24,7 +24,6 @@ describe("Discord bot foundation", () => {
       "owner",
       "tickets",
       "reports",
-      "archive",
     ]);
     const names = commandJson.map((command) => command.name);
     expect(new Set(names).size).toBe(names.length);
