@@ -284,9 +284,7 @@ export function notificationMessage(content: string) {
 /** Reads the bot's profile images (after login) into the card style. */
 export async function loadBrand(client: {
   user: {
-    fetch(
-      force?: boolean,
-    ): Promise<{
+    fetch(force?: boolean): Promise<{
       displayAvatarURL(o: object): string;
       bannerURL(o: object): string | null | undefined;
     }>;

@@ -6,6 +6,7 @@ import {
   type GuildAuditLogsEntry,
   type GuildMember,
 } from "discord.js";
+import type { CaseKind, CaseInput, DiscordApiClient } from "../api-client.js";
 import { card, type Tone } from "../panels.js";
 import type { Logger } from "../runtime/logger.js";
 
@@ -18,7 +19,7 @@ import type { Logger } from "../runtime/logger.js";
  * hold View Audit Log; without it Discord simply sends no events.)
  */
 
-type ModKind = "ban" | "unban" | "kick" | "timeout" | "untimeout" | "delete";
+type ModKind = CaseKind | "delete";
 
 const style: Record<ModKind, { emoji: string; title: string; tone: Tone }> = {
   ban: { emoji: "🔨", title: "Member banned", tone: "danger" },
@@ -27,6 +28,8 @@ const style: Record<ModKind, { emoji: string; title: string; tone: Tone }> = {
   timeout: { emoji: "🔇", title: "Member timed out", tone: "warning" },
   untimeout: { emoji: "🔊", title: "Timeout removed", tone: "success" },
   delete: { emoji: "🗑️", title: "Message deleted", tone: "danger" },
+  warn: { emoji: "⚠️", title: "Member warned", tone: "warning" },
+  note: { emoji: "📝", title: "Staff note", tone: "info" },
 };
 
 const who = (id: string | null | undefined) =>
@@ -37,12 +40,15 @@ export function modLogCard(input: {
   targetId: string | null;
   moderatorId: string | null;
   reason: string | null;
+  caseNumber?: number | undefined;
   extra?: { name: string; value: string; inline?: boolean }[];
 }) {
-  const s = style[input.kind];
+  const s = style[input.kind as ModKind] ?? style.note;
   return card({
     emoji: s.emoji,
-    title: s.title,
+    title: input.caseNumber
+      ? `${s.title} · Case #${input.caseNumber}`
+      : s.title,
     tone: s.tone,
     fields: [
       { name: "User", value: who(input.targetId), inline: true },
@@ -64,11 +70,13 @@ export function cardForEntry(
     GuildAuditLogsEntry,
     "action" | "targetId" | "executorId" | "reason" | "changes" | "extra"
   >,
+  caseNumber?: number,
 ) {
   const base = {
     targetId: entry.targetId,
     moderatorId: entry.executorId,
     reason: entry.reason,
+    caseNumber,
   };
   switch (entry.action) {
     case AuditLogEvent.MemberBanAdd:
@@ -126,6 +134,47 @@ export function cardForEntry(
   }
 }
 
+/** The case a Discord-UI action should create; null for non-case events. */
+export function caseForEntry(
+  entry: Pick<
+    GuildAuditLogsEntry,
+    "action" | "targetId" | "executorId" | "reason" | "changes"
+  >,
+): CaseInput | null {
+  if (!entry.targetId) return null;
+  const base = {
+    targetId: entry.targetId,
+    moderatorId: entry.executorId ?? null,
+    reason: (entry.reason ?? "No reason given").slice(0, 1_000),
+    source: "discord" as const,
+  };
+  switch (entry.action) {
+    case AuditLogEvent.MemberBanAdd:
+      return { kind: "ban", ...base };
+    case AuditLogEvent.MemberBanRemove:
+      return { kind: "unban", ...base };
+    case AuditLogEvent.MemberKick:
+      return { kind: "kick", ...base };
+    case AuditLogEvent.MemberUpdate: {
+      const change = entry.changes.find(
+        (c) => c.key === "communication_disabled_until",
+      );
+      if (!change) return null;
+      if (!change.new) return { kind: "untimeout", ...base };
+      const seconds = Math.round(
+        (Date.parse(String(change.new)) - Date.now()) / 1_000,
+      );
+      return {
+        kind: "timeout",
+        ...base,
+        ...(seconds > 0 ? { durationSeconds: seconds } : {}),
+      };
+    }
+    default:
+      return null;
+  }
+}
+
 /** The member-joined card for #welcome. */
 export function welcomeCard(
   member: Pick<GuildMember, "id" | "displayAvatarURL" | "user" | "guild">,
@@ -161,22 +210,33 @@ export function registerModLog(
   client: Client,
   config: { guildId: string; channelIds: Record<string, string> },
   log: Logger,
+  api?: Pick<DiscordApiClient, "recordCase">,
 ) {
   const channelId = config.channelIds["staff:moderation-log"];
   client.on(Events.GuildAuditLogEntryCreate, (entry, guild: Guild) => {
     if (guild.id !== config.guildId || !channelId) return;
     // The bot's own actions (e.g. honeypot removals) post their own cards.
     if (entry.executorId === client.user?.id) return;
-    const embed = cardForEntry(entry);
-    if (!embed) return;
-    const channel = guild.channels.cache.get(channelId);
-    if (!channel?.isSendable()) return;
-    void channel
-      .send({ embeds: [embed], allowedMentions: { parse: [] } })
-      .catch((error: unknown) =>
-        log.warn("modlog.post.failed", {
-          error: error instanceof Error ? error.message : "unknown",
-        }),
-      );
+    void (async () => {
+      // Discord-UI actions become numbered cases too, so !cases is complete.
+      const input = api ? caseForEntry(entry) : null;
+      const recorded = input
+        ? await api!.recordCase(input).catch((error: unknown) => {
+            log.warn("modlog.case.failed", {
+              error: error instanceof Error ? error.message : "unknown",
+            });
+            return null;
+          })
+        : null;
+      const embed = cardForEntry(entry, recorded?.number);
+      if (!embed) return;
+      const channel = guild.channels.cache.get(channelId);
+      if (!channel?.isSendable()) return;
+      await channel.send({ embeds: [embed], allowedMentions: { parse: [] } });
+    })().catch((error: unknown) =>
+      log.warn("modlog.post.failed", {
+        error: error instanceof Error ? error.message : "unknown",
+      }),
+    );
   });
 }

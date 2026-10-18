@@ -1,6 +1,24 @@
 import { createHash } from "node:crypto";
 
 /** Non-2xx API response; `message` comes from the API and is safe to show. */
+export type CaseKind =
+  "warn" | "timeout" | "untimeout" | "kick" | "ban" | "unban" | "note";
+
+export interface CaseInput {
+  kind: CaseKind;
+  targetId: string;
+  moderatorId: string | null;
+  reason: string;
+  durationSeconds?: number;
+  source: "bot" | "discord";
+}
+
+export interface ModerationCase extends Omit<CaseInput, "durationSeconds"> {
+  number: number;
+  durationSeconds: number | null;
+  createdAt: string;
+}
+
 export class ApiError extends Error {
   constructor(
     readonly status: number,
@@ -377,6 +395,34 @@ export class DiscordApiClient {
       "PATCH",
       `${this.#tenant}/ticket-channels/${channelId}`,
       { state },
+    );
+  }
+
+  // --------------------------------------------------- moderation cases
+
+  async recordCase(input: CaseInput) {
+    return this.#request<ModerationCase>(
+      "POST",
+      `${this.#tenant}/moderation/cases`,
+      input,
+    );
+  }
+
+  async listCases(targetId?: string, limit = 10) {
+    const query = new URLSearchParams({ limit: String(limit) });
+    if (targetId) query.set("target", targetId);
+    return (
+      await this.#request<{ cases: ModerationCase[] }>(
+        "GET",
+        `${this.#tenant}/moderation/cases?${query}`,
+      )
+    ).cases;
+  }
+
+  async getCase(number: number) {
+    return this.#request<ModerationCase>(
+      "GET",
+      `${this.#tenant}/moderation/cases/${number}`,
     );
   }
 

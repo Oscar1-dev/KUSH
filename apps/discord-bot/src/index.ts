@@ -1,4 +1,10 @@
-import { Client, Events, GatewayIntentBits, type Guild } from "discord.js";
+import {
+  Client,
+  Events,
+  GatewayIntentBits,
+  PermissionFlagsBits,
+  type Guild,
+} from "discord.js";
 import { DiscordApiClient } from "./api-client.js";
 import {
   loadRuntimeConfig,
@@ -222,6 +228,70 @@ export async function startBot(): Promise<{
       return member ? [...member.roles.cache.keys()] : null;
     },
   };
+  services.moderation = {
+    permitted: (kind) => {
+      const needed = {
+        kick: PermissionFlagsBits.KickMembers,
+        ban: PermissionFlagsBits.BanMembers,
+        unban: PermissionFlagsBits.BanMembers,
+        timeout: PermissionFlagsBits.ModerateMembers,
+        untimeout: PermissionFlagsBits.ModerateMembers,
+      }[kind as string];
+      return (
+        needed === undefined ||
+        Boolean(guild().members.me?.permissions.has(needed))
+      );
+    },
+    member: async (userId) => {
+      const member = await Promise.race([
+        guild()
+          .members.fetch(userId)
+          .catch(() => null),
+        new Promise<null>((resolve) => setTimeout(() => resolve(null), 10_000)),
+      ]);
+      return member
+        ? {
+            roleIds: [...member.roles.cache.keys()],
+            isOwner: member.id === guild().ownerId,
+            isBot: member.user.bot,
+          }
+        : null;
+    },
+    timeout: async (userId, ms, reason) => {
+      await (await guild().members.fetch(userId)).timeout(ms, reason);
+    },
+    kick: async (userId, reason) => {
+      await guild().members.kick(userId, reason);
+    },
+    ban: async (userId, reason) => {
+      // Also clears the last hour of their messages (spam clean-up).
+      await guild().bans.create(userId, {
+        reason,
+        deleteMessageSeconds: 3_600,
+      });
+    },
+    unban: async (userId, reason) => {
+      await guild().bans.remove(userId, reason);
+    },
+    notify: async (userId, message) => {
+      try {
+        const user = await client.users.fetch(userId);
+        await user.send({ embeds: [message] });
+        return true;
+      } catch {
+        return false;
+      }
+    },
+    log: async (message) => {
+      const id = config.channelIds["staff:moderation-log"];
+      const channel = id ? guild().channels.cache.get(id) : undefined;
+      if (channel?.isSendable())
+        await channel.send({
+          embeds: [message],
+          allowedMentions: { parse: [] },
+        });
+    },
+  };
   const router = new CommandRouter(commands);
   const honeypot = new HoneypotTracker();
   const dependencies = { router, services, honeypot };
@@ -383,7 +453,7 @@ export async function startBot(): Promise<{
     supportChannelId: config.channelIds["support:create-ticket"],
     kick,
   };
-  registerModLog(client, config, log);
+  registerModLog(client, config, log, api);
   const guarded = (label: string, work: () => Promise<unknown>) => () =>
     void work().catch((error: unknown) =>
       log.error(label, {

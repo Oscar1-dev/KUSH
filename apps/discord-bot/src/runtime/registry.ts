@@ -8,6 +8,7 @@ import {
 import { planProvisioning } from "../provisioning.js";
 import { ticketCategories } from "../tickets/categories.js";
 import { ticketCommands } from "../tickets/commands.js";
+import { moderationCommands } from "../moderation/commands.js";
 import { hasAuthority } from "./authority.js";
 import {
   CommandError,
@@ -63,8 +64,6 @@ const pending = (
 
 const ENTITLEMENTS =
   "Product entitlements are not connected yet. Nothing is shown until KUSH has verified purchase records.";
-const MODERATION =
-  "Moderation cases are not connected to the KUSH backend yet, so no action was taken or recorded.";
 
 export const commands: CommandDefinition[] = [
   // ------------------------------------------------------------ community
@@ -331,30 +330,7 @@ export const commands: CommandDefinition[] = [
   ...ticketCommands,
 
   // ----------------------------------------------------------- moderation
-  pending(
-    ["warn"],
-    "Moderation",
-    "moderator",
-    "Warn a member",
-    "!warn @member <reason>",
-    MODERATION,
-  ),
-  pending(
-    ["timeout"],
-    "Moderation",
-    "moderator",
-    "Time out a member",
-    "!timeout @member <minutes> <reason>",
-    MODERATION,
-  ),
-  pending(
-    ["case"],
-    "Moderation",
-    "moderator",
-    "View a moderation case",
-    "!case <id>",
-    MODERATION,
-  ),
+  ...moderationCommands,
 
   // ------------------------------------------------------- administration
   {
