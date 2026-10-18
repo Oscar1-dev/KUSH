@@ -16,11 +16,15 @@ export default async function StaffTeam() {
       applicationNumber: number | null;
       ndaSignedAt: string | null;
       ndaSignedVia: "website" | "discord" | null;
+      offboardedAt: string | null;
+      offboardedReason: string | null;
     }[];
   }>(
     "/web/staff/team",
     { token: gate.token },
   );
+  const current = team.filter((m) => !m.offboardedAt);
+  const former = team.filter((m) => m.offboardedAt);
   return (
     <>
       <p className={styles.kicker}>TEAM</p>
@@ -31,7 +35,8 @@ export default async function StaffTeam() {
         Staff who have used the dashboard, with the roles Discord reported last time. Roles are managed in Discord;
         access is always re-checked live.
       </p>
-      {team.map((m) => (
+      {current.length === 0 ? <p className={styles.lede}>Nobody on the team has used the dashboard yet.</p> : null}
+      {current.map((m) => (
         <div key={m.userId} className={styles.row}>
           <div className={styles.rowMain}>
             <p className={styles.rowTitle}>{m.name}</p>
@@ -54,6 +59,30 @@ export default async function StaffTeam() {
           </div>
         </div>
       ))}
+      {former.length ? (
+        <>
+          <p className={styles.kicker} style={{ marginTop: 36 }}>
+            FORMER STAFF
+          </p>
+          <p className={styles.lede}>
+            Offboarded with <code>!offboard</code> in Discord. Their roles were removed and open work went back to the
+            queue; signed agreements stay on record.
+          </p>
+          {former.map((m) => (
+            <div key={m.userId} className={styles.row} style={{ opacity: 0.7 }}>
+              <div className={styles.rowMain}>
+                <p className={styles.rowTitle}>{m.name}</p>
+                <p className={styles.rowMeta}>
+                  Offboarded {dateTime.format(new Date(m.offboardedAt!))}
+                  {m.offboardedReason ? ` · ${m.offboardedReason}` : ""}
+                  {m.ndaSignedAt ? " · NDA remains in effect" : ""}
+                </p>
+              </div>
+              <span className={styles.badge}>FORMER</span>
+            </div>
+          ))}
+        </>
+      ) : null}
     </>
   );
 }
