@@ -1,4 +1,5 @@
 import styles from "@/components/account/account.module.css";
+import ActionForm from "@/components/staff/action-form";
 import { kushApi } from "@/lib/server/kush-api";
 import { has, requireStaff, roleLabel, type StaffRole } from "@/lib/server/staff";
 import { dateTime } from "@/lib/workspace";
@@ -23,6 +24,7 @@ export default async function StaffTeam() {
     "/web/staff/team",
     { token: gate.token },
   );
+  const canOffboard = has(gate.me, "team.offboard");
   const current = team.filter((m) => !m.offboardedAt);
   const former = team.filter((m) => m.offboardedAt);
   return (
@@ -50,7 +52,22 @@ export default async function StaffTeam() {
               {dateTime.format(new Date(m.lastVerifiedAt))}
             </p>
           </div>
-          <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+          <div style={{ display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center", justifyContent: "flex-end" }}>
+            {canOffboard ? (
+              <details>
+                <summary className={`${styles.button} ${styles.buttonDanger}`} style={{ listStyle: "none" }}>
+                  OFFBOARD
+                </summary>
+                <div style={{ marginTop: 10, minWidth: 280 }}>
+                  <ActionForm action="offboard" hidden={{ userId: m.userId }} submit="CONFIRM OFFBOARD" tone="danger">
+                    <label className={styles.label} htmlFor={`reason-${m.userId}`}>
+                      REASON (KEPT ON THEIR RECORD)
+                    </label>
+                    <input id={`reason-${m.userId}`} className={styles.input} name="reason" required minLength={3} maxLength={1000} />
+                  </ActionForm>
+                </div>
+              </details>
+            ) : null}
             {m.roles.map((r) => (
               <span key={r} className={styles.badge}>
                 {(roleLabel[r] ?? r).toUpperCase()}
@@ -65,8 +82,8 @@ export default async function StaffTeam() {
             FORMER STAFF
           </p>
           <p className={styles.lede}>
-            Offboarded with <code>!offboard</code> in Discord. Their roles were removed and open work went back to the
-            queue; signed agreements stay on record.
+            Offboarded here or with <code>!offboard</code> in Discord. Their roles were removed and open work went back
+            to the queue; signed agreements stay on record.
           </p>
           {former.map((m) => (
             <div key={m.userId} className={styles.row} style={{ opacity: 0.7 }}>

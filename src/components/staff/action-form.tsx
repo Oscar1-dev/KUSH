@@ -22,6 +22,8 @@ import {
   staffWithdrawQuote,
   staffAddMilestone,
   staffSetMilestone,
+  staffHideVouch,
+  staffOffboard,
 } from "@/app/staff/actions";
 import { FormMessage } from "@/components/account/form-message";
 import styles from "@/components/account/account.module.css";
@@ -45,6 +47,8 @@ const actions = {
   withdrawQuote: staffWithdrawQuote,
   addMilestone: staffAddMilestone,
   setMilestone: staffSetMilestone,
+  hideVouch: staffHideVouch,
+  offboard: staffOffboard,
 };
 
 /**

@@ -6,6 +6,7 @@ import {
   Activity,
   Contact,
   FileSignature,
+  Gavel,
   Gauge,
   LifeBuoy,
   Package,
@@ -28,12 +29,14 @@ type Section =
   | "customers"
   | "operations"
   | "team"
+  | "moderation"
   | "audit";
 
 const links: { href: string; label: string; icon: typeof Gauge; section?: Section }[] = [
   { href: "/staff", label: "Overview", icon: Gauge },
   { href: "/staff/tickets", label: "Support tickets", icon: LifeBuoy, section: "tickets" },
   { href: "/staff/tickets?scope=reports", label: "Member reports", icon: ShieldAlert, section: "reports" },
+  { href: "/staff/moderation", label: "Moderation & vouches", icon: Gavel, section: "moderation" },
   { href: "/staff/commissions", label: "Commissions", icon: PenTool, section: "commissions" },
   { href: "/staff/applications", label: "Applications", icon: UserPlus, section: "applications" },
   { href: "/staff/agreements", label: "Agreements", icon: FileSignature, section: "agreements" },

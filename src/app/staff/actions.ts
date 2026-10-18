@@ -215,3 +215,24 @@ export async function staffSetMilestone(_p: ActionState, form: FormData) {
     "Milestone updated.",
   );
 }
+
+// ------------------------------------------------- Discord parity actions
+
+export async function staffHideVouch(_p: ActionState, form: FormData) {
+  const number = Number(form.get("number"));
+  if (!Number.isInteger(number) || number < 1) return { error: "Vouch not found." };
+  return call(`/web/staff/vouches/${number}/hide`, {}, "/staff/moderation", `Vouch #${number} removed. The bot is deleting it from Discord.`);
+}
+
+export async function staffOffboard(_p: ActionState, form: FormData) {
+  const userId = id(form, "userId");
+  const reason = text(form, "reason");
+  if (!userId) return { error: "Team member not found." };
+  if (reason.length < 3) return { error: "Add a short reason; it's kept on their record." };
+  return call(
+    `/web/staff/team/${userId}/offboard`,
+    { reason },
+    "/staff/team",
+    "Offboarded. The bot is removing their Discord roles and letting them know.",
+  );
+}
