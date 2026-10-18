@@ -24,6 +24,17 @@ export type Delivery =
       roleId: string;
       reason: string;
     }
+  | {
+      target: "create_ticket_channel";
+      ticketId: string;
+      number: number;
+      category: string;
+      priority: string;
+      queue: "support" | "reports";
+      customerDiscordId: string;
+      /** Posted instead when the customer is not in the server. */
+      fallback: Delivery;
+    }
   | { target: "none"; reason: string };
 
 export interface NotificationJob {
@@ -57,6 +68,10 @@ export interface NotificationGateway {
     roleId: string,
     reason: string,
   ): Promise<SendResult>;
+  /** "absent": the customer is not a member, so post the fallback. */
+  createTicketChannel(
+    delivery: Extract<Delivery, { target: "create_ticket_channel" }>,
+  ): Promise<SendResult | "absent">;
 }
 
 export interface NotificationStats {
@@ -106,6 +121,10 @@ export class NotificationWorker {
         return "skipped";
       case "dm":
         return this.gateway.sendDm(delivery.discordUserId, delivery.content);
+      case "create_ticket_channel": {
+        const result = await this.gateway.createTicketChannel(delivery);
+        return result === "absent" ? this.#send(delivery.fallback) : result;
+      }
       case "create_application_channel":
         return this.gateway.createApplicationChannel(delivery);
       case "grant_role":

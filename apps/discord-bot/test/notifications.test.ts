@@ -42,6 +42,13 @@ class FakeGateway implements NotificationGateway {
     this.sent.push({ to: `create:${input.applicationId}`, content: "" });
     return this.result;
   }
+  member = true;
+  async createTicketChannel(delivery: { ticketId: string }) {
+    if (this.fail) throw this.fail;
+    if (!this.member) return "absent" as const;
+    this.sent.push({ to: `ticket:${delivery.ticketId}`, content: "" });
+    return this.result;
+  }
   async grantRole(userId: string, roleId: string) {
     if (this.fail) throw this.fail;
     this.sent.push({ to: `grant:${userId}:${roleId}`, content: "" });
@@ -169,6 +176,38 @@ describe("notification worker", () => {
     await worker.tick();
     expect(api.finished[0]).toMatchObject({ ok: false });
     expect(api.finished[0]!.error).toContain("staff:missing");
+  });
+
+  it("opens ticket channels, or posts the fallback for non-members", async () => {
+    const { api, gateway, worker } = setup();
+    const job = (id: string) => ({
+      id,
+      kind: "ticket.created",
+      delivery: {
+        target: "create_ticket_channel" as const,
+        ticketId: `t-${id}`,
+        number: 1,
+        category: "technical",
+        priority: "normal",
+        queue: "support" as const,
+        customerDiscordId: "333333333333333333",
+        fallback: {
+          target: "channel" as const,
+          channelKey: "staff:ticket-queue",
+          content: "fallback",
+        },
+      },
+    });
+    api.jobs = [job("a")];
+    await worker.tick();
+    gateway.member = false;
+    api.jobs = [job("b")];
+    await worker.tick();
+    expect(gateway.sent.map((s) => s.to)).toEqual([
+      "ticket:t-a",
+      "channel:111111111111111111",
+    ]);
+    expect(api.finished.every((f) => f.ok)).toBe(true);
   });
 
   it("skips overlapping runs", async () => {

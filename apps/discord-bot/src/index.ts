@@ -294,6 +294,31 @@ export async function startBot(): Promise<{
           await guild().members.fetch(input.applicantDiscordId);
           await applications.create(input);
         }),
+      createTicketChannel: async (delivery) => {
+        const member = await guild()
+          .members.fetch(delivery.customerDiscordId)
+          .catch((error: unknown) => {
+            if (error instanceof DiscordAPIError && error.code === 10007)
+              return null;
+            throw error;
+          });
+        if (!member) return "absent";
+        return deliver(async () => {
+          // The same private channel a Discord-opened ticket gets; open()
+          // records it with the API and notifies the right queue.
+          await tickets.open({
+            ticket: {
+              id: delivery.ticketId,
+              number: delivery.number,
+              category: delivery.category,
+              priority: delivery.priority,
+            } as Parameters<typeof tickets.open>[0]["ticket"],
+            queue: delivery.queue,
+            creatorId: delivery.customerDiscordId,
+            existingChannelId: null,
+          });
+        });
+      },
       grantRole: (discordUserId, roleId, reason) =>
         deliver(async () => {
           // Only on an administrator's explicit activation (see the API).

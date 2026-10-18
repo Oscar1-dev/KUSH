@@ -62,6 +62,16 @@ export type Delivery =
       roleId: string;
       reason: string;
     }
+  | {
+      target: "create_ticket_channel";
+      ticketId: string;
+      number: number;
+      category: string;
+      priority: string;
+      queue: "support" | "reports";
+      customerDiscordId: string;
+      fallback: Delivery;
+    }
   | { target: "none"; reason: string };
 
 const MAX_ATTEMPTS = 8;
@@ -196,10 +206,11 @@ export class NotificationService {
         number: number;
         category: string;
         status: string;
+        priority: string;
         customer_id: string;
         config: { reportCategories?: string[] };
       }>(
-        `SELECT t.number,t.category,t.status,t.customer_id,s.config FROM support_tickets t
+        `SELECT t.number,t.category,t.status,t.priority,t.customer_id,s.config FROM support_tickets t
          JOIN support_tenants s ON s.id=t.tenant_id WHERE t.tenant_id=$1 AND t.id=$2`,
         [job.tenant_id, job.subject_id],
       )
@@ -209,20 +220,41 @@ export class NotificationService {
     const staffLink = `${site()}/staff/tickets/${job.subject_id}`;
 
     if (job.kind === "ticket.created") {
-      if (report)
-        return {
-          target: "channel",
-          channelKey: "staff:moderation-log",
-          content: `🚩 New **member report** #${t.number} from the website.\n${staffLink}`,
-        };
-      // Billing tickets are confidential: no category detail beyond the label.
+      const announcement: Delivery = report
+        ? {
+            target: "channel",
+            channelKey: "staff:moderation-log",
+            content: `🚩 New **member report** #${t.number} from the website.\n${staffLink}`,
+          }
+        : {
+            target: "channel",
+            channelKey: "staff:ticket-queue",
+            content:
+              t.category === "billing"
+                ? `🔒 New **confidential billing** ticket #${t.number} from the website (managers only).\n${staffLink}`
+                : `🎫 New **${t.category}** ticket #${t.number} from the website, waiting to be claimed.\n${staffLink}`,
+          };
+      // Billing stays on the website: Discord ticket channels are visible to
+      // Support Leads, but billing is confidential to managers and above.
+      if (t.category === "billing") return announcement;
+      const customerDiscordId = await this.customerDiscord(
+        c,
+        job.tenant_id,
+        t.customer_id,
+      );
+      if (!customerDiscordId) return announcement;
+      // The bot opens the same private channel a Discord ticket gets (which
+      // also notifies the queue); if the customer is not in the server it
+      // posts the announcement instead.
       return {
-        target: "channel",
-        channelKey: "staff:ticket-queue",
-        content:
-          t.category === "billing"
-            ? `🔒 New **confidential billing** ticket #${t.number} from the website (managers only).\n${staffLink}`
-            : `🎫 New **${t.category}** ticket #${t.number} from the website, waiting to be claimed.\n${staffLink}`,
+        target: "create_ticket_channel",
+        ticketId: job.subject_id,
+        number: t.number,
+        category: t.category,
+        priority: t.priority,
+        queue: report ? "reports" : "support",
+        customerDiscordId,
+        fallback: announcement,
       };
     }
 

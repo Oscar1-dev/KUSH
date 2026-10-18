@@ -549,29 +549,55 @@ describe.skipIf(!databaseUrl)("staff dashboard (real PostgreSQL)", () => {
       return jobs;
     };
 
-    it("announces website tickets to the right channel, billing without detail", async () => {
+    it("opens Discord ticket channels for website tickets, except billing", async () => {
       await drain();
       const customer = await person([], { mfa: false });
       const technical = await openTicket(customer, "technical");
       const billing = await openTicket(customer, "billing");
       const report = await openTicket(customer, "member-report");
       const jobs = await drain();
-      const by = (id: string) =>
-        jobs.find((j) => j.delivery.content?.includes(id))!.delivery;
-      expect(by(technical.id)).toMatchObject({
+      const of = (id: string) =>
+        jobs.find(
+          (j) =>
+            (j.delivery as { ticketId?: string }).ticketId === id ||
+            j.delivery.content?.includes(id),
+        )!.delivery as Record<string, unknown>;
+      // Linked customer: the bot opens the same private channel as Discord.
+      expect(of(technical.id)).toMatchObject({
+        target: "create_ticket_channel",
+        queue: "support",
+        customerDiscordId: customer.discordId,
+        fallback: { target: "channel", channelKey: "staff:ticket-queue" },
+      });
+      expect(of(report.id)).toMatchObject({
+        target: "create_ticket_channel",
+        queue: "reports",
+        fallback: { channelKey: "staff:moderation-log" },
+      });
+      // Billing never gets a Discord channel (Support Leads could see it).
+      expect(of(billing.id)).toMatchObject({ target: "channel" });
+      expect(of(billing.id).content).toMatch(/confidential billing/);
+      // Ticket text never goes to the staff channel, only a link.
+      expect(JSON.stringify(jobs)).not.toContain("TEST technical ticket");
+      // Delivered jobs are done: nothing more to claim.
+      expect(await drain()).toEqual([]);
+    });
+
+    it("announces website tickets from unlinked customers instead", async () => {
+      await drain();
+      const customer = await person([], { mfa: false });
+      await pool.query(
+        "UPDATE discord_account_links SET state='revoked' WHERE user_id=$1",
+        [customer.userId],
+      );
+      const ticket = await openTicket(customer, "technical");
+      const job = (await drain()).find((j) =>
+        j.delivery.content?.includes(ticket.id),
+      )!;
+      expect(job.delivery).toMatchObject({
         target: "channel",
         channelKey: "staff:ticket-queue",
       });
-      expect(by(billing.id).content).toMatch(/confidential billing/);
-      expect(by(report.id)).toMatchObject({
-        channelKey: "staff:moderation-log",
-      });
-      // Ticket text never goes to the staff channel, only a link.
-      expect(
-        jobs.some((j) => j.delivery.content?.includes("TEST technical ticket")),
-      ).toBe(false);
-      // Delivered jobs are done: nothing more to claim.
-      expect(await drain()).toEqual([]);
     });
 
     it("mirrors staff replies and DMs the customer, but never internal notes", async () => {
