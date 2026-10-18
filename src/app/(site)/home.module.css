@@ -1,0 +1,409 @@
+/* ----------------------------------------------------------------- hero */
+
+.hero {
+  position: relative;
+  min-height: 100svh;
+  display: flex;
+  align-items: flex-end;
+  padding: calc(var(--header-h) + 40px) 0 clamp(36px, 5vw, 64px);
+  overflow: hidden;
+  border-bottom: 1px solid var(--line);
+}
+.heroMesh {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  -webkit-mask-image: radial-gradient(ellipse 70% 80% at 85% 20%, #000 0%, transparent 70%);
+  mask-image: radial-gradient(ellipse 70% 80% at 85% 20%, #000 0%, transparent 70%);
+}
+.heroInner {
+  position: relative;
+  width: 100%;
+}
+.heroMeta {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  padding-bottom: 18px;
+  border-bottom: 1px solid var(--line);
+}
+.heroTitle {
+  margin: clamp(28px, 6vh, 72px) 0 clamp(36px, 6vh, 72px);
+  /* Sized so "DIFFERENT." (the widest line) always fits the container. */
+  font-size: min(11.2vw, 168px);
+  line-height: 0.86;
+}
+.heroLine {
+  display: flex;
+  align-items: center;
+  gap: 0.12em;
+}
+.heroAccent {
+  display: block;
+  font-style: italic;
+  padding-right: 0.08em; /* italic overhang */
+}
+
+/* The leaf from inside the KUSH wordmark, in the same living rainbow. */
+.leafWrap {
+  display: inline-block;
+  width: 1.12em;
+  height: 0.96em;
+  flex: none;
+  margin-top: -0.06em;
+  animation: leafIn 1.6s var(--ease) 0.4s both;
+  transform-origin: 50% 92%;
+}
+.leaf {
+  display: block;
+  width: 100%;
+  height: 100%;
+  background: var(--holo-vivid);
+  background-size: 200% 100%;
+  -webkit-mask: url("/brand/kush-leaf.svg") center / contain no-repeat;
+  mask: url("/brand/kush-leaf.svg") center / contain no-repeat;
+  transform-origin: 50% 92%;
+  animation:
+    rainbow 14s linear infinite,
+    sway 7s var(--ease-in-out) infinite alternate;
+}
+@keyframes leafIn {
+  from {
+    opacity: 0;
+    transform: scale(0.2) rotate(-18deg);
+  }
+}
+@keyframes sway {
+  from {
+    transform: rotate(-4deg);
+  }
+  to {
+    transform: rotate(5deg);
+  }
+}
+
+.heroFoot {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 340px);
+  gap: clamp(32px, 6vw, 120px);
+  align-items: end;
+}
+.heroLede {
+  margin: 0;
+  max-width: 30em;
+  font-size: clamp(18px, 1.7vw, 22px);
+  line-height: 1.5;
+  color: var(--text-2);
+}
+.heroIndex {
+  display: flex;
+  flex-direction: column;
+  border-top: 1px solid var(--line-2);
+}
+.heroIndex a {
+  display: flex;
+  gap: 16px;
+  align-items: baseline;
+  padding: 11px 0;
+  border-bottom: 1px solid var(--line);
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--text-2);
+  transition:
+    color var(--t-fast),
+    padding var(--t) var(--ease);
+}
+.heroIndex a:hover {
+  color: var(--text);
+  padding-left: 6px;
+}
+.heroIndex .mono {
+  color: var(--text-3);
+}
+
+@media (max-width: 860px) {
+  .heroFoot {
+    grid-template-columns: 1fr;
+  }
+  .heroIndex {
+    display: none;
+  }
+}
+@media (max-width: 520px) {
+  .heroMeta .eyebrow:last-child {
+    display: none;
+  }
+  .heroTitle {
+    font-size: 12.4vw;
+  }
+}
+
+/* -------------------------------------------------------------- platform */
+
+.platformInner {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: clamp(40px, 7vw, 120px);
+  align-items: center;
+}
+.platformList {
+  margin: 40px 0 0;
+  display: grid;
+  border-top: 1px solid var(--line-2);
+}
+.platformList > div {
+  display: grid;
+  grid-template-columns: minmax(0, 180px) minmax(0, 1fr);
+  gap: 20px;
+  padding: 18px 0;
+  border-bottom: 1px solid var(--line);
+}
+.platformList dt {
+  font-weight: 600;
+}
+.platformList dd {
+  margin: 0;
+  color: var(--text-2);
+  font-size: 15px;
+}
+@media (max-width: 960px) {
+  .platformInner {
+    grid-template-columns: 1fr;
+  }
+}
+@media (max-width: 520px) {
+  .platformList > div {
+    grid-template-columns: 1fr;
+    gap: 4px;
+  }
+}
+
+/* The illustrative account window. */
+.mock {
+  margin: 0;
+  border: 1px solid var(--line-2);
+  border-radius: var(--radius-l);
+  background: var(--ink-1);
+  overflow: hidden;
+  box-shadow: 0 40px 120px -40px rgba(0, 0, 0, 0.8);
+}
+.mock figcaption {
+  padding: 12px 20px;
+  border-top: 1px solid var(--line);
+  color: var(--text-3);
+}
+.mockBar {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--line);
+}
+.mockBar span {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--ink-4);
+}
+.mockBar p {
+  margin: 0 0 0 12px;
+  color: var(--text-3);
+}
+.mockBody {
+  padding: clamp(22px, 3vw, 34px);
+}
+.mockTitle {
+  margin: 10px 0 22px;
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-variation-settings: "wdth" 112;
+  font-size: 30px;
+  letter-spacing: -0.03em;
+  text-transform: uppercase;
+}
+.mockQuote {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 16px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  color: var(--text-2);
+}
+.mockPill {
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ok);
+  background: rgba(143, 227, 185, 0.1);
+}
+.mockSteps {
+  list-style: none;
+  margin: 22px 0;
+  padding: 0;
+  display: grid;
+  gap: 2px;
+}
+.mockSteps li {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 0;
+  color: var(--text-3);
+  font-size: 15px;
+}
+.mockSteps li::before {
+  content: "";
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 1.5px solid var(--line-3);
+  flex: none;
+}
+.mockSteps li[data-state="done"] {
+  color: var(--text-2);
+}
+.mockSteps li[data-state="done"]::before {
+  border-color: var(--ok);
+  background: var(--ok);
+  box-shadow: inset 0 0 0 3px var(--ink-1);
+}
+.mockSteps li[data-state="now"] {
+  color: var(--text);
+  font-weight: 600;
+}
+.mockSteps li[data-state="now"]::before {
+  border: 0;
+  background: var(--holo);
+  background-size: 300% 100%;
+  animation: pulse 2.4s var(--ease-in-out) infinite;
+}
+@keyframes pulse {
+  50% {
+    transform: scale(0.8);
+    opacity: 0.7;
+  }
+}
+.mockMessage {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  padding: 14px 16px;
+  border-radius: var(--radius);
+  background: var(--ink-2);
+}
+.mockMessage p {
+  margin: 0;
+  color: var(--text-2);
+  font-size: 14px;
+}
+.mockAvatar {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--text);
+  color: var(--ink-0);
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 13px;
+}
+
+/* ------------------------------------------------------------ principles */
+
+.principles {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  border-top: 1px solid var(--line-2);
+}
+.principle {
+  padding: 28px 24px 8px 0;
+}
+.principle + .principle {
+  padding-left: 24px;
+  border-left: 1px solid var(--line);
+}
+.principle .mono {
+  color: var(--text-3);
+}
+.principle h3 {
+  margin: 44px 0 12px;
+  font-size: 21px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+.principle p {
+  margin: 0;
+  color: var(--text-2);
+  font-size: 15px;
+}
+@media (max-width: 900px) {
+  .principles {
+    grid-template-columns: 1fr 1fr;
+  }
+  .principle:nth-child(3) {
+    padding-left: 0;
+    border-left: 0;
+  }
+  .principle:nth-child(n + 3) {
+    border-top: 1px solid var(--line);
+  }
+}
+@media (max-width: 520px) {
+  .principles {
+    grid-template-columns: 1fr;
+  }
+  .principle,
+  .principle + .principle {
+    padding: 24px 0 8px;
+    border-left: 0;
+  }
+  .principle + .principle {
+    border-top: 1px solid var(--line);
+  }
+  .principle h3 {
+    margin-top: 16px;
+  }
+}
+
+/* --------------------------------------------------------------- vouches */
+
+.vouches {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+.vouch {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding: 28px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-l);
+  background: var(--ink-1);
+}
+.vouch p {
+  margin: 0;
+  flex: 1;
+  font-size: 17px;
+  line-height: 1.5;
+}
+.vouch footer {
+  color: var(--text-3);
+}
+.stars {
+  letter-spacing: 3px;
+  color: var(--holo-butter);
+}
+.stars span {
+  color: var(--ink-4);
+}
+@media (max-width: 900px) {
+  .vouches {
+    grid-template-columns: 1fr;
+  }
+}
