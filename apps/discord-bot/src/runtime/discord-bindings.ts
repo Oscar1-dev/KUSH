@@ -31,6 +31,14 @@ import {
 import { roles as blueprintRoles } from "../blueprint.js";
 import { ARGUMENTS_OPTION, slashOptions } from "../commands.js";
 import { verifyComponentId } from "../component-id.js";
+import {
+  RULE_WATCH_PREFIX,
+  type RuleWatchTracker,
+} from "../moderation/rule-watch.js";
+import {
+  handleRuleWatchButton,
+  watchMessage,
+} from "../moderation/rule-watch-discord.js";
 import { RULES_VERSION } from "../automation/membership.js";
 import { PUBLIC_COMMISSION_BUTTON } from "../content/channel-content.js";
 import { PUBLIC_TICKET_BUTTON } from "../panels.js";
@@ -50,6 +58,7 @@ export interface BindingDependencies {
   router: CommandRouter;
   services: BotServices;
   honeypot: HoneypotTracker;
+  ruleWatch?: RuleWatchTracker;
 }
 
 const roleKeys = blueprintRoles.map((role) => role.key);
@@ -77,7 +86,7 @@ const mentionsFor = (userId: string) =>
 
 export async function handleMessage(
   message: Message,
-  { router, services, honeypot }: BindingDependencies,
+  { router, services, honeypot, ruleWatch }: BindingDependencies,
 ): Promise<void> {
   if (message.author.bot || message.webhookId || !message.inGuild()) return;
   if (message.guildId !== services.config.guildId) return;
@@ -94,6 +103,21 @@ export async function handleMessage(
     return;
   }
   const tokens = tokenise(message.content);
+  if (!tokens && ruleWatch) {
+    const member =
+      message.member ?? (await message.guild.members.fetch(message.author.id));
+    await watchMessage(
+      message,
+      member,
+      actorFromMember(member, services.config.roleIds),
+      services,
+      ruleWatch,
+    ).catch((error: unknown) =>
+      services.log.warn("rulewatch.failed", {
+        error: error instanceof Error ? error.message : "unknown",
+      }),
+    );
+  }
   if (!tokens) {
     // Application channels are recorded on the application, not a ticket.
     const recorded = await services.applications?.mirror({
@@ -335,6 +359,15 @@ async function handleComponent(
 
   // Public persistent panel buttons: the clicker is the actor.
   if (interaction.isButton()) {
+    if (interaction.customId.startsWith(`${RULE_WATCH_PREFIX}:`)) {
+      const member = await interaction.guild!.members.fetch(userId);
+      await handleRuleWatchButton(
+        interaction,
+        actorFromMember(member, services.config.roleIds),
+        services,
+      );
+      return;
+    }
     if (interaction.customId === PUBLIC_TICKET_BUTTON) {
       await respond(interaction, {
         content: "Choose the category that fits best.",

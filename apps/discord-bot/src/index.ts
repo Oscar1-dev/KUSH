@@ -46,6 +46,7 @@ import { ApplicationChannels } from "./automation/applications.js";
 import { ndaPrompt } from "./automation/nda.js";
 import { registerModLog } from "./moderation/mod-log.js";
 import { UptimeWatcher } from "./runtime/uptime.js";
+import { RuleWatchTracker } from "./moderation/rule-watch.js";
 import { DiscordTicketChannels } from "./tickets/discord-tickets.js";
 import { configuredRoleId } from "./blueprint.js";
 import { TicketManager } from "./tickets/manager.js";
@@ -314,7 +315,8 @@ export async function startBot(): Promise<{
   };
   const router = new CommandRouter(commands);
   const honeypot = new HoneypotTracker();
-  const dependencies = { router, services, honeypot };
+  const ruleWatch = new RuleWatchTracker();
+  const dependencies = { router, services, honeypot, ruleWatch };
 
   // ------------------------------------------------- membership automation
   const roleIds = () => ({
@@ -632,6 +634,7 @@ export async function startBot(): Promise<{
     setInterval(() => {
       router.sweep();
       honeypot.sweep();
+      ruleWatch.sweep();
     }, 5 * 60_000),
     // The queue is the source of retries; this poll drains it.
     setInterval(kick, 15_000),
