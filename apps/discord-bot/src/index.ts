@@ -36,6 +36,7 @@ import {
 } from "./automation/notifications.js";
 import { DiscordAPIError } from "discord.js";
 import { ApplicationChannels } from "./automation/applications.js";
+import { ndaPrompt } from "./automation/nda.js";
 import { DiscordTicketChannels } from "./tickets/discord-tickets.js";
 import { configuredRoleId } from "./blueprint.js";
 import { TicketManager } from "./tickets/manager.js";
@@ -293,6 +294,22 @@ export async function startBot(): Promise<{
           // Throws Unknown Member (permanent); the website flow still works.
           await guild().members.fetch(input.applicantDiscordId);
           await applications.create(input);
+        }),
+      sendNdaPrompt: (delivery) =>
+        deliver(async () => {
+          const message = {
+            ...ndaPrompt(delivery),
+            allowedMentions: { users: [delivery.discordUserId] },
+          };
+          // The applicant's private channel, or a DM if it does not exist.
+          if (delivery.channelId) {
+            const channel = await guild().channels.fetch(delivery.channelId);
+            if (!channel?.isTextBased()) return "undeliverable";
+            await channel.send(message);
+          } else {
+            const user = await client.users.fetch(delivery.discordUserId);
+            await user.send(message);
+          }
         }),
       createTicketChannel: async (delivery) => {
         const member = await guild()

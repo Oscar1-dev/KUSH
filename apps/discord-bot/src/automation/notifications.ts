@@ -35,6 +35,16 @@ export type Delivery =
       /** Posted instead when the customer is not in the server. */
       fallback: Delivery;
     }
+  | {
+      target: "nda_prompt";
+      channelId: string | null;
+      discordUserId: string;
+      agreementId: string;
+      title: string;
+      version: string;
+      body: string;
+      websiteUrl: string;
+    }
   | { target: "none"; reason: string };
 
 export interface NotificationJob {
@@ -67,6 +77,9 @@ export interface NotificationGateway {
     discordUserId: string,
     roleId: string,
     reason: string,
+  ): Promise<SendResult>;
+  sendNdaPrompt(
+    delivery: Extract<Delivery, { target: "nda_prompt" }>,
   ): Promise<SendResult>;
   /** "absent": the customer is not a member, so post the fallback. */
   createTicketChannel(
@@ -121,6 +134,8 @@ export class NotificationWorker {
         return "skipped";
       case "dm":
         return this.gateway.sendDm(delivery.discordUserId, delivery.content);
+      case "nda_prompt":
+        return this.gateway.sendNdaPrompt(delivery);
       case "create_ticket_channel": {
         const result = await this.gateway.createTicketChannel(delivery);
         return result === "absent" ? this.#send(delivery.fallback) : result;

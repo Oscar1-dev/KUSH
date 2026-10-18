@@ -43,6 +43,11 @@ class FakeGateway implements NotificationGateway {
     return this.result;
   }
   member = true;
+  async sendNdaPrompt(delivery: { agreementId: string }) {
+    if (this.fail) throw this.fail;
+    this.sent.push({ to: `nda:${delivery.agreementId}`, content: "" });
+    return this.result;
+  }
   async createTicketChannel(delivery: { ticketId: string }) {
     if (this.fail) throw this.fail;
     if (!this.member) return "absent" as const;

@@ -9,6 +9,11 @@ import {
   type StringSelectMenuInteraction,
 } from "discord.js";
 import { isTransient, retryInBackground } from "./retry.js";
+import {
+  NDA_SIGN_PREFIX,
+  NDA_SUBMIT_PREFIX,
+  ndaModal,
+} from "../automation/nda.js";
 import { ApiError, requestUuid } from "../api-client.js";
 import {
   HONEYPOT_CHANNEL_KEY,
@@ -353,6 +358,62 @@ async function handleComponent(
       await acceptRules(interaction, services);
       return;
     }
+    // Staff NDA: anyone can open the form, but the API only accepts a
+    // signature from the agreement's owner (verified Discord link).
+    const ndaId = interaction.customId.startsWith(NDA_SIGN_PREFIX)
+      ? interaction.customId.slice(NDA_SIGN_PREFIX.length)
+      : null;
+    if (ndaId && /^[0-9a-f-]{36}$/.test(ndaId)) {
+      await interaction.showModal(ndaModal(ndaId));
+      return;
+    }
+  }
+  if (
+    interaction.isModalSubmit() &&
+    interaction.customId.startsWith(NDA_SUBMIT_PREFIX)
+  ) {
+    const agreementId = interaction.customId.slice(NDA_SUBMIT_PREFIX.length);
+    if (!/^[0-9a-f-]{36}$/.test(agreementId)) return;
+    await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+    const field = (id: string) =>
+      interaction.fields.getTextInputValue(id).trim();
+    try {
+      await services.api.signAgreement(agreementId, {
+        discordUserId: userId,
+        legalName: field("legalName"),
+        email: field("email"),
+        signature: field("signature"),
+        confirmation: field("confirmation"),
+      });
+    } catch (error) {
+      if (error instanceof ApiError && [400, 404, 409].includes(error.status)) {
+        await respond(interaction, {
+          content:
+            error.status === 404
+              ? "❌ This NDA isn't yours to sign."
+              : `⚠️ Not signed: ${error.message}`,
+        });
+        return;
+      }
+      throw error;
+    }
+    services.audit({
+      action: "agreement.signed.discord",
+      actorId: userId,
+      outcome: "ok",
+    });
+    await respond(interaction, {
+      content:
+        "✅ **NDA signed.** Thank you. A PDF copy is in your KUSH account under Staff applications. The team will now confirm your role.",
+    });
+    if (interaction.channel?.isSendable())
+      await interaction.channel
+        .send({
+          content: `✅ <@${userId}> signed the KUSH Staff NDA.`,
+          allowedMentions: { parse: [] },
+        })
+        .catch(() => undefined);
+    return;
   }
 
   const verified = scoped(interaction, services);

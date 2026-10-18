@@ -486,6 +486,23 @@ export class DiscordApiClient {
     );
   }
 
+  async signAgreement(
+    agreementId: string,
+    input: {
+      discordUserId: string;
+      legalName: string;
+      email: string;
+      signature: string;
+      confirmation: string;
+    },
+  ) {
+    return this.#request<{ signed: boolean }>(
+      "POST",
+      `${this.#tenant}/agreements/${agreementId}/sign`,
+      input,
+    );
+  }
+
   async reconcileRoles() {
     return (
       await this.#request<{ queued: number }>(
