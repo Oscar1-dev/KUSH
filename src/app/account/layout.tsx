@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Wordmark from "@/components/site/wordmark";
 import Link from "next/link";
 
 import AccountNav from "@/components/account/account-nav";
@@ -23,7 +24,7 @@ export default async function AccountLayout({ children }: { children: React.Reac
     <div className={styles.shell}>
       <aside className={styles.sidebar}>
         <Link href="/" className={styles.brand} aria-label="KUSH home">
-          K<span>U</span>SH
+          <Wordmark height={30} />
           <span className={styles.brandTag}>ACCOUNT</span>
         </Link>
         <AccountNav />

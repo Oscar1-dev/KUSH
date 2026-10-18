@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Wordmark from "@/components/site/wordmark";
 import Link from "next/link";
 import { ShieldCheck, ShieldX, WifiOff } from "lucide-react";
 
@@ -90,7 +91,7 @@ export default async function StaffLayout({ children }: { children: React.ReactN
     <div className={styles.shell}>
       <aside className={styles.sidebar}>
         <Link href="/staff" className={styles.brand} aria-label="KUSH staff home">
-          K<span>U</span>SH
+          <Wordmark height={30} />
           <span className={styles.brandTag}>STAFF OPERATIONS</span>
         </Link>
         <StaffNav sections={[...sections]} />

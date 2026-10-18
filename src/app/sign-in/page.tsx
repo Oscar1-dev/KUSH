@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Wordmark from "@/components/site/wordmark";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
@@ -34,7 +35,7 @@ export default async function SignInPage({
     <main className={styles.signIn}>
       <section className={styles.signInPanel} aria-labelledby="sign-in-title">
         <Link href="/" className={styles.brand} aria-label="KUSH home">
-          K<span>U</span>SH
+          <Wordmark height={34} />
         </Link>
         <p className={styles.kicker} style={{ marginTop: 34 }}>
           KUSH ACCOUNT

@@ -15,6 +15,9 @@ const eslintConfig = [
     ignores: [
       "**/.next/**",
       "**/.next-e2e/**",
+      "**/.next-build/**",
+      // The API and bot have their own lint setup.
+      "platform/**",
       "**/node_modules/**",
       "**/out/**",
       "**/build/**",
