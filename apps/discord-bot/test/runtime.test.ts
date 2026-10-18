@@ -279,10 +279,7 @@ describe("command router", () => {
 
   it("marks unconnected workflows as unavailable instead of faking results", async () => {
     const { run } = harness();
-    const result = await run(
-      "!downloads",
-      actor(["member", "verified-customer"]),
-    );
+    const result = await run("!products", actor(["member"]));
     expect(text(result.publicReplies[0])).toContain("not connected");
     expect(result.privateReplies).toEqual([]);
   });

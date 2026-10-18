@@ -37,6 +37,8 @@ function harness(options: { canBan?: boolean } = {}) {
   const dms: string[] = [];
   const posted: { channelId: string; title: string }[] = [];
   const api: string[] = [];
+  const reports: string[] = [];
+  const privates: string[] = [];
   const moderation: ModerationGateway = {
     member: async (id) =>
       id === TARGET
@@ -113,8 +115,28 @@ function harness(options: { canBan?: boolean } = {}) {
           commissionsUnassigned: 1,
         };
       },
+      create: async (input: { category: string; description: string }) => {
+        api.push(`ticket ${input.category}`);
+        reports.push(input.description);
+        return {
+          reference: "#0099",
+          ticket: { id: "t1", number: 99 },
+          queue: input.category === "member-report" ? "reports" : "support",
+          channel: null,
+        };
+      },
+      memberEntitlements: async () => ({
+        linked: true,
+        entitlements: [
+          { productName: "TEST Toolkit", status: "active", expiresAt: null },
+          { productName: "TEST Old", status: "revoked", expiresAt: null },
+        ],
+      }),
     } as unknown as BotServices["api"],
-    tickets: { channels: new Map() } as unknown as BotServices["tickets"],
+    tickets: {
+      channels: new Map(),
+      open: async () => "888888888888888899",
+    } as unknown as BotServices["tickets"],
   } satisfies BotServices;
   const router = new CommandRouter(commands);
   const run = async (content: string, roles: RoleKey[] = ["moderator"]) => {
@@ -128,11 +150,14 @@ function harness(options: { canBan?: boolean } = {}) {
       args: resolved.args,
       services,
       reply: async (reply) => void replies.push(reply),
-      replyPrivately: async () => "dm",
+      replyPrivately: async (reply) => (
+        privates.push(JSON.stringify(reply)),
+        "dm"
+      ),
     });
     return replies.map((reply) => JSON.stringify(reply)).join("\n");
   };
-  return { run, calls, cases, logged, dms, posted, api };
+  return { run, calls, cases, logged, dms, posted, api, reports, privates };
 }
 
 describe("moderation commands", () => {
@@ -284,5 +309,29 @@ describe("offboarding", () => {
       await h.run(`!offboard <@${TARGET}> x`, ["administrator"]),
     ).toContain("doesn't hold any KUSH staff role");
     expect(h.calls).toEqual([]);
+  });
+});
+
+describe("reports and downloads", () => {
+  it("files a private member report for moderators", async () => {
+    const h = harness();
+    const reply = await h.run(
+      `!report <@${TARGET}> posting scam links in general`,
+      ["member"],
+    );
+    expect(h.api).toEqual(["ticket member-report"]);
+    expect(h.reports[0]).toContain(`<@${TARGET}>`);
+    expect(h.reports[0]).toContain("posting scam links");
+    expect(h.privates[0]).toContain("888888888888888899");
+    expect(reply).toContain("privately");
+    expect(await h.run("!report nobody", ["member"])).toContain("Usage");
+  });
+
+  it("lists only active products and points to the website for files", async () => {
+    const h = harness();
+    await h.run("!downloads", ["member"]);
+    expect(h.privates[0]).toContain("TEST Toolkit");
+    expect(h.privates[0]).not.toContain("TEST Old");
+    expect(h.privates[0]).toContain("Downloads");
   });
 });
