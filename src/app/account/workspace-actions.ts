@@ -107,3 +107,23 @@ export async function replyToTicket(_previous: ActionState, form: FormData): Pro
   revalidatePath(`/account/support/${ticketId}`);
   return { success: "Reply sent." };
 }
+
+export async function decideQuote(_previous: ActionState, form: FormData): Promise<ActionState> {
+  const requestId = text(form, "requestId");
+  const quoteId = text(form, "quoteId");
+  const decision = text(form, "decision") === "accept" ? "accept" : "decline";
+  if (!/^[0-9a-f-]{36}$/.test(requestId) || !/^[0-9a-f-]{36}$/.test(quoteId)) return { error: "Quote not found." };
+  if (decision === "accept" && form.get("confirm") !== "yes") return { error: "Tick the box to confirm you accept this quote." };
+  const reason = text(form, "reason");
+  try {
+    await kushApi(`/web/workspace/commissions/${requestId}/quotes/${quoteId}/${decision}`, {
+      method: "POST",
+      token: await token(),
+      body: decision === "decline" && reason ? { reason } : {},
+    });
+  } catch (error) {
+    return failure(error);
+  }
+  revalidatePath(`/account/commissions/${requestId}`);
+  return { success: decision === "accept" ? "Quote accepted. The team will schedule your project." : "Quote declined. The team will be in touch." };
+}

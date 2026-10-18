@@ -18,6 +18,10 @@ import {
   staffActivateApplication,
   staffTemplateStatus,
   staffRetryJob,
+  staffProposeQuote,
+  staffWithdrawQuote,
+  staffAddMilestone,
+  staffSetMilestone,
 } from "@/app/staff/actions";
 import { FormMessage } from "@/components/account/form-message";
 import styles from "@/components/account/account.module.css";
@@ -37,6 +41,10 @@ const actions = {
   activateApplication: staffActivateApplication,
   templateStatus: staffTemplateStatus,
   retryJob: staffRetryJob,
+  proposeQuote: staffProposeQuote,
+  withdrawQuote: staffWithdrawQuote,
+  addMilestone: staffAddMilestone,
+  setMilestone: staffSetMilestone,
 };
 
 /**

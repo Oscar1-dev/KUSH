@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
+import { QuoteDecision } from "@/components/account/workspace-forms";
 import styles from "@/components/account/account.module.css";
 import { ApiError, kushApi } from "@/lib/server/kush-api";
 import { requireAccount } from "@/lib/server/session";
@@ -8,8 +9,11 @@ import {
   commissionLabel,
   commissionStages,
   dateTime,
+  milestoneLabel,
   needsYou,
   type Commission,
+  type Milestone,
+  type Quote,
 } from "@/lib/workspace";
 
 export default async function CommissionPage({
@@ -24,8 +28,16 @@ export default async function CommissionPage({
   const { new: isNew } = await searchParams;
   if (!/^[0-9a-f-]{36}$/.test(id)) notFound();
   let commission: Commission;
+  let quotes: Quote[] = [];
+  let milestones: Milestone[] = [];
+  let ticketId: string | null = null;
   try {
-    commission = (await kushApi<{ commission: Commission }>(`/web/workspace/commissions/${id}`, { token })).commission;
+    ({ commission, quotes, milestones, ticketId } = await kushApi<{
+      commission: Commission;
+      quotes: Quote[];
+      milestones: Milestone[];
+      ticketId: string | null;
+    }>(`/web/workspace/commissions/${id}`, { token }));
   } catch (error) {
     // Someone else's commission looks exactly like a missing one.
     if (error instanceof ApiError && error.status === 404) notFound();
@@ -105,6 +117,63 @@ export default async function CommissionPage({
           </div>
         </section>
       </div>
+
+      {quotes.length ? (
+        <section className={styles.section} aria-labelledby="quotes">
+          <h2 id="quotes" className={styles.sectionTitle}>
+            Quotes
+          </h2>
+          {quotes.map((q) => (
+            <div key={q.id} className={styles.card} style={{ marginBottom: 12, borderColor: q.status === "proposed" ? "rgba(167,250,67,.45)" : undefined }}>
+              <div className={styles.headerRow}>
+                <p className={styles.cardValue}>{q.amount}</p>
+                <span className={`${styles.badge} ${q.status === "proposed" ? styles.badgeWarn : q.status === "accepted" ? styles.badgeOn : ""}`}>
+                  {q.status === "proposed" ? "AWAITING YOUR DECISION" : q.status.toUpperCase()}
+                </span>
+              </div>
+              <p className={styles.prose} style={{ marginTop: 12 }}>
+                {q.summary}
+              </p>
+              <p className={styles.rowMeta} style={{ marginTop: 10 }}>
+                {q.timeframe ? `Timeframe: ${q.timeframe} · ` : ""}Sent {dateTime.format(new Date(q.createdAt))}
+              </p>
+              {q.status === "proposed" ? (
+                <div style={{ marginTop: 16 }}>
+                  <QuoteDecision requestId={commission.id} quoteId={q.id} />
+                </div>
+              ) : null}
+            </div>
+          ))}
+        </section>
+      ) : null}
+
+      {milestones.length ? (
+        <section className={styles.section} aria-labelledby="milestones">
+          <h2 id="milestones" className={styles.sectionTitle}>
+            Milestones
+          </h2>
+          <ol className={styles.timeline}>
+            {milestones.map((m) => (
+              <li key={m.id} className={`${styles.stage} ${m.status === "done" ? styles.stageDone : ""} ${m.status === "in_progress" ? styles.stageCurrent : ""}`}>
+                <p className={styles.stageTitle}>{m.title}</p>
+                <p className={styles.stageText}>{milestoneLabel[m.status]}</p>
+              </li>
+            ))}
+          </ol>
+        </section>
+      ) : null}
+
+      {ticketId ? (
+        <section className={styles.section}>
+          <h2 className={styles.sectionTitle}>Conversation</h2>
+          <Link href={`/account/support/${ticketId}`} className={styles.listLink}>
+            <div className={styles.rowMain}>
+              <p className={styles.rowTitle}>Talk to the team about this commission</p>
+              <p className={styles.rowMeta}>Questions, files and feedback. Replies also reach you on Discord.</p>
+            </div>
+          </Link>
+        </section>
+      ) : null}
     </>
   );
 }

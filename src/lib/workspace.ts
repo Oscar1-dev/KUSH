@@ -103,3 +103,28 @@ export const needsYou = (status: string) =>
 
 export const dateTime = new Intl.DateTimeFormat("en-GB", { dateStyle: "medium", timeStyle: "short" });
 export const dateOnly = new Intl.DateTimeFormat("en-GB", { dateStyle: "medium" });
+
+export interface Quote {
+  id: string;
+  amount: string;
+  summary: string;
+  timeframe: string | null;
+  status: "proposed" | "accepted" | "declined" | "withdrawn";
+  createdAt: string;
+  decidedAt: string | null;
+  declineReason: string | null;
+}
+
+export interface Milestone {
+  id: string;
+  title: string;
+  status: "planned" | "in_progress" | "done";
+  position: number;
+  updatedAt: string;
+}
+
+export const milestoneLabel: Record<Milestone["status"], string> = {
+  planned: "Planned",
+  in_progress: "In progress",
+  done: "Done",
+};

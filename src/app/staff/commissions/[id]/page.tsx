@@ -5,7 +5,7 @@ import ActionForm from "@/components/staff/action-form";
 import styles from "@/components/account/account.module.css";
 import { ApiError, kushApi } from "@/lib/server/kush-api";
 import { requireStaff } from "@/lib/server/staff";
-import { commissionLabel, dateTime, type CommissionStatus } from "@/lib/workspace";
+import { commissionLabel, dateTime, milestoneLabel, type CommissionStatus, type Milestone, type Quote } from "@/lib/workspace";
 
 interface Detail {
   id: string;
@@ -31,8 +31,16 @@ export default async function StaffCommission({ params }: { params: Promise<{ id
   const { id } = await params;
   if (!/^[0-9a-f-]{36}$/.test(id)) notFound();
   let c: Detail;
+  let quotes: Quote[] = [];
+  let milestones: Milestone[] = [];
+  let ticketId: string | null = null;
   try {
-    c = (await kushApi<{ commission: Detail }>(`/web/staff/commissions/${id}`, { token: gate.token })).commission;
+    ({ commission: c, quotes, milestones, ticketId } = await kushApi<{
+      commission: Detail;
+      quotes: Quote[];
+      milestones: Milestone[];
+      ticketId: string | null;
+    }>(`/web/staff/commissions/${id}`, { token: gate.token }));
   } catch (error) {
     if (error instanceof ApiError && error.status === 404) notFound();
     throw error;
@@ -42,6 +50,7 @@ export default async function StaffCommission({ params }: { params: Promise<{ id
         .team
     : [];
   const v = { requestId: c.id, expectedVersion: c.version };
+  const openQuote = quotes.find((q) => q.status === "proposed");
 
   return (
     <>
@@ -134,6 +143,75 @@ export default async function StaffCommission({ params }: { params: Promise<{ id
               </ActionForm>
             </div>
           ) : null}
+        </aside>
+      </div>
+
+      <div className={styles.split} style={{ marginTop: 16 }}>
+        <section className={styles.card} aria-labelledby="milestones">
+          <p id="milestones" className={styles.cardLabel}>
+            MILESTONES (VISIBLE TO THE CUSTOMER)
+          </p>
+          {milestones.length === 0 ? <p className={styles.rowMeta}>No milestones yet.</p> : null}
+          {milestones.map((m) => (
+            <div key={m.id} className={styles.row} style={{ padding: "10px 0" }}>
+              <span>
+                {m.title} <span className={styles.rowMeta}>· {milestoneLabel[m.status]}</span>
+              </span>
+              <ActionForm key={`${m.id}-${m.status}`} action="setMilestone" hidden={{ requestId: c.id, milestoneId: m.id }} submit="SET" tone="plain">
+                <select name="status" className={styles.input} defaultValue={m.status} aria-label={`Status of ${m.title}`}>
+                  {(["planned", "in_progress", "done"] as const).map((st) => (
+                    <option key={st} value={st}>
+                      {milestoneLabel[st]}
+                    </option>
+                  ))}
+                </select>
+              </ActionForm>
+            </div>
+          ))}
+          <div key={`add-${milestones.length}`} style={{ marginTop: 12 }}>
+            <ActionForm action="addMilestone" hidden={{ requestId: c.id }} submit="ADD MILESTONE" tone="plain">
+              <input name="title" className={styles.input} required minLength={2} maxLength={120} placeholder="e.g. Homepage design approved" aria-label="Milestone title" />
+            </ActionForm>
+          </div>
+          {ticketId ? (
+            <p className={styles.rowMeta} style={{ marginTop: 16 }}>
+              Conversation: <Link href={`/staff/tickets/${ticketId}`} style={{ textDecoration: "underline" }}>open the linked ticket</Link>
+            </p>
+          ) : null}
+        </section>
+
+        <aside className={styles.form} style={{ maxWidth: "none" }} aria-label="Quotes">
+          {c.actions.note ? (
+            <div className={styles.card} key={`quote-${c.version}`}>
+              <p className={styles.cardLabel}>QUOTE</p>
+              {openQuote ? (
+                <>
+                  <p className={styles.cardValue}>{openQuote.amount}</p>
+                  <p className={styles.rowMeta}>Waiting for the customer to accept or decline.</p>
+                  <ActionForm action="withdrawQuote" hidden={{ requestId: c.id, quoteId: openQuote.id }} submit="WITHDRAW QUOTE" tone="danger" />
+                </>
+              ) : c.status === "reviewing" || c.status === "awaiting_customer" ? (
+                <ActionForm action="proposeQuote" hidden={{ requestId: c.id }} submit="SEND QUOTE">
+                  <input name="amount" className={styles.input} required maxLength={60} placeholder="Amount, e.g. £450" aria-label="Amount" />
+                  <textarea name="summary" className={styles.input} rows={4} required minLength={10} maxLength={5000} placeholder="What's included, deliverables, revisions…" aria-label="Quote summary" />
+                  <input name="timeframe" className={styles.input} maxLength={200} placeholder="Timeframe (optional)" aria-label="Timeframe" />
+                  <p className={styles.rowMeta}>A written proposal only; no payment is taken by the website.</p>
+                </ActionForm>
+              ) : (
+                <p className={styles.rowMeta}>Move the commission to “Under review” to send a quote.</p>
+              )}
+            </div>
+          ) : null}
+          {quotes.filter((q) => q.status !== "proposed").map((q) => (
+            <div key={q.id} className={styles.card}>
+              <p className={styles.cardLabel}>PAST QUOTE · {q.status.toUpperCase()}</p>
+              <p className={styles.rowTitle}>{q.amount}</p>
+              <p className={styles.rowMeta}>
+                {dateTime.format(new Date(q.createdAt))}
+                {q.declineReason ? ` · “${q.declineReason}”` : ""}
+              </p>
+            </div>
+          ))}
         </aside>
       </div>
     </>

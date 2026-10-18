@@ -177,3 +177,41 @@ export async function staffRetryJob(_p: ActionState, form: FormData) {
   if (!jobId) return { error: "Job not found." };
   return call(`/web/staff/operations/jobs/${jobId}/retry`, {}, "/staff/operations", "Queued for another attempt.");
 }
+
+// ------------------------------------------------------ commission workflow
+
+export async function staffProposeQuote(_p: ActionState, form: FormData) {
+  const requestId = id(form, "requestId");
+  if (!requestId) return { error: "Commission not found." };
+  return call(
+    `/web/staff/commissions/${requestId}/quotes`,
+    { amount: text(form, "amount"), summary: text(form, "summary"), timeframe: text(form, "timeframe") || null },
+    `/staff/commissions/${requestId}`,
+    "Quote sent to the customer.",
+  );
+}
+
+export async function staffWithdrawQuote(_p: ActionState, form: FormData) {
+  const requestId = id(form, "requestId");
+  const quoteId = id(form, "quoteId");
+  if (!requestId || !quoteId) return { error: "Quote not found." };
+  return call(`/web/staff/commissions/${requestId}/quotes/${quoteId}/withdraw`, {}, `/staff/commissions/${requestId}`, "Quote withdrawn.");
+}
+
+export async function staffAddMilestone(_p: ActionState, form: FormData) {
+  const requestId = id(form, "requestId");
+  if (!requestId) return { error: "Commission not found." };
+  return call(`/web/staff/commissions/${requestId}/milestones`, { title: text(form, "title") }, `/staff/commissions/${requestId}`, "Milestone added.");
+}
+
+export async function staffSetMilestone(_p: ActionState, form: FormData) {
+  const requestId = id(form, "requestId");
+  const milestoneId = id(form, "milestoneId");
+  if (!requestId || !milestoneId) return { error: "Milestone not found." };
+  return call(
+    `/web/staff/commissions/${requestId}/milestones/${milestoneId}`,
+    { status: text(form, "status") },
+    `/staff/commissions/${requestId}`,
+    "Milestone updated.",
+  );
+}

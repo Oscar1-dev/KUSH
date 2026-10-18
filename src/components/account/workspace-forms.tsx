@@ -3,7 +3,7 @@
 import { useActionState } from "react";
 
 import type { ActionState } from "@/app/account/actions";
-import { createCommission, createTicket, replyToTicket } from "@/app/account/workspace-actions";
+import { createCommission, createTicket, decideQuote, replyToTicket } from "@/app/account/workspace-actions";
 import { commissionCategories } from "@/lib/workspace";
 
 import { FormMessage } from "./form-message";
@@ -163,5 +163,39 @@ export function ReplyForm({
       </div>
       <FormMessage state={state} />
     </form>
+  );
+}
+
+export function QuoteDecision({ requestId, quoteId }: { requestId: string; quoteId: string }) {
+  const [state, action, pending] = useActionState<ActionState, FormData>(decideQuote, {});
+  return (
+    <div className={styles.form} style={{ maxWidth: "none" }}>
+      <form action={action} className={styles.form} style={{ maxWidth: "none" }}>
+        <input type="hidden" name="requestId" value={requestId} />
+        <input type="hidden" name="quoteId" value={quoteId} />
+        <input type="hidden" name="decision" value="accept" />
+        <label className={styles.rowMeta}>
+          <input type="checkbox" name="confirm" value="yes" /> I accept this quote. I understand no payment is taken on
+          the website; the team will confirm next steps.
+        </label>
+        <div className={styles.formRow}>
+          <button className={`${styles.button} ${styles.buttonPrimary}`} disabled={pending}>
+            ACCEPT QUOTE
+          </button>
+        </div>
+      </form>
+      <form action={action} className={styles.form} style={{ maxWidth: "none" }}>
+        <input type="hidden" name="requestId" value={requestId} />
+        <input type="hidden" name="quoteId" value={quoteId} />
+        <input type="hidden" name="decision" value="decline" />
+        <input name="reason" className={styles.input} maxLength={2000} placeholder="Why not? (optional, helps us re-quote)" aria-label="Reason for declining" />
+        <div className={styles.formRow}>
+          <button className={`${styles.button} ${styles.buttonDanger}`} disabled={pending}>
+            DECLINE
+          </button>
+        </div>
+      </form>
+      <FormMessage state={state} />
+    </div>
   );
 }
