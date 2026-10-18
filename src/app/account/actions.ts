@@ -191,3 +191,14 @@ export async function markNotificationsSeen() {
   await kushApi("/web/account/notifications/seen", { method: "POST", token: session }).catch(() => undefined);
   revalidatePath("/account", "layout");
 }
+
+/** Issues a fresh signed link for an owned file, then starts the download. */
+export async function startDownload(fileId: string) {
+  if (!/^[0-9a-f-]{36}$/.test(fileId)) return;
+  const session = await token();
+  const { token: link } = await kushApi<{ token: string }>(`/web/account/downloads/${fileId}/link`, {
+    method: "POST",
+    token: session,
+  });
+  redirect(`/download/${link}`);
+}
