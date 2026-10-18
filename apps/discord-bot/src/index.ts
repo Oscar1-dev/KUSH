@@ -19,7 +19,7 @@ import {
 import { HealthMonitor, startHealthServer } from "./runtime/health.js";
 import { createLogger, type Logger } from "./runtime/logger.js";
 import { commands } from "./runtime/registry.js";
-import { embed } from "./panels.js";
+import { card, notificationMessage } from "./panels.js";
 import { HoneypotTracker } from "./moderation/honeypot.js";
 import {
   DiscordMemberGateway,
@@ -37,6 +37,7 @@ import {
 import { DiscordAPIError } from "discord.js";
 import { ApplicationChannels } from "./automation/applications.js";
 import { ndaPrompt } from "./automation/nda.js";
+import { registerModLog } from "./moderation/mod-log.js";
 import { DiscordTicketChannels } from "./tickets/discord-tickets.js";
 import { configuredRoleId } from "./blueprint.js";
 import { TicketManager } from "./tickets/manager.js";
@@ -70,7 +71,8 @@ async function connect(
   health: HealthMonitor,
   log: Logger,
 ): Promise<Client> {
-  const base = [GatewayIntentBits.Guilds];
+  // GuildModeration (not privileged): audit-log entries for the mod log.
+  const base = [GatewayIntentBits.Guilds, GatewayIntentBits.GuildModeration];
   // Privileged: Server Members (join/leave/role automation) and Message
   // Content (`!` commands). Both are enabled in the Developer Portal.
   const prefix = [
@@ -116,16 +118,22 @@ function auditSink(client: Client, config: RuntimeConfig, log: Logger) {
     void channel
       .send({
         embeds: [
-          embed(
-            event.action,
-            [
-              `Actor: <@${event.actorId}>`,
-              `Outcome: ${event.outcome}`,
-              ...Object.entries(event.detail ?? {}).map(
-                ([key, value]) => `${key}: ${value}`,
-              ),
-            ].join("\n"),
-          ),
+          card({
+            emoji: event.outcome === "ok" ? "🤖" : "⚠️",
+            title: event.action,
+            tone: event.outcome === "ok" ? "staff" : "warning",
+            fields: [
+              { name: "Actor", value: `<@${event.actorId}>`, inline: true },
+              { name: "Outcome", value: event.outcome, inline: true },
+              ...Object.entries(event.detail ?? {}).map(([key, value]) => ({
+                name: key,
+                value: String(value).slice(0, 1_000),
+                inline: true,
+              })),
+            ],
+            footer: "KUSH • Bot log",
+            timestamp: true,
+          }),
         ],
         allowedMentions: { parse: [] },
       })
@@ -286,7 +294,10 @@ export async function startBot(): Promise<{
         deliver(async () => {
           const channel = await guild().channels.fetch(channelId);
           if (!channel?.isTextBased()) return "undeliverable";
-          await channel.send({ content, allowedMentions: noMentions });
+          await channel.send({
+            ...notificationMessage(content),
+            allowedMentions: noMentions,
+          });
         }),
       createApplicationChannel: (input) =>
         deliver(async () => {
@@ -346,7 +357,10 @@ export async function startBot(): Promise<{
       sendDm: (discordUserId, content) =>
         deliver(async () => {
           const user = await client.users.fetch(discordUserId);
-          await user.send({ content, allowedMentions: noMentions });
+          await user.send({
+            ...notificationMessage(content),
+            allowedMentions: noMentions,
+          });
         }),
     },
     () => config.channelIds,
@@ -365,8 +379,11 @@ export async function startBot(): Promise<{
     rulesChannelId:
       config.channelIds["information:rules"] ??
       config.channelIds["01-start-here:rules"],
+    welcomeChannelId: config.channelIds["information:welcome"],
+    supportChannelId: config.channelIds["support:create-ticket"],
     kick,
   };
+  registerModLog(client, config, log);
   const guarded = (label: string, work: () => Promise<unknown>) => () =>
     void work().catch((error: unknown) =>
       log.error(label, {

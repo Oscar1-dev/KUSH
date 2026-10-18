@@ -1,3 +1,4 @@
+import { welcomeCard } from "../moderation/mod-log.js";
 import type { Guild, GuildMember, PartialGuildMember } from "discord.js";
 import type { DiscordApiClient } from "../api-client.js";
 import { embed } from "../panels.js";
@@ -43,6 +44,8 @@ export interface MembershipDependencies {
   api: DiscordApiClient;
   log: Logger;
   rulesChannelId: string | undefined;
+  welcomeChannelId?: string | undefined;
+  supportChannelId?: string | undefined;
   /** Wakes the role-sync worker after an event, instead of waiting for the poll. */
   kick: () => void;
 }
@@ -54,11 +57,36 @@ export interface MembershipDependencies {
  */
 export async function onMemberJoin(
   member: GuildMember,
-  { api, log, rulesChannelId, kick }: MembershipDependencies,
+  {
+    api,
+    log,
+    rulesChannelId,
+    welcomeChannelId,
+    supportChannelId,
+    kick,
+  }: MembershipDependencies,
 ) {
   if (member.user.bot) return;
   await api.presence(member.id, true);
   kick();
+  // Public welcome card in #welcome (no personal data beyond the profile).
+  const welcome = welcomeChannelId
+    ? member.guild.channels.cache.get(welcomeChannelId)
+    : undefined;
+  if (welcome?.isSendable())
+    await welcome
+      .send({
+        embeds: [
+          welcomeCard(member, {
+            rules: rulesChannelId,
+            support: supportChannelId,
+          }),
+        ],
+        allowedMentions: { parse: [] },
+      })
+      .catch(() =>
+        log.info("welcome.post.failed", { discordUserId: member.id }),
+      );
   // Discord's own membership screening is in progress; wait for it.
   if (member.pending) return;
   const desired = await api.desiredRoles(member.id).catch(() => null);

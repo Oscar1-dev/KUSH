@@ -1,6 +1,6 @@
 import type { GuildMember, Message } from "discord.js";
 import type { RoleKey } from "../blueprint.js";
-import { embed, kushColours } from "../panels.js";
+import { card, embed, kushColours } from "../panels.js";
 import type { Actor } from "../runtime/authority.js";
 import type { BotServices } from "../runtime/command.js";
 
@@ -175,18 +175,48 @@ export async function handleHoneypotMessage(
       await channel
         .send({
           embeds: [
-            embed(
-              restricted ? "Honeypot: member restricted" : "Honeypot triggered",
-              [
-                `Member: <@${member.id}>`,
-                `Triggers in the last ${Math.round(policy.windowMs / 60_000)} minutes: ${strikes}`,
-                `Account created: <t:${Math.floor(member.user.createdTimestamp / 1000)}:R>`,
-                `Message removed: ${deleted ? "yes" : "no (missing permission)"}`,
-                restricted
-                  ? `Timed out for ${Math.round(policy.timeoutMs / 60_000)} minutes — remove the timeout if this looks accidental.`
-                  : "No restriction applied. Review and act manually if this looks like abuse.",
-              ].join("\n"),
-            ).setColor(kushColours.warning),
+            card({
+              emoji: restricted ? "🔇" : "🪤",
+              title: restricted
+                ? "Honeypot: member timed out"
+                : "Honeypot triggered",
+              tone: restricted ? "danger" : "warning",
+              fields: [
+                {
+                  name: "User",
+                  value: `<@${member.id}>\n\`${member.id}\``,
+                  inline: true,
+                },
+                {
+                  name: "Moderator",
+                  value: "AutoMod (honeypot)",
+                  inline: true,
+                },
+                {
+                  name: "Strikes",
+                  value: `${strikes} in ${Math.round(policy.windowMs / 60_000)} min`,
+                  inline: true,
+                },
+                {
+                  name: "Account created",
+                  value: `<t:${Math.floor(member.user.createdTimestamp / 1000)}:R>`,
+                  inline: true,
+                },
+                {
+                  name: "Message removed",
+                  value: deleted ? "Yes" : "No (missing permission)",
+                  inline: true,
+                },
+                {
+                  name: "Action",
+                  value: restricted
+                    ? `Timed out for ${Math.round(policy.timeoutMs / 60_000)} minutes. Remove it if this looks accidental.`
+                    : "None. Review and act manually if this looks like abuse.",
+                },
+              ],
+              footer: "KUSH • Moderation log",
+              timestamp: true,
+            }),
           ],
           allowedMentions: { parse: [] },
         })

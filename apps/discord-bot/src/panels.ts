@@ -222,3 +222,30 @@ export function ticketCategoryGrid(
     );
   return rows;
 }
+
+/**
+ * Website-to-Discord notification text as a house-style card. A leading
+ * user mention stays outside the card (mentions inside embeds don't
+ * notify); the first line becomes the heading.
+ */
+export function notificationMessage(content: string) {
+  const mention = /^(<@\d{17,20}>)\s*/.exec(content);
+  const body = mention ? content.slice(mention[0].length) : content;
+  const [first, ...rest] = body.split("\n");
+  const urls = /(https?:\/\/\S+)/g;
+  return {
+    ...(mention ? { content: mention[1] } : {}),
+    embeds: [
+      card({
+        title:
+          first!.replace(/\*\*/g, "").replace(urls, "").trim().slice(0, 240) ||
+          "KUSH update",
+        description:
+          [first!.match(urls)?.join(" "), ...rest].filter(Boolean).join("\n") ||
+          undefined,
+        tone: "brand",
+        timestamp: true,
+      }),
+    ],
+  };
+}

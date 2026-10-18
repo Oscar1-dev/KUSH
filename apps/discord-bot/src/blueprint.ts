@@ -106,6 +106,8 @@ export const requiredBotPermissions =
   P.ManageChannels |
   P.ManageRoles |
   P.ModerateMembers |
+  // Reads Discord's audit log to post the moderation log (owner must grant).
+  P.ViewAuditLog |
   P.ChangeNickname;
 
 // ------------------------------------------------------------------- roles
