@@ -1025,6 +1025,137 @@ describe.skipIf(!databaseUrl)("staff dashboard (real PostgreSQL)", () => {
     });
   });
 
+  describe("protected downloads", () => {
+    const setupFile = async () => {
+      const { mkdtempSync, writeFileSync } = await import("node:fs");
+      const { tmpdir } = await import("node:os");
+      const { join } = await import("node:path");
+      const { createHash } = await import("node:crypto");
+      const dir = mkdtempSync(join(tmpdir(), "kush-dl-"));
+      process.env.KUSH_DOWNLOADS_DIR = dir;
+      const product = (
+        await pool.query<{ id: string }>(
+          "INSERT INTO products(tenant_id,slug,name,status) VALUES($1,$2,'TEST Download Product','active') RETURNING id",
+          [tenantId, `test-dl-${Date.now()}`],
+        )
+      ).rows[0]!.id;
+      const storageKey = randomUUID();
+      const bytes = Buffer.from("TEST download payload");
+      writeFileSync(join(dir, storageKey), bytes);
+      const file = (
+        await pool.query<{ id: string }>(
+          `INSERT INTO product_files(tenant_id,product_id,version,filename,size_bytes,sha256,storage_key)
+           VALUES($1,$2,'1.0.0','kush-test.zip',$3,$4,$5) RETURNING id`,
+          [
+            tenantId,
+            product,
+            bytes.length,
+            createHash("sha256").update(bytes).digest("hex"),
+            storageKey,
+          ],
+        )
+      ).rows[0]!.id;
+      return { product, file, bytes };
+    };
+    const grant = (userId: string, product: string, status = "active") =>
+      pool
+        .query(
+          `INSERT INTO support_members(tenant_id,user_id,role) VALUES($1,$2,'customer') ON CONFLICT DO NOTHING;`,
+          [tenantId, userId],
+        )
+        .then(() =>
+          pool.query(
+            `INSERT INTO entitlements(tenant_id,user_id,product_id,status,source,source_reference) VALUES($1,$2,$3,$4,'manual',$5) RETURNING id`,
+            [tenantId, userId, product, status, `test-${randomUUID()}`],
+          ),
+        );
+    const redeem = (token: string) =>
+      app.inject({
+        method: "GET",
+        url: `/web/downloads/${token}`,
+        headers: { "x-kush-website-secret": WEBSITE },
+      });
+
+    it("lets only owners download, with signed links checked at use", async () => {
+      const { product, file, bytes } = await setupFile();
+      const owner = await person([], { mfa: false });
+      const other = await person([], { mfa: false });
+      const entitlement = (await grant(owner.userId, product)).rows[0]
+        .id as string;
+
+      expect(
+        (await web("GET", "/web/account/downloads", other.token)).json().files,
+      ).toEqual([]);
+      expect(
+        (await web("POST", `/web/account/downloads/${file}/link`, other.token))
+          .statusCode,
+      ).toBe(404);
+      // Staff role alone grants nothing.
+      const staffer = await person([ROLE.owner]);
+      expect(
+        (
+          await web(
+            "POST",
+            `/web/account/downloads/${file}/link`,
+            staffer.token,
+          )
+        ).statusCode,
+      ).toBe(404);
+
+      const listed = (
+        await web("GET", "/web/account/downloads", owner.token)
+      ).json().files;
+      expect(listed).toMatchObject([
+        { id: file, filename: "kush-test.zip", version: "1.0.0" },
+      ]);
+      const { token } = (
+        await web("POST", `/web/account/downloads/${file}/link`, owner.token)
+      ).json();
+      const ok = await redeem(token);
+      expect(ok.statusCode).toBe(200);
+      expect(ok.rawPayload.equals(bytes)).toBe(true);
+      expect(ok.headers["content-disposition"]).toContain("kush-test.zip");
+
+      // A tampered token is refused, and so is the API without the website.
+      const raw = Buffer.from(token, "base64url");
+      Buffer.from(other.userId.replace(/-/g, ""), "hex").copy(raw, 16); // swap the user
+      const forged = raw.toString("base64url");
+      expect((await redeem(forged)).statusCode).toBe(403);
+      expect(
+        (await app.inject({ method: "GET", url: `/web/downloads/${token}` }))
+          .statusCode,
+      ).toBe(401);
+
+      // Revoking ownership stops an already-issued link working.
+      await pool.query("UPDATE entitlements SET status='revoked' WHERE id=$1", [
+        entitlement,
+      ]);
+      expect((await redeem(token)).statusCode).toBe(403);
+      const events = await pool.query(
+        "SELECT kind FROM download_events WHERE file_id=$1 ORDER BY created_at",
+        [file],
+      );
+      expect(events.rows.map((r) => r.kind)).toEqual([
+        "link_issued",
+        "downloaded",
+        "denied",
+      ]);
+    });
+
+    it("rejects expired links", async () => {
+      const { signDownload } = await import("../src/downloads.js");
+      const { product, file } = await setupFile();
+      const owner = await person([], { mfa: false });
+      await grant(owner.userId, product);
+      const expired = signDownload(
+        file,
+        owner.userId,
+        Math.floor(Date.now() / 1000) - 1,
+      );
+      expect((await redeem(expired)).statusCode).toBe(403);
+    });
+  });
+
   it("never grants product ownership for being staff", async () => {
     const owner = await person([ROLE.owner]);
     await web("GET", "/web/staff/me", owner.token);
