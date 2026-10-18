@@ -124,10 +124,5 @@ export default function Backdrop() {
     };
   }, []);
 
-  return (
-    <>
-      <canvas ref={ref} className={styles.backdrop} aria-hidden="true" />
-      <div className={styles.grain} aria-hidden="true" />
-    </>
-  );
+  return <canvas ref={ref} className={styles.backdrop} aria-hidden="true" />;
 }
