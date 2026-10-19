@@ -23,3 +23,185 @@
 .next:hover .nextName svg {
   transform: translateX(8px);
 }
+
+@keyframes rainbow {
+  to {
+    background-position: -200% 0;
+  }
+}
+
+.from {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 26px 0 0;
+}
+.from .mono {
+  color: var(--text-3);
+}
+.from > span:last-child {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-variation-settings: "wdth" 118;
+  font-size: 64px;
+  line-height: 0.95;
+  letter-spacing: -0.04em;
+}
+
+/* ----------------------------------------------------------------- tiers */
+
+.tiers {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+  align-items: stretch;
+}
+.tier {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: clamp(24px, 3vw, 34px);
+  border: 1px solid var(--line-2);
+  border-radius: var(--radius-l);
+  background: rgba(12, 12, 16, 0.82);
+  backdrop-filter: blur(10px);
+}
+/* Premium gets a slowly moving rainbow edge. */
+.tierPremium {
+  border-color: transparent;
+  background:
+    linear-gradient(rgba(12, 12, 16, 0.96), rgba(12, 12, 16, 0.96)) padding-box,
+    var(--holo-vivid) border-box;
+  background-size: 100% 100%, 200% 100%;
+  animation: rainbow 10s linear infinite;
+}
+.tierName {
+  margin: 0;
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-variation-settings: "wdth" 112;
+  font-size: clamp(22px, 2.1vw, 28px);
+  letter-spacing: -0.03em;
+  line-height: 1.05;
+  text-transform: uppercase;
+}
+.tierPrice {
+  margin: 4px 0 0;
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-variation-settings: "wdth" 118;
+  font-size: clamp(32px, 3.4vw, 46px);
+  letter-spacing: -0.04em;
+  line-height: 1;
+}
+.tierPrice .mono {
+  font-family: var(--font-mono);
+  font-weight: 400;
+  font-size: 13px;
+  letter-spacing: 0.04em;
+  color: var(--text-3);
+  vertical-align: middle;
+}
+.tierNote {
+  margin: -6px 0 0;
+  color: var(--text-3);
+}
+.tierFor {
+  margin: 0;
+  color: var(--text-2);
+}
+.small {
+  margin: 22px 0 0;
+  color: var(--text-3);
+}
+@media (max-width: 960px) {
+  .tiers {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* -------------------------------------------------------------- concepts */
+
+.concepts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+}
+.concept {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.conceptFrame {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid var(--line-2);
+  border-radius: var(--radius-l);
+  background: var(--ink-1);
+}
+.conceptFrame img {
+  width: 100%;
+  height: auto;
+  transition: transform 1.2s var(--ease);
+}
+.concept:hover .conceptFrame img {
+  transform: scale(1.03);
+}
+.conceptTag {
+  position: absolute;
+  top: 14px;
+  left: 14px;
+  padding: 5px 10px;
+  border-radius: 999px;
+  background: rgba(7, 7, 10, 0.78);
+  backdrop-filter: blur(8px);
+  color: var(--text);
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+.concept figcaption {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.concept figcaption strong {
+  font-size: 18px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+.concept figcaption > span:last-child {
+  color: var(--text-2);
+  font-size: 15px;
+}
+@media (max-width: 900px) {
+  .concepts {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* --------------------------------------------------------------- options */
+
+.options {
+  margin-top: 40px;
+}
+.options ul {
+  list-style: none;
+  margin: 16px 0 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.options li {
+  padding: 8px 14px;
+  border: 1px solid var(--line-2);
+  border-radius: 999px;
+  color: var(--text-2);
+  font-size: 14px;
+}
+.partner li::before {
+  background: var(--ink-4);
+}

@@ -4,7 +4,7 @@ import { ArrowUpRight, PenTool } from "lucide-react";
 import styles from "@/components/account/account.module.css";
 import { kushApi } from "@/lib/server/kush-api";
 import { requireAccount } from "@/lib/server/session";
-import { commissionLabel, dateOnly, needsYou, type Commission } from "@/lib/workspace";
+import { categoryLabel,  commissionLabel, dateOnly, needsYou, type Commission } from "@/lib/workspace";
 
 export default async function CommissionsPage() {
   const { token } = await requireAccount();
@@ -42,7 +42,7 @@ export default async function CommissionsPage() {
             <div className={styles.rowMain}>
               <p className={styles.rowTitle}>{c.title}</p>
               <p className={styles.rowMeta}>
-                {c.category.charAt(0).toUpperCase() + c.category.slice(1)} · started {dateOnly.format(new Date(c.createdAt))}
+                {categoryLabel(c.category)} · started {dateOnly.format(new Date(c.createdAt))}
               </p>
             </div>
             <span

@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<link rel="stylesheet" href="base.css" />
+<style>
+  .site { position: absolute; inset: 0; background: #0e0d0b; color: #efe9df; font-family: "Geist", sans-serif; }
+  .nav { display: flex; justify-content: space-between; align-items: center; padding: 26px 56px; font-size: 14px; letter-spacing: .02em; }
+  .logo { font: italic 30px "Instrument Serif", serif; letter-spacing: -.01em; }
+  .links { display: flex; gap: 34px; color: #b7ae9f; }
+  .links span:first-child { color: #efe9df; }
+  .hero { display: grid; grid-template-columns: 1.05fr .95fr; gap: 40px; padding: 30px 56px 0; height: 520px; }
+  .title { font: 400 148px/0.86 "Instrument Serif", serif; letter-spacing: -.035em; margin: 34px 0 0; }
+  .title em { font-style: italic; color: #d9b98a; }
+  .meta { display: flex; gap: 40px; margin-top: 40px; color: #b7ae9f; font-size: 14px; }
+  .meta b { display: block; color: #efe9df; font-weight: 500; font-size: 22px; margin-bottom: 4px; font-family: "Instrument Serif", serif; }
+  .feature { position: relative; border-radius: 6px; overflow: hidden; }
+  /* Abstract "photographs" made of light, no stock imagery. */
+  .ph { position: absolute; inset: 0; }
+  .ph1 { background: radial-gradient(60% 70% at 70% 30%, #f3c98b 0%, #c4743f 30%, #3c1c12 70%, #120b08 100%); }
+  .ph1::after { content: ""; position: absolute; left: 18%; top: 22%; width: 46%; height: 70%; border-radius: 48% 52% 40% 60%; background: radial-gradient(70% 60% at 40% 30%, #2a1a14, #070404); filter: blur(1px); }
+  .caption { position: absolute; left: 22px; bottom: 20px; font: 500 12px "Geist Mono", monospace; letter-spacing: .12em; color: rgba(255,255,255,.8); }
+  .strip { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; padding: 26px 56px 0; height: 220px; }
+  .tile { position: relative; border-radius: 4px; overflow: hidden; }
+  .t1 { background: linear-gradient(160deg, #6f8fa8, #1d2a36 70%); }
+  .t1::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 45%; background: linear-gradient(transparent, #0d1218); }
+  .t2 { background: radial-gradient(50% 60% at 50% 60%, #e9d5b7, #8c6f52 60%, #2d2219); }
+  .t3 { background: linear-gradient(200deg, #2f3d2c, #10150f), #222; }
+  .t3::before { content: ""; position: absolute; inset: 30% 20% 0; border-radius: 50% 50% 0 0; background: radial-gradient(#93a37a, #3f4c33 70%); }
+  .t4 { background: conic-gradient(from 210deg at 60% 40%, #c9a37a, #5b3a29, #1a1210, #c9a37a); }
+  .tile span { position: absolute; left: 12px; bottom: 10px; font: 500 11px "Geist Mono"; letter-spacing: .1em; color: rgba(255,255,255,.85); z-index: 2; }
+  .cta { position: absolute; right: 56px; top: 30px; display: flex; gap: 10px; align-items: center; }
+  .pill { padding: 11px 20px; border-radius: 999px; background: #efe9df; color: #0e0d0b; font-weight: 600; font-size: 14px; }
+</style>
+</head>
+<body>
+  <div class="stage">
+    <div class="window">
+      <div class="chrome"><b></b><b></b><b></b><span class="url">elarafilm.studio</span></div>
+      <div class="viewport">
+        <div class="site">
+          <div class="nav">
+            <span class="logo">Elara Film</span>
+            <span class="links"><span>Work</span><span>Journal</span><span>About</span><span>Prints</span></span>
+            <span class="pill">Book a shoot</span>
+          </div>
+          <div class="hero">
+            <div>
+              <p style="margin:0;color:#b7ae9f;font:500 13px 'Geist Mono';letter-spacing:.14em">PORTRAIT &amp; EDITORIAL · LONDON</p>
+              <h1 class="title">Light,<br /><em>held still.</em></h1>
+              <div class="meta">
+                <div><b>Editorial</b>Magazines &amp; brands</div>
+                <div><b>Portrait</b>People, not poses</div>
+                <div><b>Prints</b>Limited runs</div>
+              </div>
+            </div>
+            <div class="feature"><div class="ph ph1"></div><span class="caption">NO. 014 — GOLDEN HOUR</span></div>
+          </div>
+          <div class="strip">
+            <div class="tile t1"><span>COASTLINE</span></div>
+            <div class="tile t2"><span>STUDIO 3</span></div>
+            <div class="tile t3"><span>GREENHOUSE</span></div>
+            <div class="tile t4"><span>AFTER DARK</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="kush-tag"><i></i>Concept by KUSH · Websites</div>
+</body>
+</html>

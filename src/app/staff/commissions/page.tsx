@@ -4,7 +4,7 @@ import { PenTool } from "lucide-react";
 import styles from "@/components/account/account.module.css";
 import { kushApi } from "@/lib/server/kush-api";
 import { has, requireStaff } from "@/lib/server/staff";
-import { commissionLabel, dateTime, type CommissionStatus } from "@/lib/workspace";
+import { categoryLabel,  commissionLabel, dateTime, type CommissionStatus } from "@/lib/workspace";
 
 interface Row {
   id: string;
@@ -61,7 +61,7 @@ export default async function StaffCommissions({
             <div className={styles.rowMain}>
               <p className={styles.rowTitle}>{c.title}</p>
               <p className={styles.rowMeta}>
-                {c.customerName} · {c.category} · updated {dateTime.format(new Date(c.updatedAt))} ·{" "}
+                {c.customerName} · {categoryLabel(c.category)} · updated {dateTime.format(new Date(c.updatedAt))} ·{" "}
                 {c.assigneeName ? `with ${c.assigneeName}` : "unassigned"}
               </p>
             </div>

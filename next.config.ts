@@ -17,6 +17,14 @@ const nextConfig: NextConfig = {
   allowedDevOrigins: [
     "192.168.50.111",
   ],
+
+  // Service pages that were renamed when the catalogue grew to six.
+  async redirects() {
+    return [
+      { source: "/services/custom-development", destination: "/services/automation", permanent: true },
+      { source: "/services/ui-ux-design", destination: "/services/creative", permanent: true },
+    ];
+  },
 };
 
 export default nextConfig;

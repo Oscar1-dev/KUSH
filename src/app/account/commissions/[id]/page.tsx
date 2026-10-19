@@ -7,6 +7,7 @@ import { ApiError, kushApi } from "@/lib/server/kush-api";
 import { requireAccount } from "@/lib/server/session";
 import {
   commissionLabel,
+  categoryLabel,
   commissionStages,
   dateTime,
   milestoneLabel,
@@ -47,7 +48,13 @@ export default async function CommissionPage({
   const cancelled = commission.status === "cancelled";
   // "Waiting for you" sits between review and quote in the journey.
   const position = commissionStages.findIndex(
-    (s) => s.status === (commission.status === "awaiting_customer" ? "reviewing" : commission.status),
+    (s) =>
+      s.status ===
+      (commission.status === "awaiting_customer"
+        ? "reviewing"
+        : commission.status === "accepted"
+          ? "payment_pending"
+          : commission.status),
   );
 
   return (
@@ -61,7 +68,8 @@ export default async function CommissionPage({
         </p>
       ) : null}
       <p className={styles.kicker} style={{ marginTop: 22 }}>
-        {commission.category.toUpperCase()} COMMISSION
+        {categoryLabel(commission.category).toUpperCase()}
+        {commission.serviceTier ? ` · ${commission.serviceTier.toUpperCase()}` : ""}
       </p>
       <h1 className={styles.title} style={{ fontSize: "clamp(36px, 5vw, 64px)" }}>
         {commission.title}
@@ -97,7 +105,9 @@ export default async function CommissionPage({
           )}
           {needsYou(commission.status) ? (
             <p className={`${styles.notice} ${styles.badgeWarn}`} style={{ marginTop: 6 }}>
-              {commissionLabel[commission.status]}: the team will contact you on Discord with the details.
+              {commission.status === "payment_pending"
+                ? "Deposit pending: the team will confirm payment details with you on Discord. Card payments aren't switched on here yet, so never pay anywhere you weren't sent by KUSH staff."
+                : `${commissionLabel[commission.status]}: the team will contact you on Discord with the details.`}
             </p>
           ) : null}
         </section>
@@ -114,6 +124,24 @@ export default async function CommissionPage({
           <div className={styles.row}>
             <span className={styles.rowMeta}>Timeframe</span>
             <span>{commission.preferredTimeframe ?? "Not given"}</span>
+          </div>
+          {commission.referenceLinks ? (
+            <div className={styles.row}>
+              <span className={styles.rowMeta}>References</span>
+              <span className={styles.prose} style={{ textAlign: "right" }}>
+                {commission.referenceLinks}
+              </span>
+            </div>
+          ) : null}
+          {commission.contactPreference ? (
+            <div className={styles.row}>
+              <span className={styles.rowMeta}>Contact</span>
+              <span>{commission.contactPreference}</span>
+            </div>
+          ) : null}
+          <div className={styles.row}>
+            <span className={styles.rowMeta}>Requested from</span>
+            <span>{commission.origin === "discord" ? "Discord" : "Website"}</span>
           </div>
         </section>
       </div>

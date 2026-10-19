@@ -93,8 +93,8 @@ export default async function Home() {
         <div className="container">
           <SectionHead eyebrow="01 — What we do" title="What we" accent="make.">
             <p className={site.lede}>
-              Five things, done properly. Because design, code and brand all come from the same small team, they
-              actually fit together.
+              Six services, from a £10 fix to a full build. Design, code and brand come from the same small team, so
+              everything actually fits together.
             </p>
           </SectionHead>
           <ServiceList services={services} />
@@ -102,7 +102,7 @@ export default async function Home() {
       </section>
 
       {/* --------------------------------------------- process (pinned) */}
-      <section className={fx.pin} data-pin aria-labelledby="process-title">
+      <section className={fx.pin} data-pin aria-labelledby="process-title" style={{ "--n": process.length } as React.CSSProperties}>
         <div className={`container ${fx.pinStage}`}>
           <div>
             <Scramble className="eyebrow" text="02 — How it works" />

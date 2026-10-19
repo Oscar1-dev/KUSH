@@ -55,6 +55,9 @@ export async function createCommission(_previous: ActionState, form: FormData): 
           details: text(form, "details"),
           approximateBudget: optional(form, "approximateBudget"),
           preferredTimeframe: optional(form, "preferredTimeframe"),
+          serviceTier: optional(form, "serviceTier"),
+          referenceLinks: optional(form, "referenceLinks"),
+          contactPreference: optional(form, "contactPreference"),
         },
       })
     ).commission;

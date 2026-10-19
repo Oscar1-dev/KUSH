@@ -4,39 +4,105 @@ import Link from "next/link";
 import { Arrow, PageHero, SectionHead } from "@/components/site/blocks";
 import site from "@/components/site/site.module.css";
 import { currentAccount } from "@/lib/server/session";
-import { process, services } from "@/lib/site-content";
+import { process, serviceBySlug, services, startingPrice, type TierKey } from "@/lib/site-content";
+
+import styles from "./commission.module.css";
 
 export const metadata: Metadata = {
   title: "Start a project",
-  description: "Send KUSH a commission request and get a quote in your account.",
+  description: "Pick a KUSH service and send a commission request. You'll get a written quote before anything starts.",
 };
 export const dynamic = "force-dynamic";
 
 const delay = (i: number) => ({ "--reveal-i": i }) as React.CSSProperties;
-const formPath = "/account/commissions/new";
+const tiers: TierKey[] = ["starter", "standard", "premium"];
 
-export default async function CommissionPage() {
-  // Signed-in visitors go straight to the form; everyone else signs in first
-  // and lands back on it.
+export default async function CommissionPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ service?: string; tier?: string }>;
+}) {
+  const params = await searchParams;
+  const chosen = params.service ? serviceBySlug(params.service) : undefined;
+  const tier = tiers.includes(params.tier as TierKey) ? (params.tier as TierKey) : undefined;
   const account = await currentAccount().catch(() => null);
-  const start = account ? formPath : `/sign-in?next=${encodeURIComponent(formPath)}`;
+
+  // Signed-in visitors go straight to the form; everyone else signs in first
+  // and lands back on it, with their choice kept.
+  const formPath = (slug?: string, key?: TierKey) =>
+    `/account/commissions/new${slug ? `?service=${slug}${key ? `&tier=${key}` : ""}` : ""}`;
+  const start = (slug?: string, key?: TierKey) =>
+    account ? formPath(slug, key) : `/sign-in?next=${encodeURIComponent(formPath(slug, key))}`;
+  const chosenTier = chosen && tier ? chosen.tiers.find((t) => t.key === tier) : undefined;
 
   return (
     <>
       <PageHero
         eyebrow="Start a project"
         title={["Let's build", "something."]}
-        lede="Requests are free. Tell us what you're after and we'll come back with questions or a quote, right in your account."
+        lede="Pick a service and tell us what you need. Asking is free: you'll get questions or a written quote back in your account, and nothing starts until you accept it."
       >
-        <Link href={start} className={site.button} data-magnetic>
-          {account ? "Open the request form" : "Sign in & start"} <Arrow />
+        <Link href={start(chosen?.slug, tier)} className={site.button} data-magnetic>
+          {chosen ? `Request ${chosen.name}` : account ? "Open the request form" : "Sign in & start"} <Arrow />
         </Link>
         <Link href="/faq" className={site.buttonGhost} data-magnetic>
           Questions first?
         </Link>
       </PageHero>
 
+      {chosen ? (
+        <section className={site.sectionTight}>
+          <div className={`container ${styles.chosen}`} data-reveal>
+            <p className="eyebrow">You picked</p>
+            <p className={styles.chosenName}>
+              {chosen.name}
+              {chosenTier ? <span> · {chosenTier.name}</span> : null}
+            </p>
+            <p className={styles.chosenPrice}>
+              {chosenTier
+                ? chosenTier.from
+                  ? `From ${chosenTier.from}${chosenTier.quote ? ` (${chosenTier.quote.toLowerCase()})` : ""}`
+                  : chosenTier.quote
+                : startingPrice(chosen)
+                  ? `From ${startingPrice(chosen)}`
+                  : "Quoted individually"}
+            </p>
+            <Link href={`/services/${chosen.slug}`} className={site.textLink}>
+              Back to {chosen.name} <Arrow />
+            </Link>
+          </div>
+        </section>
+      ) : null}
+
       <section className={site.section}>
+        <div className="container">
+          <SectionHead eyebrow="Services" title="Choose a" accent="service.">
+            <p className={site.lede}>Starting prices for small jobs. Bigger projects are quoted once we understand them.</p>
+          </SectionHead>
+          <div className={styles.grid}>
+            {services.map((service, i) => (
+              <article key={service.slug} className={styles.card} data-reveal style={delay(i)} data-active={chosen?.slug === service.slug}>
+                <div className={styles.cardHead}>
+                  <span className="mono">{service.index}</span>
+                  <span className={styles.price}>{startingPrice(service) ? `from ${startingPrice(service)}` : "quoted"}</span>
+                </div>
+                <h3>{service.name}</h3>
+                <p>{service.summary}</p>
+                <div className={styles.cardActions}>
+                  <Link href={start(service.slug)} className={site.button}>
+                    Request <Arrow />
+                  </Link>
+                  <Link href={`/services/${service.slug}`} className={site.textLink}>
+                    Details
+                  </Link>
+                </div>
+              </article>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section className={`${site.section} ${site.sectionRule}`}>
         <div className={`container ${site.twoCol}`}>
           <div data-reveal>
             <p className="eyebrow">Worth including</p>
@@ -46,17 +112,15 @@ export default async function CommissionPage() {
               <li>Links or files for anything you like the look of</li>
               <li>Any deadline you&apos;re working towards</li>
               <li>A rough budget, if you have one in mind</li>
+              <li>How you&apos;d like us to reach you</li>
             </ul>
           </div>
           <div data-reveal style={delay(1)}>
-            <p className="eyebrow">We can help with</p>
-            <ul className={site.checkList} style={{ marginTop: 20 }}>
-              {services.map((service) => (
-                <li key={service.slug}>
-                  <Link href={`/services/${service.slug}`}>{service.name}</Link>
-                </li>
-              ))}
-            </ul>
+            <p className="eyebrow">Prefer Discord?</p>
+            <p className={site.lede} style={{ marginTop: 20 }}>
+              Use the commission panel in our Discord&apos;s <strong>#commission-enquiries</strong> channel. It creates the
+              same request, so you can follow it in either place.
+            </p>
           </div>
         </div>
       </section>
@@ -73,11 +137,6 @@ export default async function CommissionPage() {
               </li>
             ))}
           </ol>
-          <div className={site.heroActions} style={{ marginTop: 48 }} data-reveal>
-            <Link href={start} className={site.button} data-magnetic>
-              {account ? "Open the request form" : "Sign in & start"} <Arrow />
-            </Link>
-          </div>
         </div>
       </section>
     </>

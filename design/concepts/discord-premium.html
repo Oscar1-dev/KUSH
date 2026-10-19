@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<link rel="stylesheet" href="base.css" />
+<style>
+  .dc { width: 1480px; height: 910px; border-radius: 12px; overflow: hidden; display: grid; grid-template-columns: 72px 248px 1fr 250px; font-family: "Inter", sans-serif; color: #dbdee1; box-shadow: 0 0 0 1px rgba(255,255,255,.06), 0 50px 120px -30px #000; }
+  .rail { background: #1e1f22; display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 12px 0; }
+  .rail i { width: 48px; height: 48px; border-radius: 16px; background: #313338; }
+  .rail i.on { border-radius: 14px; background: linear-gradient(135deg, #22d3ee, #6366f1); position: relative; }
+  .rail i.on::before { content: ""; position: absolute; left: -12px; top: 8px; bottom: 8px; width: 4px; border-radius: 0 4px 4px 0; background: #fff; }
+  .chan { background: #2b2d31; padding: 0 8px; }
+  .server { height: 52px; display: flex; align-items: center; padding: 0 8px; font-weight: 700; color: #f2f3f5; border-bottom: 1px solid #1f2023; margin: 0 -8px 10px; padding-left: 16px; }
+  .cat { font-size: 11px; font-weight: 700; letter-spacing: .04em; color: #949ba4; margin: 16px 8px 4px; text-transform: uppercase; }
+  .c { padding: 6px 8px; border-radius: 4px; color: #949ba4; font-size: 15px; display: flex; gap: 6px; }
+  .c::before { content: "#"; color: #6d6f78; }
+  .c.on { background: #404249; color: #f2f3f5; }
+  .main { background: #313338; display: grid; grid-template-rows: 52px 1fr 70px; min-width: 0; }
+  .hdr { display: flex; align-items: center; gap: 10px; padding: 0 18px; border-bottom: 1px solid #26272b; font-weight: 600; color: #f2f3f5; }
+  .hdr small { color: #949ba4; font-weight: 400; margin-left: 8px; }
+  .feed { padding: 18px 22px; display: flex; flex-direction: column; gap: 18px; overflow: hidden; }
+  .msg { display: grid; grid-template-columns: 44px 1fr; gap: 14px; }
+  .av { width: 42px; height: 42px; border-radius: 50%; display: grid; place-items: center; font-weight: 700; color: #fff; }
+  .name { font-weight: 600; color: #f2f3f5; }
+  .bot { font-size: 10px; font-weight: 700; background: #5865f2; color: #fff; border-radius: 4px; padding: 1px 5px; margin-left: 6px; vertical-align: 2px; }
+  .time { color: #949ba4; font-size: 12px; margin-left: 8px; }
+  .embed { margin-top: 6px; max-width: 560px; background: #2b2d31; border-left: 4px solid #22d3ee; border-radius: 4px; padding: 14px 16px; }
+  .embed h4 { margin: 0 0 6px; color: #f2f3f5; font-size: 16px; }
+  .embed p { margin: 0 0 10px; font-size: 14px; color: #dbdee1; line-height: 1.45; }
+  .fields { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; font-size: 13px; }
+  .fields b { display: block; color: #f2f3f5; font-size: 12px; margin-bottom: 2px; }
+  .btns { display: flex; gap: 8px; margin-top: 10px; }
+  .btn { padding: 8px 14px; border-radius: 4px; font-size: 14px; font-weight: 500; color: #fff; background: #4e5058; }
+  .btn.p { background: #5865f2; } .btn.r { background: #da373c; } .btn.g { background: #248046; }
+  .input { margin: 0 18px 18px; border-radius: 8px; background: #383a40; display: flex; align-items: center; padding: 0 16px; color: #6d6f78; font-size: 15px; }
+  .mem { background: #2b2d31; padding: 18px 10px; }
+  .mem h5 { margin: 0 8px 8px; font-size: 11px; color: #949ba4; letter-spacing: .04em; }
+  .m { display: flex; align-items: center; gap: 10px; padding: 6px 8px; font-size: 14px; color: #949ba4; }
+  .m i { width: 32px; height: 32px; border-radius: 50%; }
+  .m.on { color: #dbdee1; }
+  .callout { position: absolute; z-index: 3; padding: 10px 14px; border-radius: 10px; background: rgba(7,7,10,.92); border: 1px solid rgba(255,255,255,.14); color: #f3f2ef; font: 500 13px "Geist", sans-serif; }
+  .callout b { display: block; font: 500 10px "Geist Mono"; letter-spacing: .12em; color: #96f2c8; margin-bottom: 3px; }
+</style>
+</head>
+<body>
+  <div class="stage">
+    <div class="dc">
+      <div class="rail"><i class="on"></i><i></i><i></i><i></i></div>
+      <div class="chan">
+        <div class="server">NOVA Studios</div>
+        <div class="cat">Information</div><div class="c">welcome</div><div class="c">rules</div><div class="c">announcements</div>
+        <div class="cat">Support</div><div class="c">open-a-ticket</div><div class="c">faq</div>
+        <div class="cat">Tickets</div><div class="c on">ticket-0217</div><div class="c">ticket-0216</div>
+        <div class="cat">Staff</div><div class="c">ticket-queue</div><div class="c">mod-log</div>
+      </div>
+      <div class="main">
+        <div class="hdr"># ticket-0217<small>Private to Alex and the support team</small></div>
+        <div class="feed">
+          <div class="msg"><div class="av" style="background:linear-gradient(135deg,#22d3ee,#6366f1)">N</div><div>
+            <span class="name">NOVA Assistant</span><span class="bot">BOT</span><span class="time">Today at 14:02</span>
+            <div class="embed">
+              <h4>🎫 Ticket created</h4>
+              <p>Thanks Alex, your ticket is open. Only you and the support team can see this channel. You can also follow it on the NOVA website.</p>
+              <div class="fields"><span><b>Ticket</b>#0217</span><span><b>Category</b>💳 Order problem</span><span><b>Priority</b>Normal</span></div>
+              <div class="btns"><span class="btn r">🔒 Close ticket</span><span class="btn">📄 Transcript</span></div>
+            </div>
+          </div></div>
+          <div class="msg"><div class="av" style="background:#f97316">A</div><div>
+            <span class="name">Alex</span><span class="time">Today at 14:03</span>
+            <p style="margin:4px 0 0">My order #48121 says delivered but the download link expired 😅</p>
+          </div></div>
+          <div class="msg"><div class="av" style="background:linear-gradient(135deg,#22d3ee,#6366f1)">N</div><div>
+            <span class="name">NOVA Assistant</span><span class="bot">BOT</span><span class="time">Today at 14:03</span>
+            <div class="embed" style="border-left-color:#96f2c8">
+              <h4>✅ Claimed by Priya (Support)</h4>
+              <p>Priya will reply here. Replies on the website show up in this channel too.</p>
+            </div>
+          </div></div>
+          <div class="msg"><div class="av" style="background:#22c55e">P</div><div>
+            <span class="name" style="color:#96f2c8">Priya</span><span class="time">Today at 14:05</span>
+            <p style="margin:4px 0 0">Sorted! I've sent you a fresh link. It expires in 5 minutes, so grab it now.</p>
+          </div></div>
+        </div>
+        <div class="input">Message #ticket-0217</div>
+      </div>
+      <div class="mem"><h5>SUPPORT — 2</h5><div class="m on"><i style="background:#22c55e"></i>Priya</div><div class="m on"><i style="background:#eab308"></i>Marcus</div><h5 style="margin-top:16px">CUSTOMER — 1</h5><div class="m on"><i style="background:#f97316"></i>Alex</div></div>
+    </div>
+  </div>
+  <div class="kush-tag"><i></i>Concept by KUSH · Discord systems</div>
+</body>
+</html>

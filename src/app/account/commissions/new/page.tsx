@@ -4,9 +4,16 @@ import Link from "next/link";
 import { CommissionForm } from "@/components/account/workspace-forms";
 import styles from "@/components/account/account.module.css";
 import { requireAccount } from "@/lib/server/session";
+import { commissionCategories } from "@/lib/workspace";
 
-export default async function NewCommissionPage() {
+export default async function NewCommissionPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ service?: string; tier?: string }>;
+}) {
   await requireAccount();
+  const { service, tier } = await searchParams;
+  const known = commissionCategories.some((c) => c.key === service);
   return (
     <>
       <Link href="/account/commissions" className={styles.rowMeta}>
@@ -19,9 +26,13 @@ export default async function NewCommissionPage() {
         Tell us what to <em>build.</em>
       </h1>
       <p className={styles.lede}>
-        The more detail, the better the quote. You can add more later in a reply.
+        The more detail, the better the quote. You can add more later in a reply, here or in your private Discord channel.
       </p>
-      <CommissionForm requestId={randomUUID()} />
+      <CommissionForm
+        requestId={randomUUID()}
+        service={known ? service : undefined}
+        tier={tier && ["starter", "standard", "premium"].includes(tier) ? tier : undefined}
+      />
     </>
   );
 }

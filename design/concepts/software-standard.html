@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<link rel="stylesheet" href="base.css" />
+<style>
+  .desk { position: absolute; inset: 0; background: linear-gradient(135deg, #1e293b, #0f172a 55%, #312e81); }
+  .desk::after { content: ""; position: absolute; inset: 0; background: radial-gradient(60% 50% at 75% 20%, rgba(129,140,248,.35), transparent 60%); }
+  .win { position: absolute; left: 50%; top: 50%; translate: -50% -52%; z-index: 2; width: 1180px; height: 760px; border-radius: 10px; background: #f3f3f3; color: #1a1a1a; font-family: "Inter", sans-serif; box-shadow: 0 0 0 1px rgba(0,0,0,.2), 0 40px 100px -20px rgba(0,0,0,.7); overflow: hidden; display: grid; grid-template-rows: 38px 1fr 54px; }
+  .title { display: flex; align-items: center; gap: 10px; padding: 0 12px; font-size: 13px; background: #ebebeb; }
+  .title .app { width: 16px; height: 16px; border-radius: 4px; background: linear-gradient(135deg, #22c55e, #0ea5e9); }
+  .title .ctl { margin-left: auto; display: flex; gap: 26px; color: #444; }
+  .body { display: grid; grid-template-columns: 330px 1fr; min-height: 0; }
+  .rules { padding: 20px; background: #fafafa; border-right: 1px solid #dedede; }
+  h3 { margin: 0 0 14px; font-size: 15px; }
+  .rule { background: #fff; border: 1px solid #dedede; border-radius: 8px; padding: 12px; margin-bottom: 10px; font-size: 13px; }
+  .rule b { display: block; margin-bottom: 8px; font-size: 13px; }
+  .input { padding: 7px 10px; border: 1px solid #c9c9c9; border-radius: 5px; background: #fff; font: 13px "Geist Mono"; color: #333; margin-top: 6px; }
+  .chk { display: flex; gap: 8px; align-items: center; margin-top: 8px; color: #333; }
+  .chk i { width: 14px; height: 14px; border-radius: 3px; background: #0ea5e9; }
+  .files { padding: 20px; overflow: hidden; }
+  .head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+  .drop { font-size: 13px; color: #555; }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; background: #fff; border: 1px solid #dedede; border-radius: 8px; overflow: hidden; }
+  th { text-align: left; padding: 9px 12px; background: #f7f7f7; color: #555; font-weight: 500; border-bottom: 1px solid #dedede; }
+  td { padding: 9px 12px; border-bottom: 1px solid #efefef; font-family: "Geist Mono", monospace; font-size: 12.5px; }
+  td.new { color: #15803d; }
+  .foot { display: flex; align-items: center; gap: 12px; padding: 0 20px; border-top: 1px solid #dedede; background: #fafafa; font-size: 13px; color: #555; }
+  .btn { margin-left: auto; padding: 9px 18px; border-radius: 6px; background: #0ea5e9; color: #fff; font-weight: 600; }
+  .btn.alt { margin-left: 0; background: #fff; color: #1a1a1a; border: 1px solid #c9c9c9; }
+</style>
+</head>
+<body>
+  <div class="desk"></div>
+  <div class="win">
+    <div class="title"><span class="app"></span>Batch Renamer<span class="ctl"><span>—</span><span>▢</span><span>✕</span></span></div>
+    <div class="body">
+      <div class="rules">
+        <h3>Rename rules</h3>
+        <div class="rule"><b>1 · Replace text</b>Find<div class="input">IMG_</div>Replace with<div class="input">holiday-</div></div>
+        <div class="rule"><b>2 · Add number</b>Start at<div class="input">001</div><div class="chk"><i></i>Keep original order</div></div>
+        <div class="rule"><b>3 · Change case</b><div class="input">lowercase</div></div>
+      </div>
+      <div class="files">
+        <div class="head"><h3 style="margin:0">Preview · 128 files</h3><span class="drop">Drop a folder anywhere to add files</span></div>
+        <table>
+          <tr><th>Current name</th><th>New name</th></tr>
+          <tr><td>IMG_4471.JPG</td><td class="new">holiday-001.jpg</td></tr>
+          <tr><td>IMG_4472.JPG</td><td class="new">holiday-002.jpg</td></tr>
+          <tr><td>IMG_4475.JPG</td><td class="new">holiday-003.jpg</td></tr>
+          <tr><td>IMG_4478.JPG</td><td class="new">holiday-004.jpg</td></tr>
+          <tr><td>IMG_4480.JPG</td><td class="new">holiday-005.jpg</td></tr>
+          <tr><td>IMG_4481.JPG</td><td class="new">holiday-006.jpg</td></tr>
+          <tr><td>IMG_4486.JPG</td><td class="new">holiday-007.jpg</td></tr>
+          <tr><td>IMG_4490.JPG</td><td class="new">holiday-008.jpg</td></tr>
+          <tr><td>IMG_4493.JPG</td><td class="new">holiday-009.jpg</td></tr>
+          <tr><td>IMG_4497.JPG</td><td class="new">holiday-010.jpg</td></tr>
+        </table>
+      </div>
+    </div>
+    <div class="foot">No conflicts found · Undo is available after renaming<span class="btn alt" style="margin-left:auto">Save rules</span><span class="btn" style="margin-left:0">Rename 128 files</span></div>
+  </div>
+  <div class="kush-tag"><i></i>Concept by KUSH · Desktop tools</div>
+</body>
+</html>

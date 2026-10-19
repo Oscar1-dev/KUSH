@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<link rel="stylesheet" href="base.css" />
+<style>
+  .wrap { position: absolute; inset: 40px 50px; display: grid; grid-template-columns: 1.4fr 1fr; grid-template-rows: 1.05fr 1fr; gap: 20px; font-family: "Archivo", sans-serif; }
+  .card { border-radius: 16px; overflow: hidden; position: relative; box-shadow: 0 30px 70px -30px #000; }
+  .label { position: absolute; left: 18px; top: 14px; z-index: 2; font: 500 11px "Geist Mono"; letter-spacing: .14em; text-transform: uppercase; color: rgba(255,255,255,.8); background: rgba(0,0,0,.35); padding: 4px 8px; border-radius: 999px; }
+  .banner { grid-column: span 2; background: linear-gradient(115deg, #0f0a1f 10%, #3b1d78 45%, #ec4899 80%, #fbbf24); display: flex; align-items: center; padding: 0 70px; }
+  .banner::before { content: ""; position: absolute; inset: 0; background: repeating-linear-gradient(90deg, rgba(255,255,255,.05) 0 2px, transparent 2px 40px); }
+  .grid8 { position: absolute; right: 70px; top: 50%; translate: 0 -50%; display: grid; grid-template-columns: repeat(4, 48px); gap: 10px; }
+  .grid8 i { width: 48px; height: 48px; border-radius: 10px; background: rgba(255,255,255,.12); }
+  .grid8 i:nth-child(3n) { background: #fbbf24; } .grid8 i:nth-child(4n) { background: #ec4899; }
+  .bt { position: relative; color: #fff; }
+  .bt b { display: block; font-weight: 900; font-stretch: 125%; font-size: 96px; letter-spacing: -.04em; line-height: .9; text-transform: uppercase; }
+  .bt span { font: 500 15px "Geist Mono"; letter-spacing: .3em; color: #fde68a; }
+  .icons { background: #17121f; display: flex; align-items: center; justify-content: center; gap: 30px; }
+  .ico { width: 150px; height: 150px; border-radius: 50%; display: grid; place-items: center; font-weight: 900; font-stretch: 125%; font-size: 64px; color: #fff; }
+  .ico.sq { border-radius: 34px; }
+  .emoji { background: #221a2e; display: grid; grid-template-columns: repeat(4, 1fr); place-items: center; padding: 40px 30px 20px; }
+  .em { width: 86px; height: 86px; border-radius: 22px; display: grid; place-items: center; font-size: 46px; }
+</style>
+</head>
+<body>
+  <div class="stage">
+    <div class="wrap">
+      <div class="card banner"><span class="label">Server banner · 960×540</span><div class="bt"><b>Pixel<br />Lounge</b><span>PLAY · CHILL · REPEAT</span></div><div class="grid8"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div></div>
+      <div class="card icons"><span class="label">Server icons</span>
+        <div class="ico" style="background:linear-gradient(135deg,#3b1d78,#ec4899)">PL</div>
+        <div class="ico sq" style="background:#fbbf24;color:#17121f">P</div>
+      </div>
+      <div class="card emoji"><span class="label">Emoji set</span>
+        <div class="em" style="background:#3b1d78">🎮</div><div class="em" style="background:#ec4899">🔥</div><div class="em" style="background:#fbbf24">⭐</div><div class="em" style="background:#14b8a6">👋</div>
+        <div class="em" style="background:#f97316">🏆</div><div class="em" style="background:#6366f1">💬</div><div class="em" style="background:#22c55e">✅</div><div class="em" style="background:#ef4444">❤️</div>
+      </div>
+    </div>
+  </div>
+  <div class="kush-tag"><i></i>Concept by KUSH · Graphics</div>
+</body>
+</html>

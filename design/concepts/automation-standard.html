@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<link rel="stylesheet" href="base.css" />
+<style>
+  .wrap { position: absolute; inset: 60px 70px; display: grid; grid-template-columns: 420px 1fr; gap: 30px; align-items: center; font-family: "Inter", sans-serif; }
+  .cfg { background: #f8f8f7; border-radius: 16px; padding: 26px; color: #18181b; box-shadow: 0 30px 80px -30px #000; }
+  .cfg h3 { margin: 0 0 4px; font-size: 20px; }
+  .cfg p { margin: 0 0 18px; color: #71717a; font-size: 14px; }
+  .row { background: #fff; border: 1px solid #e4e4e7; border-radius: 10px; padding: 14px; margin-bottom: 10px; display: flex; gap: 12px; align-items: center; font-size: 14px; }
+  .row i { width: 32px; height: 32px; border-radius: 9px; flex: none; }
+  .row b { display: block; }
+  .row small { color: #71717a; }
+  .arrow { text-align: center; color: #a1a1aa; margin: -4px 0 6px; }
+  .on { margin-left: auto; width: 38px; height: 22px; border-radius: 999px; background: #22c55e; position: relative; }
+  .on::after { content: ""; position: absolute; right: 3px; top: 3px; width: 16px; height: 16px; border-radius: 50%; background: #fff; }
+  .dc { background: #313338; border-radius: 14px; padding: 22px; color: #dbdee1; box-shadow: 0 30px 80px -30px #000; display: flex; flex-direction: column; gap: 16px; }
+  .ch { color: #f2f3f5; font-weight: 600; padding-bottom: 12px; border-bottom: 1px solid #26272b; }
+  .msg { display: grid; grid-template-columns: 40px 1fr; gap: 12px; }
+  .av { width: 40px; height: 40px; border-radius: 50%; background: linear-gradient(135deg, #f59e0b, #ef4444); }
+  .name { color: #f2f3f5; font-weight: 600; }
+  .bot { font-size: 10px; font-weight: 700; background: #5865f2; color: #fff; border-radius: 4px; padding: 1px 5px; margin-left: 6px; vertical-align: 2px; }
+  .embed { margin-top: 6px; background: #2b2d31; border-left: 4px solid #22c55e; border-radius: 4px; padding: 12px 14px; font-size: 14px; }
+  .embed h4 { margin: 0 0 6px; color: #f2f3f5; font-size: 15px; }
+  .f { display: flex; gap: 26px; margin-top: 6px; font-size: 13px; }
+  .f b { display: block; font-size: 12px; color: #f2f3f5; }
+</style>
+</head>
+<body>
+  <div class="stage">
+    <div class="wrap">
+      <div class="cfg">
+        <h3>Store alerts</h3><p>When something happens in your shop, your team hears about it in Discord.</p>
+        <div class="row"><i style="background:#8b5cf6"></i><div><b>New order</b><small>From your store webhook</small></div><span class="on"></span></div>
+        <div class="arrow">↓</div>
+        <div class="row"><i style="background:#5865f2"></i><div><b>Post to #orders</b><small>Order number, total, items</small></div><span class="on"></span></div>
+        <div class="row"><i style="background:#ef4444"></i><div><b>Payment failed</b><small>DM the shop owner</small></div><span class="on"></span></div>
+        <div class="row"><i style="background:#f59e0b"></i><div><b>Daily summary</b><small>Every day at 9:00</small></div><span class="on"></span></div>
+      </div>
+      <div class="dc">
+        <div class="ch"># orders</div>
+        <div class="msg"><div class="av"></div><div><span class="name">Shop Alerts</span><span class="bot">BOT</span>
+          <div class="embed"><h4>🛒 New order #48121</h4>2 × Desk Mat XL, 1 × Sticker Pack<div class="f"><span><b>Total</b>£52.97</span><span><b>Paid</b>Card</span><span><b>Ships</b>Tomorrow</span></div></div></div></div>
+        <div class="msg"><div class="av"></div><div><span class="name">Shop Alerts</span><span class="bot">BOT</span>
+          <div class="embed" style="border-left-color:#ef4444"><h4>⚠️ Payment failed #48122</h4>Card declined. The customer has been emailed a retry link.</div></div></div>
+        <div class="msg"><div class="av"></div><div><span class="name">Shop Alerts</span><span class="bot">BOT</span>
+          <div class="embed" style="border-left-color:#f59e0b"><h4>☀️ Yesterday in numbers</h4><div class="f"><span><b>Orders</b>41</span><span><b>Revenue</b>£1,532</span><span><b>Refunds</b>1</span></div></div></div></div>
+      </div>
+    </div>
+  </div>
+  <div class="kush-tag"><i></i>Concept by KUSH · Automation</div>
+</body>
+</html>

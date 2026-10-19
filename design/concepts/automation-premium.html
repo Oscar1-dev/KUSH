@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<link rel="stylesheet" href="base.css" />
+<style>
+  .app { position: absolute; inset: 0; background: #0c0d10; color: #e5e7eb; font-family: "Inter", sans-serif; display: grid; grid-template-columns: 1fr 360px; }
+  .canvas { position: relative; background-image: radial-gradient(#23262d 1.2px, transparent 1.2px); background-size: 24px 24px; }
+  .top { position: absolute; left: 24px; top: 20px; right: 24px; display: flex; justify-content: space-between; align-items: center; }
+  .top h2 { margin: 0; font-size: 20px; }
+  .top small { color: #8b8f99; }
+  .live { padding: 6px 12px; border-radius: 999px; background: #052e1b; color: #4ade80; font-size: 13px; font-weight: 600; }
+  .node { position: absolute; width: 250px; border-radius: 14px; background: #15171c; border: 1px solid #2a2d35; padding: 14px 16px; box-shadow: 0 20px 40px -20px #000; }
+  .node p { margin: 0; font-size: 12px; color: #8b8f99; }
+  .node b { display: flex; align-items: center; gap: 10px; font-size: 15px; margin: 6px 0 4px; }
+  .node b i { width: 26px; height: 26px; border-radius: 8px; }
+  .node .ok { color: #4ade80; font-size: 12px; }
+  svg { position: absolute; inset: 0; }
+  .side { background: #111317; border-left: 1px solid #22252c; padding: 22px; }
+  .side h3 { margin: 0 0 14px; font-size: 15px; }
+  .log { font: 12.5px "Geist Mono"; border-bottom: 1px solid #22252c; padding: 10px 0; color: #b6bac4; }
+  .log span { color: #6b7080; margin-right: 8px; }
+  .log .g { color: #4ade80; } .log .y { color: #facc15; } .log .r { color: #f87171; }
+  .metric { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 18px; }
+  .metric div { background: #15171c; border: 1px solid #2a2d35; border-radius: 10px; padding: 12px; }
+  .metric b { display: block; font-size: 22px; }
+  .metric small { color: #8b8f99; }
+</style>
+</head>
+<body>
+  <div class="stage">
+    <div class="window" style="background:#0c0d10">
+      <div class="chrome"><b></b><b></b><b></b><span class="url">flows.relaybench.dev / new-order-flow</span></div>
+      <div class="viewport">
+        <div class="app">
+          <div class="canvas">
+            <div class="top"><div><h2>New order flow</h2><small>Runs every time someone buys in your store</small></div><span class="live">● Live · 1,204 runs this week</span></div>
+            <svg viewBox="0 0 1080 836" preserveAspectRatio="none">
+              <g fill="none" stroke="#3b82f6" stroke-width="2.5">
+                <path d="M290 200 C380 200 380 330 470 330" /><path d="M720 330 C800 330 800 190 880 190" /><path d="M720 330 C800 330 800 470 880 470" /><path d="M720 330 C760 330 760 640 600 650" stroke="#f87171" stroke-dasharray="6 6" />
+              </g>
+            </svg>
+            <div class="node" style="left:40px;top:150px"><p>TRIGGER</p><b><i style="background:#8b5cf6"></i>Store: order paid</b><span class="ok">Webhook verified ✓</span></div>
+            <div class="node" style="left:470px;top:280px"><p>ACTION</p><b><i style="background:#3b82f6"></i>Create invoice</b><span class="ok">Retries 3× on failure</span></div>
+            <div class="node" style="left:820px;top:140px;width:230px"><p>NOTIFY</p><b><i style="background:#5865f2"></i>Discord #orders</b><span class="ok">Posted</span></div>
+            <div class="node" style="left:820px;top:420px;width:230px"><p>SYNC</p><b><i style="background:#22c55e"></i>Google Sheets</b><span class="ok">Row added</span></div>
+            <div class="node" style="left:350px;top:600px"><p>IF IT FAILS</p><b><i style="background:#ef4444"></i>Alert the team</b><span style="color:#f87171;font-size:12px">Email + Discord DM</span></div>
+          </div>
+          <aside class="side">
+            <h3>This week</h3>
+            <div class="metric"><div><b>1,204</b><small>Runs</small></div><div><b>99.7%</b><small>Succeeded</small></div><div><b>4</b><small>Retried</small></div><div><b>0</b><small>Lost</small></div></div>
+            <h3>Live log</h3>
+            <div class="log"><span>14:02:11</span><span class="g">OK</span>order #48121 → invoice INV-2207</div>
+            <div class="log"><span>14:02:12</span><span class="g">OK</span>posted to Discord #orders</div>
+            <div class="log"><span>14:02:12</span><span class="g">OK</span>sheet row 1,983 added</div>
+            <div class="log"><span>13:58:40</span><span class="y">RETRY</span>sheets timeout, attempt 2</div>
+            <div class="log"><span>13:58:43</span><span class="g">OK</span>sheet row 1,982 added</div>
+            <div class="log"><span>13:41:05</span><span class="g">OK</span>order #48120 → invoice INV-2206</div>
+          </aside>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="kush-tag"><i></i>Concept by KUSH · Automation</div>
+</body>
+</html>

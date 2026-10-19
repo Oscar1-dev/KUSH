@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<link rel="stylesheet" href="base.css" />
+<style>
+  .win { width: 1460px; height: 900px; border-radius: 12px; overflow: hidden; background: #121216; color: #e4e4ea; font-family: "Inter", sans-serif; box-shadow: 0 0 0 1px rgba(255,255,255,.08), 0 50px 120px -30px #000; display: grid; grid-template-rows: 40px 1fr 250px; }
+  .title { display: flex; align-items: center; gap: 12px; padding: 0 14px; background: #0c0c0f; font-size: 13px; color: #9a9aa6; border-bottom: 1px solid #22222a; }
+  .title b { color: #fff; font-weight: 600; }
+  .title .app { width: 18px; height: 18px; border-radius: 5px; background: linear-gradient(135deg, #f97316, #ec4899); }
+  .title .ctl { margin-left: auto; display: flex; gap: 18px; color: #6b6b76; }
+  .mid { display: grid; grid-template-columns: 270px 1fr 300px; min-height: 0; }
+  .bin, .insp { background: #16161b; border-right: 1px solid #22222a; padding: 14px; font-size: 13px; }
+  .insp { border-right: 0; border-left: 1px solid #22222a; }
+  h4 { margin: 0 0 12px; font-size: 11px; letter-spacing: .1em; text-transform: uppercase; color: #8a8a96; }
+  .clips { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .clip { aspect-ratio: 16/10; border-radius: 6px; position: relative; overflow: hidden; }
+  .clip span { position: absolute; left: 6px; bottom: 5px; font: 500 10px "Geist Mono"; color: #fff; }
+  .c1 { background: linear-gradient(135deg, #1e3a8a, #9333ea); } .c2 { background: linear-gradient(135deg, #f97316, #7c2d12); } .c3 { background: linear-gradient(135deg, #065f46, #34d399); } .c4 { background: linear-gradient(135deg, #be185d, #fbcfe8); } .c5 { background: linear-gradient(135deg, #0f172a, #64748b); } .c6 { background: linear-gradient(135deg, #a16207, #fde68a); }
+  .clip.sel { outline: 2px solid #f97316; outline-offset: 2px; }
+  .preview { display: grid; place-items: center; background: #0a0a0c; position: relative; }
+  .frame { width: 640px; aspect-ratio: 16/9; border-radius: 4px; position: relative; overflow: hidden; background: radial-gradient(80% 90% at 30% 30%, #fb923c, #9a3412 45%, #1c0a05 85%); }
+  .frame::after { content: "CLIP 04 · 00:00:12:08"; position: absolute; left: 14px; top: 12px; font: 500 12px "Geist Mono"; color: rgba(255,255,255,.85); }
+  .frame i { position: absolute; right: 18%; bottom: 0; width: 34%; height: 78%; border-radius: 50% 50% 0 0; background: #13070388; }
+  .transport { position: absolute; bottom: 18px; display: flex; gap: 16px; align-items: center; font: 500 13px "Geist Mono"; color: #c9c9d2; }
+  .play { width: 38px; height: 38px; border-radius: 50%; background: #f97316; display: grid; place-items: center; color: #fff; }
+  .field { display: flex; justify-content: space-between; padding: 9px 0; border-bottom: 1px solid #22222a; color: #b7b7c2; }
+  .field b { color: #fff; font-weight: 500; }
+  .slider { height: 4px; border-radius: 4px; background: #2a2a33; margin: 12px 0 18px; position: relative; }
+  .slider::after { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 62%; border-radius: 4px; background: #f97316; }
+  .export { margin-top: 18px; padding: 11px; text-align: center; border-radius: 8px; background: linear-gradient(90deg, #f97316, #ec4899); font-weight: 600; color: #fff; }
+  .timeline { background: #101014; border-top: 1px solid #22222a; padding: 12px 14px; position: relative; }
+  .ruler { display: flex; justify-content: space-between; font: 500 10px "Geist Mono"; color: #6b6b76; margin: 0 0 8px 90px; }
+  .track { display: grid; grid-template-columns: 80px 1fr; gap: 10px; align-items: center; height: 44px; margin-bottom: 6px; }
+  .track > span { font-size: 12px; color: #8a8a96; }
+  .lane { position: relative; height: 38px; background: #17171c; border-radius: 6px; }
+  .seg { position: absolute; top: 3px; bottom: 3px; border-radius: 5px; }
+  .head { position: absolute; top: 8px; bottom: 8px; left: 47%; width: 2px; background: #f97316; }
+  .head::before { content: ""; position: absolute; top: -6px; left: -6px; border: 7px solid transparent; border-top-color: #f97316; }
+  .wave { background: repeating-linear-gradient(90deg, #22c55e55 0 2px, transparent 2px 5px); }
+</style>
+</head>
+<body>
+  <div class="stage">
+    <div class="win">
+      <div class="title"><span class="app"></span><b>Clipforge</b> — launch-teaser.cfproj<span class="ctl"><span>—</span><span>▢</span><span>✕</span></span></div>
+      <div class="mid">
+        <div class="bin">
+          <h4>Media</h4>
+          <div class="clips"><div class="clip c1"><span>intro.mp4</span></div><div class="clip c2 sel"><span>sunset.mp4</span></div><div class="clip c3"><span>b-roll.mp4</span></div><div class="clip c4"><span>logo.mov</span></div><div class="clip c5"><span>city.mp4</span></div><div class="clip c6"><span>outro.mp4</span></div></div>
+          <h4 style="margin-top:18px">Presets</h4>
+          <div class="field"><span>TikTok 9:16</span><b>1080×1920</b></div>
+          <div class="field"><span>YouTube 16:9</span><b>3840×2160</b></div>
+          <div class="field"><span>Square post</span><b>1080×1080</b></div>
+        </div>
+        <div class="preview"><div class="frame"><i></i></div><div class="transport"><span>00:00:12:08</span><span class="play">▶</span><span>00:00:45:00</span></div></div>
+        <div class="insp">
+          <h4>Inspector</h4>
+          <div class="field"><span>Clip</span><b>sunset.mp4</b></div>
+          <div class="field"><span>Speed</span><b>1.25×</b></div>
+          <div class="field"><span>Colour grade</span><b>Warm film</b></div>
+          <p style="margin:16px 0 0;color:#8a8a96">Exposure</p><div class="slider"></div>
+          <p style="margin:0;color:#8a8a96">Saturation</p><div class="slider" style="--x:40%"></div>
+          <div class="field"><span>Auto captions</span><b>On · English</b></div>
+          <div class="export">Export all formats</div>
+        </div>
+      </div>
+      <div class="timeline">
+        <div class="ruler"><span>00:00</span><span>00:05</span><span>00:10</span><span>00:15</span><span>00:20</span><span>00:25</span><span>00:30</span><span>00:35</span><span>00:40</span></div>
+        <div class="track"><span>Video 2</span><div class="lane"><div class="seg" style="left:30%;width:18%;background:#be185d"></div></div></div>
+        <div class="track"><span>Video 1</span><div class="lane"><div class="seg" style="left:0;width:24%;background:#1e40af"></div><div class="seg" style="left:25%;width:30%;background:#c2410c"></div><div class="seg" style="left:56%;width:26%;background:#047857"></div><div class="seg" style="left:83%;width:16%;background:#a16207"></div></div></div>
+        <div class="track"><span>Captions</span><div class="lane"><div class="seg" style="left:4%;width:12%;background:#3f3f46"></div><div class="seg" style="left:20%;width:16%;background:#3f3f46"></div><div class="seg" style="left:42%;width:10%;background:#3f3f46"></div><div class="seg" style="left:60%;width:20%;background:#3f3f46"></div></div></div>
+        <div class="track"><span>Audio</span><div class="lane"><div class="seg wave" style="left:0;width:99%"></div></div></div>
+        <div class="head" style="left:calc(90px + 45%)"></div>
+      </div>
+    </div>
+  </div>
+  <div class="kush-tag"><i></i>Concept by KUSH · Desktop software</div>
+</body>
+</html>

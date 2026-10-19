@@ -152,7 +152,8 @@
 
 .pin {
   position: relative;
-  height: 340vh;
+  /* Scroll distance scales with the number of steps (--n on the element). */
+  height: calc(var(--n, 4) * 72vh + 60vh);
   border-top: 1px solid var(--line);
 }
 .pinStage {
@@ -177,7 +178,7 @@
 }
 .pinNumber {
   --on: calc(
-    max(0, min(1, (var(--pin, 0) * 4 - var(--i)) * 4)) * max(0, min(1, (var(--end) - var(--pin, 0) * 4) * 4))
+    max(0, min(1, (var(--pin, 0) * var(--n, 4) - var(--i)) * 4)) * max(0, min(1, (var(--end) - var(--pin, 0) * var(--n, 4)) * 4))
   );
   position: absolute;
   inset: 0;
@@ -212,7 +213,7 @@
   gap: clamp(18px, 3vh, 36px);
 }
 .pinStep {
-  --a: max(0, min(1, (var(--pin, 0) * 4 - var(--i)) * 2.5));
+  --a: max(0, min(1, (var(--pin, 0) * var(--n, 4) - var(--i)) * 2.5));
   opacity: calc(0.18 + var(--a) * 0.82);
   transform: translateX(calc((1 - var(--a)) * 28px));
 }

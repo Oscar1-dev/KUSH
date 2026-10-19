@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<link rel="stylesheet" href="base.css" />
+<style>
+  .board { position: absolute; inset: 0; background: #ece6dc; color: #1f2a24; font-family: "Space Grotesk", sans-serif; display: grid; grid-template-columns: 1.15fr 1fr 1fr; grid-template-rows: 1fr 1fr; gap: 18px; padding: 40px; }
+  .cell { border-radius: 18px; position: relative; overflow: hidden; }
+  .hero { grid-row: span 2; background: #1f3b2f; color: #ece6dc; display: grid; place-items: center; }
+  .mark { width: 230px; height: 230px; border-radius: 50%; border: 10px solid #e8b04a; position: relative; display: grid; place-items: center; }
+  .mark::before { content: ""; width: 120px; height: 60px; border-radius: 0 0 60px 60px; background: #e8b04a; translate: 0 26px; }
+  .mark::after { content: ""; position: absolute; top: 52px; width: 70px; height: 70px; border-radius: 50%; background: #ece6dc; }
+  .word { position: absolute; bottom: 70px; text-align: center; }
+  .word b { display: block; font-size: 58px; letter-spacing: -.04em; line-height: 1; }
+  .word span { font: 500 13px "Geist Mono"; letter-spacing: .3em; color: #e8b04a; }
+  .label { position: absolute; left: 22px; top: 18px; font: 500 11px "Geist Mono"; letter-spacing: .14em; text-transform: uppercase; opacity: .7; }
+  .palette { background: #fff; display: grid; grid-template-columns: repeat(4, 1fr); }
+  .sw { display: flex; flex-direction: column; justify-content: flex-end; padding: 14px; font: 500 12px "Geist Mono"; }
+  .type { background: #fff; padding: 52px 26px 22px; }
+  .type .aa { font-size: 120px; line-height: .9; letter-spacing: -.06em; font-weight: 700; }
+  .type .serif { font: italic 38px "Instrument Serif", serif; margin-top: 6px; }
+  .type p { font-size: 14px; color: #4b5a51; }
+  .cup { background: #d9c8ae; display: grid; place-items: center; }
+  .cupb { width: 150px; height: 190px; background: #1f3b2f; border-radius: 10px 10px 40px 40px; position: relative; display: grid; place-items: center; }
+  .cupb::before { content: ""; position: absolute; top: -18px; left: -10px; right: -10px; height: 24px; border-radius: 8px; background: #e8b04a; }
+  .cupb i { width: 64px; height: 64px; border-radius: 50%; border: 5px solid #e8b04a; }
+  .card { background: #1f3b2f; display: grid; place-items: center; }
+  .bc { width: 300px; height: 176px; border-radius: 12px; background: #ece6dc; padding: 20px; display: flex; flex-direction: column; justify-content: space-between; box-shadow: 0 20px 40px -10px rgba(0,0,0,.4); rotate: -6deg; }
+  .bc b { font-size: 26px; letter-spacing: -.03em; }
+  .bc span { font: 500 11px "Geist Mono"; color: #4b5a51; }
+</style>
+</head>
+<body>
+  <div class="board">
+    <div class="cell hero"><span class="label" style="color:#ece6dc">Primary mark</span><div class="mark"></div><div class="word"><b>Halcyon</b><span>COFFEE · EST. 2024</span></div></div>
+    <div class="cell palette"><span class="label">Palette</span>
+      <div class="sw" style="background:#1f3b2f;color:#ece6dc">Pine<br />#1F3B2F</div>
+      <div class="sw" style="background:#e8b04a">Honey<br />#E8B04A</div>
+      <div class="sw" style="background:#d9c8ae">Oat<br />#D9C8AE</div>
+      <div class="sw" style="background:#ece6dc;border-left:1px solid #ddd">Milk<br />#ECE6DC</div>
+    </div>
+    <div class="cell type"><span class="label">Typography</span><div class="aa">Aa</div><div class="serif">Slow mornings, good coffee.</div><p>Space Grotesk for headlines · Instrument Serif for voice</p></div>
+    <div class="cell cup"><span class="label">Packaging</span><div class="cupb"><i></i></div></div>
+    <div class="cell card"><span class="label" style="color:#ece6dc">Stationery</span><div class="bc"><b>Halcyon</b><span>hello@halcyon.cafe<br />14 Market Row</span></div></div>
+  </div>
+  <div class="kush-tag"><i></i>Concept by KUSH · Brand identity</div>
+</body>
+</html>

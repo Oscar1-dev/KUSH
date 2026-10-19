@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<link rel="stylesheet" href="base.css" />
+<style>
+  .site { position: absolute; inset: 0; background: #f4efe6; color: #17150f; font-family: "Space Grotesk", sans-serif; }
+  .nav { display: flex; justify-content: space-between; align-items: center; padding: 24px 56px; border-bottom: 2px solid #17150f; }
+  .logo { font-weight: 700; font-size: 26px; letter-spacing: -.03em; display: flex; align-items: center; gap: 10px; }
+  .logo i { width: 28px; height: 28px; border-radius: 50%; background: repeating-linear-gradient(45deg, #c8361e 0 6px, #f4efe6 6px 12px, #1f3d8a 12px 18px, #f4efe6 18px 24px); border: 2px solid #17150f; }
+  .links { display: flex; gap: 30px; font-weight: 500; }
+  .book { padding: 12px 22px; background: #c8361e; color: #fff; font-weight: 700; border-radius: 6px; box-shadow: 4px 4px 0 #17150f; }
+  .hero { display: grid; grid-template-columns: 1.15fr .85fr; height: 560px; border-bottom: 2px solid #17150f; }
+  .left { padding: 54px 56px; border-right: 2px solid #17150f; position: relative; }
+  .tag { display: inline-block; padding: 6px 12px; border: 2px solid #17150f; border-radius: 999px; font-weight: 700; font-size: 13px; letter-spacing: .06em; }
+  h1 { font-size: 118px; line-height: .9; letter-spacing: -.05em; margin: 26px 0 22px; font-weight: 700; }
+  h1 span { color: #c8361e; }
+  p.lede { font-size: 20px; max-width: 520px; margin: 0; color: #3b382f; }
+  .row { display: flex; gap: 14px; margin-top: 32px; }
+  .ghost { padding: 12px 22px; border: 2px solid #17150f; border-radius: 6px; font-weight: 700; }
+  .right { display: grid; grid-template-rows: 1fr auto; }
+  .art { position: relative; background: #1f3d8a; overflow: hidden; }
+  .art::before { content: ""; position: absolute; width: 360px; height: 360px; right: -60px; top: 40px; border-radius: 50%; background: #c8361e; }
+  .art::after { content: "EST. 2019"; position: absolute; left: 34px; bottom: 26px; color: #f4efe6; font-weight: 700; font-size: 64px; letter-spacing: -.04em; line-height: 1; }
+  .chair { position: absolute; left: 70px; top: 70px; width: 120px; height: 200px; border-radius: 60px 60px 12px 12px; background: #f4efe6; border: 4px solid #17150f; }
+  .prices { padding: 24px 34px; display: grid; gap: 10px; background: #fff; }
+  .price { display: flex; justify-content: space-between; font-weight: 500; font-size: 17px; border-bottom: 1px dashed #b9b2a3; padding-bottom: 8px; }
+  .price b { font-weight: 700; }
+  .strip { display: flex; justify-content: space-between; padding: 22px 56px; font-weight: 700; font-size: 15px; letter-spacing: .04em; }
+</style>
+</head>
+<body>
+  <div class="stage">
+    <div class="window">
+      <div class="chrome"><b></b><b></b><b></b><span class="url">northsidecuts.co.uk</span></div>
+      <div class="viewport">
+        <div class="site">
+          <div class="nav">
+            <span class="logo"><i></i>Northside Cuts</span>
+            <span class="links"><span>Prices</span><span>Team</span><span>Find us</span></span>
+            <span class="book">Book a chair</span>
+          </div>
+          <div class="hero">
+            <div class="left">
+              <span class="tag">WALK-INS WELCOME · TUE–SAT</span>
+              <h1>Sharp cuts.<br /><span>No fuss.</span></h1>
+              <p class="lede">Fades, classic cuts and beard work on the high street. Book online in under a minute.</p>
+              <div class="row"><span class="book">Book online</span><span class="ghost">See prices</span></div>
+            </div>
+            <div class="right">
+              <div class="art"><span class="chair"></span></div>
+              <div class="prices">
+                <div class="price"><span>Skin fade</span><b>£18</b></div>
+                <div class="price"><span>Classic cut</span><b>£15</b></div>
+                <div class="price"><span>Beard trim</span><b>£10</b></div>
+              </div>
+            </div>
+          </div>
+          <div class="strip"><span>★ ONE-PAGE SITE</span><span>MOBILE-FIRST</span><span>ONLINE BOOKING LINK</span><span>GOOGLE MAPS</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="kush-tag"><i></i>Concept by KUSH · Websites</div>
+</body>
+</html>

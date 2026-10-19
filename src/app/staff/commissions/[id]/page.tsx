@@ -5,7 +5,7 @@ import ActionForm from "@/components/staff/action-form";
 import styles from "@/components/account/account.module.css";
 import { ApiError, kushApi } from "@/lib/server/kush-api";
 import { requireStaff } from "@/lib/server/staff";
-import { commissionLabel, dateTime, milestoneLabel, type CommissionStatus, type Milestone, type Quote } from "@/lib/workspace";
+import { categoryLabel,  commissionLabel, dateTime, milestoneLabel, type CommissionStatus, type Milestone, type Quote } from "@/lib/workspace";
 
 interface Detail {
   id: string;
@@ -60,7 +60,7 @@ export default async function StaffCommission({ params }: { params: Promise<{ id
       <div className={styles.headerRow} style={{ marginTop: 22 }}>
         <div>
           <p className={styles.kicker}>
-            {c.category.toUpperCase()} · {c.customerName.toUpperCase()}
+            {categoryLabel(c.category).toUpperCase()} · {c.customerName.toUpperCase()}
           </p>
           <h1 className={styles.title} style={{ fontSize: "clamp(34px, 5vw, 58px)" }}>
             {c.title}
@@ -105,11 +105,20 @@ export default async function StaffCommission({ params }: { params: Promise<{ id
                   </option>
                   {c.actions.statuses.map((s) => (
                     <option key={s} value={s}>
-                      {commissionLabel[s as CommissionStatus] ?? s}
+                      {/* Leaving payment_pending means staff confirmed the deposit by hand. */}
+                      {(c.status === "payment_pending" || c.status === "accepted") && s === "in_progress"
+                        ? "Deposit received: start work"
+                        : (commissionLabel[s as CommissionStatus] ?? s)}
                     </option>
                   ))}
                 </select>
               </ActionForm>
+              {c.status === "payment_pending" ? (
+                <p className={styles.rowMeta} style={{ marginTop: 10 }}>
+                  Payments aren&apos;t collected on the site yet. Only confirm the deposit once it has actually arrived;
+                  this is recorded in the audit log.
+                </p>
+              ) : null}
             </div>
           ) : null}
           {c.actions.note ? (

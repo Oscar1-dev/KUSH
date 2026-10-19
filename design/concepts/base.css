@@ -1,0 +1,96 @@
+/* Shared base for KUSH concept showcases. Every image is labelled. */
+@import url("https://fonts.googleapis.com/css2?family=Archivo:ital,wdth,wght@0,62..125,100..900;1,62..125,100..900&family=Geist:wght@300..800&family=Geist+Mono:wght@400;500&family=Instrument+Serif:ital@0;1&family=Space+Grotesk:wght@400;500;700&family=Inter:wght@400;500;600;700&display=block");
+
+* {
+  box-sizing: border-box;
+}
+html,
+body {
+  margin: 0;
+  width: var(--w, 1600px);
+  height: var(--h, 1000px);
+  overflow: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+body {
+  position: relative;
+  font-family: "Geist", system-ui, sans-serif;
+}
+
+/* The concept label: always visible, bottom-right, every image. */
+.kush-tag {
+  position: absolute;
+  right: 22px;
+  bottom: 20px;
+  z-index: 999;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 14px 8px 10px;
+  border-radius: 999px;
+  background: rgba(7, 7, 10, 0.86);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  color: #f3f2ef;
+  font: 500 12px/1 "Geist Mono", monospace;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  backdrop-filter: blur(8px);
+}
+.kush-tag i {
+  display: block;
+  width: 18px;
+  height: 16px;
+  background: linear-gradient(100deg, #ff9edb, #b9a2ff, #8fd3ff, #96f2c8, #fff09a);
+  -webkit-mask: url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjUwIDgwIDkwMCA4MDAiPjxwYXRoIGZpbGw9IiNmZmYiIGQ9Ik01MTAuMiA2NDAuMEM1NzYuNSA0MzQuOCA1MjMuOCAxOTcuMiA1MDAuMCAxMDAuMEM0NzYuMiAxOTcuMiA0MjMuNSA0MzQuOCA0ODkuOCA2NDAuMFpNNTA3LjcgNjQ1LjJDNjU3LjcgNTMxLjAgNzMzLjUgMzMyLjYgNzYyLjggMjUwLjRDNjk3LjUgMzA4LjMgNTQyLjAgNDUyLjkgNDkyLjMgNjM0LjhaTTUwNy43IDYzNC44QzQ1OC4wIDQ1Mi45IDMwMi41IDMwOC4zIDIzNy4yIDI1MC40QzI2Ni41IDMzMi42IDM0Mi4zIDUzMS4wIDQ5Mi4zIDY0NS4yWk01MDMuMCA2NDcuMUM2NTEuOSA2MzcuOSA3ODYuMyA1MzcuOSA4NDAuNiA0OTUuNEM3NzIuMyA1MDUuMCA2MDcuMCA1MzIuMiA0OTcuMCA2MzIuOVpNNTAzLjAgNjMyLjlDMzkzLjAgNTMyLjIgMjI3LjcgNTA1LjAgMTU5LjQgNDk1LjRDMjEzLjcgNTM3LjkgMzQ4LjEgNjM3LjkgNDk3LjAgNjQ3LjFaTTQ5OS4wIDY0NC40QzU3MC4xIDY5MS4xIDY2NS40IDY4OS4wIDcwNC42IDY4Ny4yQzY3MC4yIDY2OC40IDU4NS40IDYyNC44IDUwMS4wIDYzNS42Wk00OTkuMCA2MzUuNkM0MTQuNiA2MjQuOCAzMjkuOCA2NjguNCAyOTUuNCA2ODcuMkMzMzQuNiA2ODkuMCA0MjkuOSA2OTEuMSA1MDEuMCA2NDQuNFpNNDkzIDYzNEw1MDcgNjM0TDUwMyA4NjBRNTAwIDg3MiA0OTcgODYwWiIvPjwvc3ZnPg==") center / contain no-repeat;
+  mask: url("data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjUwIDgwIDkwMCA4MDAiPjxwYXRoIGZpbGw9IiNmZmYiIGQ9Ik01MTAuMiA2NDAuMEM1NzYuNSA0MzQuOCA1MjMuOCAxOTcuMiA1MDAuMCAxMDAuMEM0NzYuMiAxOTcuMiA0MjMuNSA0MzQuOCA0ODkuOCA2NDAuMFpNNTA3LjcgNjQ1LjJDNjU3LjcgNTMxLjAgNzMzLjUgMzMyLjYgNzYyLjggMjUwLjRDNjk3LjUgMzA4LjMgNTQyLjAgNDUyLjkgNDkyLjMgNjM0LjhaTTUwNy43IDYzNC44QzQ1OC4wIDQ1Mi45IDMwMi41IDMwOC4zIDIzNy4yIDI1MC40QzI2Ni41IDMzMi42IDM0Mi4zIDUzMS4wIDQ5Mi4zIDY0NS4yWk01MDMuMCA2NDcuMUM2NTEuOSA2MzcuOSA3ODYuMyA1MzcuOSA4NDAuNiA0OTUuNEM3NzIuMyA1MDUuMCA2MDcuMCA1MzIuMiA0OTcuMCA2MzIuOVpNNTAzLjAgNjMyLjlDMzkzLjAgNTMyLjIgMjI3LjcgNTA1LjAgMTU5LjQgNDk1LjRDMjEzLjcgNTM3LjkgMzQ4LjEgNjM3LjkgNDk3LjAgNjQ3LjFaTTQ5OS4wIDY0NC40QzU3MC4xIDY5MS4xIDY2NS40IDY4OS4wIDcwNC42IDY4Ny4yQzY3MC4yIDY2OC40IDU4NS40IDYyNC44IDUwMS4wIDYzNS42Wk00OTkuMCA2MzUuNkM0MTQuNiA2MjQuOCAzMjkuOCA2NjguNCAyOTUuNCA2ODcuMkMzMzQuNiA2ODkuMCA0MjkuOSA2OTEuMSA1MDEuMCA2NDQuNFpNNDkzIDYzNEw1MDcgNjM0TDUwMyA4NjBRNTAwIDg3MiA0OTcgODYwWiIvPjwvc3ZnPg==") center / contain no-repeat;
+}
+
+/* Showcase stage + browser window, shared by the website/app concepts. */
+.stage {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: radial-gradient(120% 90% at 50% 0%, #17171d 0%, #08080b 70%);
+}
+.window {
+  width: 1440px;
+  height: 880px;
+  border-radius: 16px;
+  overflow: hidden;
+  background: #fff;
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.08),
+    0 50px 120px -30px rgba(0, 0, 0, 0.85);
+  display: flex;
+  flex-direction: column;
+}
+.chrome {
+  flex: none;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 16px;
+  background: #1c1c22;
+  color: #a1a1aa;
+  font: 500 12px "Geist Mono", monospace;
+}
+.chrome b {
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  background: #3a3a44;
+}
+.chrome .url {
+  margin-left: 18px;
+  padding: 6px 14px;
+  border-radius: 8px;
+  background: #121217;
+  min-width: 380px;
+}
+.viewport {
+  position: relative;
+  flex: 1;
+  overflow: hidden;
+}

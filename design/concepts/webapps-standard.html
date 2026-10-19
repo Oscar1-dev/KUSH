@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<link rel="stylesheet" href="base.css" />
+<style>
+  .app { position: absolute; inset: 0; background: #f7f7f5; color: #1c1c1a; font-family: "Inter", sans-serif; display: grid; grid-template-rows: 60px 1fr; }
+  .bar { display: flex; align-items: center; gap: 28px; padding: 0 28px; background: #fff; border-bottom: 1px solid #e6e5e1; font-size: 14px; }
+  .bar .logo { font-weight: 700; font-size: 17px; display: flex; gap: 8px; align-items: center; }
+  .bar .logo i { width: 22px; height: 22px; border-radius: 6px; background: #ff6b35; }
+  .bar span.on { font-weight: 600; border-bottom: 2px solid #1c1c1a; padding: 19px 0; }
+  .bar .me { margin-left: auto; width: 32px; height: 32px; border-radius: 50%; background: #e6e5e1; display: grid; place-items: center; font-weight: 600; font-size: 13px; }
+  .body { padding: 26px 32px; display: grid; grid-template-columns: 1fr 340px; gap: 20px; overflow: hidden; }
+  h2 { margin: 0; font-size: 26px; letter-spacing: -.02em; }
+  .sub { color: #6c6b66; font-size: 14px; margin: 4px 0 18px; }
+  .tools { display: flex; gap: 10px; margin-bottom: 14px; }
+  .search { flex: 1; padding: 10px 14px; border: 1px solid #dcdbd6; border-radius: 9px; background: #fff; color: #9a9993; font-size: 14px; }
+  .btn { padding: 10px 16px; border-radius: 9px; background: #1c1c1a; color: #fff; font-weight: 600; font-size: 14px; }
+  .btn.alt { background: #fff; color: #1c1c1a; border: 1px solid #dcdbd6; }
+  table { width: 100%; border-collapse: collapse; background: #fff; border: 1px solid #e6e5e1; border-radius: 12px; overflow: hidden; font-size: 14px; }
+  th { text-align: left; font-weight: 500; color: #6c6b66; font-size: 12px; text-transform: uppercase; letter-spacing: .06em; padding: 12px 16px; background: #fbfbfa; border-bottom: 1px solid #e6e5e1; }
+  td { padding: 13px 16px; border-bottom: 1px solid #efeee9; }
+  .pill { padding: 3px 10px; border-radius: 999px; font-size: 12px; font-weight: 600; }
+  .ok { background: #dcfce7; color: #166534; } .wait { background: #fef3c7; color: #92400e; } .no { background: #fee2e2; color: #991b1b; }
+  .card { background: #fff; border: 1px solid #e6e5e1; border-radius: 14px; padding: 18px; margin-bottom: 14px; }
+  .card h3 { margin: 0 0 12px; font-size: 15px; }
+  .cal { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; text-align: center; font-size: 13px; }
+  .cal span { padding: 8px 0; border-radius: 8px; color: #6c6b66; }
+  .cal .b { background: #ffede5; color: #c2410c; font-weight: 600; }
+  .cal .t { background: #1c1c1a; color: #fff; font-weight: 600; }
+  .stat { display: flex; justify-content: space-between; padding: 8px 0; font-size: 14px; border-top: 1px solid #efeee9; }
+  .stat b { font-size: 16px; }
+</style>
+</head>
+<body>
+  <div class="stage">
+    <div class="window">
+      <div class="chrome"><b></b><b></b><b></b><span class="url">admin.inkwell-tattoo.co.uk / bookings</span></div>
+      <div class="viewport">
+        <div class="app">
+          <div class="bar"><span class="logo"><i></i>Inkwell Admin</span><span class="on">Bookings</span><span>Clients</span><span>Artists</span><span>Deposits</span><span class="me">JD</span></div>
+          <div class="body">
+            <div>
+              <h2>Bookings</h2>
+              <p class="sub">Every appointment in one place, with deposit status.</p>
+              <div class="tools"><span class="search">Search clients, artists or dates…</span><span class="btn alt">Export CSV</span><span class="btn">+ New booking</span></div>
+              <table>
+                <tr><th>Client</th><th>Artist</th><th>Date</th><th>Session</th><th>Deposit</th></tr>
+                <tr><td>Maya Okafor</td><td>Rhys</td><td>Thu 14, 10:00</td><td>Half sleeve</td><td><span class="pill ok">Paid</span></td></tr>
+                <tr><td>Tom Hale</td><td>Ana</td><td>Thu 14, 14:30</td><td>Fine line</td><td><span class="pill wait">Pending</span></td></tr>
+                <tr><td>Priya Shah</td><td>Rhys</td><td>Fri 15, 11:00</td><td>Consultation</td><td><span class="pill ok">Paid</span></td></tr>
+                <tr><td>Leon Brooks</td><td>Kai</td><td>Fri 15, 16:00</td><td>Cover-up</td><td><span class="pill no">Cancelled</span></td></tr>
+                <tr><td>Ella Marsh</td><td>Ana</td><td>Sat 16, 12:00</td><td>Flash</td><td><span class="pill ok">Paid</span></td></tr>
+                <tr><td>Dan Price</td><td>Kai</td><td>Sat 16, 15:00</td><td>Touch-up</td><td><span class="pill wait">Pending</span></td></tr>
+              </table>
+            </div>
+            <div>
+              <div class="card"><h3>This week</h3>
+                <div class="cal"><span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span><span>S</span><span>11</span><span class="b">12</span><span>13</span><span class="t">14</span><span class="b">15</span><span class="b">16</span><span>17</span></div>
+              </div>
+              <div class="card"><h3>At a glance</h3>
+                <div class="stat"><span>Booked sessions</span><b>23</b></div>
+                <div class="stat"><span>Deposits pending</span><b>4</b></div>
+                <div class="stat"><span>Chairs free Saturday</span><b>1</b></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="kush-tag"><i></i>Concept by KUSH · Web apps</div>
+</body>
+</html>

@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<link rel="stylesheet" href="base.css" />
+<style>
+  .wrap { position: absolute; inset: 50px 60px; display: grid; grid-template-columns: 330px 1fr 1fr; gap: 26px; font-family: "Inter", sans-serif; color: #dbdee1; }
+  .panel { background: #2b2d31; border-radius: 12px; padding: 18px 12px; box-shadow: 0 0 0 1px rgba(255,255,255,.05), 0 30px 80px -30px #000; }
+  .head { color: #f2f3f5; font-weight: 700; font-size: 17px; padding: 0 8px 12px; border-bottom: 1px solid #1f2023; margin-bottom: 8px; display: flex; gap: 10px; align-items: center; }
+  .head i { width: 28px; height: 28px; border-radius: 9px; background: linear-gradient(135deg, #f472b6, #8b5cf6); }
+  .cat { font-size: 11px; font-weight: 700; letter-spacing: .04em; color: #949ba4; margin: 14px 8px 4px; text-transform: uppercase; display: flex; justify-content: space-between; }
+  .cat em { font-style: normal; color: #6d6f78; text-transform: none; font-weight: 500; }
+  .c { padding: 6px 8px; border-radius: 4px; color: #949ba4; font-size: 15px; display: flex; gap: 6px; align-items: center; }
+  .c::before { content: "#"; color: #6d6f78; }
+  .c.v::before { content: "🔊"; font-size: 12px; }
+  .c .lock { margin-left: auto; font-size: 12px; color: #6d6f78; }
+  .title { margin: 0 0 14px; color: #f2f3f5; font-size: 20px; font-weight: 700; }
+  .role { display: flex; align-items: center; gap: 12px; padding: 10px; border-radius: 8px; background: #313338; margin-bottom: 8px; }
+  .role i { width: 14px; height: 14px; border-radius: 50%; }
+  .role b { color: #f2f3f5; font-weight: 600; }
+  .role span { margin-left: auto; font-size: 12px; color: #949ba4; }
+  .perm { display: flex; justify-content: space-between; padding: 9px 4px; border-bottom: 1px solid #3a3c42; font-size: 14px; }
+  .yes { color: #23a55a; font-weight: 700; } .no { color: #da373c; font-weight: 700; }
+  .embed { background: #2b2d31; border-left: 4px solid #f472b6; border-radius: 4px; padding: 14px 16px; margin-top: 10px; }
+  .embed h4 { margin: 0 0 8px; color: #f2f3f5; }
+  .embed p { margin: 0; font-size: 14px; line-height: 1.5; }
+</style>
+</head>
+<body>
+  <div class="stage">
+    <div class="wrap">
+      <div class="panel">
+        <div class="head"><i></i>Pixel Lounge</div>
+        <div class="cat">📌 Start here <em>read-only</em></div><div class="c">welcome<span class="lock">🔒</span></div><div class="c">rules<span class="lock">🔒</span></div><div class="c">roles<span class="lock">🔒</span></div><div class="c">announcements<span class="lock">🔒</span></div>
+        <div class="cat">💬 Community</div><div class="c">general</div><div class="c">clips-and-screens</div><div class="c">looking-for-group</div><div class="c v">Lounge</div>
+        <div class="cat">🛟 Support</div><div class="c">open-a-ticket</div><div class="c">faq<span class="lock">🔒</span></div>
+        <div class="cat">🛠️ Staff <em>staff only</em></div><div class="c">staff-chat</div><div class="c">mod-log</div>
+      </div>
+      <div class="panel" style="padding:22px">
+        <p class="title">Roles</p>
+        <div class="role"><i style="background:#f472b6"></i><b>Owner</b><span>Everything</span></div>
+        <div class="role"><i style="background:#8b5cf6"></i><b>Moderator</b><span>Mod tools</span></div>
+        <div class="role"><i style="background:#22d3ee"></i><b>Supporter</b><span>Perks</span></div>
+        <div class="role"><i style="background:#94a3b8"></i><b>Member</b><span>Chat &amp; voice</span></div>
+        <div class="role"><i style="background:#52525b"></i><b>Muted</b><span>Read only</span></div>
+        <p class="title" style="margin-top:22px">Member can…</p>
+        <div class="perm"><span>Read info channels</span><span class="yes">✓</span></div>
+        <div class="perm"><span>Post in info channels</span><span class="no">✕</span></div>
+        <div class="perm"><span>Chat in community</span><span class="yes">✓</span></div>
+        <div class="perm"><span>See staff channels</span><span class="no">✕</span></div>
+      </div>
+      <div class="panel" style="padding:22px">
+        <p class="title">#welcome</p>
+        <div class="embed"><h4>👋 Welcome to Pixel Lounge</h4><p>Read the rules, press <b>I agree</b>, and you'll get the Member role and access to chat and voice.</p></div>
+        <div class="embed" style="border-left-color:#8b5cf6"><h4>📜 Rules</h4><p>1. Be decent to each other.<br />2. No spam or self-promo outside #clips-and-screens.<br />3. Keep it safe for work.</p></div>
+        <div class="embed" style="border-left-color:#22d3ee"><h4>🎭 Pick your roles</h4><p>Choose games and pings with the buttons below. Change them any time.</p></div>
+      </div>
+    </div>
+  </div>
+  <div class="kush-tag"><i></i>Concept by KUSH · Discord server setup</div>
+</body>
+</html>
