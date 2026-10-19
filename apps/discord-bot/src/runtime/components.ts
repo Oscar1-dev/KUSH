@@ -16,7 +16,9 @@ export type ScopedAction =
   | "ticket-category"
   | "ticket-modal"
   | "link-modal"
-  | "apply-modal";
+  | "apply-modal"
+  | "commission-service"
+  | "commission-modal";
 
 const TEN_MINUTES = 10 * 60_000;
 
@@ -179,4 +181,105 @@ export const onboardingButton = () =>
       .setCustomId(ONBOARDING_ACCEPT)
       .setLabel("I have read and accept the rules")
       .setStyle(ButtonStyle.Success),
+  );
+
+/** The services a commission can be for (the API's intake categories). */
+export interface CommissionChoice {
+  category: string;
+  label: string;
+  hint: string | null;
+}
+
+export const fallbackCommissionChoices: CommissionChoice[] = [
+  { category: "websites", label: "Websites", hint: null },
+  { category: "web-apps", label: "Web apps", hint: null },
+  { category: "discord", label: "Discord bots & servers", hint: null },
+  { category: "software", label: "Software & tools", hint: null },
+  { category: "gaming", label: "Gaming & Rust", hint: null },
+  { category: "technical", label: "Technical help", hint: null },
+  { category: "creative", label: "Creative & design", hint: null },
+  { category: "automation", label: "Automation", hint: null },
+];
+
+export const commissionServiceMenu = (
+  signer: Signer,
+  userId: string,
+  choices: readonly CommissionChoice[],
+) =>
+  row(
+    new StringSelectMenuBuilder()
+      .setCustomId(scopedId(signer, "commission-service", userId))
+      .setPlaceholder("What should KUSH build for you?")
+      .addOptions(
+        choices.slice(0, 25).map((choice) => ({
+          label: choice.label.slice(0, 100),
+          value: choice.category,
+          ...(choice.hint ? { description: choice.hint.slice(0, 100) } : {}),
+        })),
+      ),
+  );
+
+export const commissionModal = (
+  signer: Signer,
+  userId: string,
+  category: string,
+  label: string,
+) =>
+  new ModalBuilder()
+    .setCustomId(scopedId(signer, "commission-modal", userId, category))
+    .setTitle(`Commission: ${label}`.slice(0, 45))
+    .addComponents(
+      row(
+        new TextInputBuilder()
+          .setCustomId("title")
+          .setLabel("Project name")
+          .setPlaceholder("e.g. Booking site for my barbershop")
+          .setStyle(TextInputStyle.Short)
+          .setMinLength(3)
+          .setMaxLength(200)
+          .setRequired(true),
+      ),
+      row(
+        new TextInputBuilder()
+          .setCustomId("details")
+          .setLabel("What do you need?")
+          .setPlaceholder(
+            "Pages or features, who it's for, anything it must work with.",
+          )
+          .setStyle(TextInputStyle.Paragraph)
+          .setMinLength(20)
+          .setMaxLength(4000)
+          .setRequired(true),
+      ),
+      row(
+        new TextInputBuilder()
+          .setCustomId("budget")
+          .setLabel("Rough budget (optional)")
+          .setPlaceholder("e.g. around £100")
+          .setStyle(TextInputStyle.Short)
+          .setMaxLength(120)
+          .setRequired(false),
+      ),
+      row(
+        new TextInputBuilder()
+          .setCustomId("timeframe")
+          .setLabel("When do you need it? (optional)")
+          .setStyle(TextInputStyle.Short)
+          .setMaxLength(200)
+          .setRequired(false),
+      ),
+      row(
+        new TextInputBuilder()
+          .setCustomId("references")
+          .setLabel("Examples or links you like (optional)")
+          .setStyle(TextInputStyle.Paragraph)
+          .setMaxLength(2000)
+          .setRequired(false),
+      ),
+    );
+
+/** Opens Stripe Checkout in the browser; KUSH never sees card details. */
+export const payButton = (url: string, label = "Pay securely with Stripe") =>
+  row(
+    new ButtonBuilder().setURL(url).setLabel(label).setStyle(ButtonStyle.Link),
   );

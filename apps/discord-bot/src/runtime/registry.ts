@@ -8,6 +8,7 @@ import {
 import { planProvisioning } from "../provisioning.js";
 import { ticketCategories } from "../tickets/categories.js";
 import { ticketCommands } from "../tickets/commands.js";
+import { commerceCommands } from "../commerce/commands.js";
 import { moderationCommands } from "../moderation/commands.js";
 import { communityCommands } from "../community/commands.js";
 import { hasAuthority } from "./authority.js";
@@ -181,28 +182,20 @@ export const commands: CommandDefinition[] = [
     },
   },
   {
-    path: ["ticket"],
-    aliases: [["support"], ["new", "ticket"]],
+    path: ["ticket", "create"],
+    aliases: [["ticket"], ["support"], ["new", "ticket"]],
     group: "Community",
     authority: "everyone",
     allowRestricted: true,
     cooldownMs: 10_000,
     summary: "Open a private support ticket",
-    usage: "!ticket",
+    usage: "!ticket create",
     run: async (context) =>
       context.reply({
         content: `<@${context.actor.userId}>, choose a category on the next step. Categories: ${ticketCategories.map((category) => category.label).join(", ")}.`,
         components: [ticketButton(signer(context), context.actor.userId)],
       }),
   },
-  pending(
-    ["products"],
-    "Community",
-    "everyone",
-    "Published KUSH products",
-    "!products",
-    "The product catalogue is not connected yet. No products are listed until KUSH publishes verified product records.",
-  ),
 
   // ------------------------------------------------------------ customers
   {
@@ -309,6 +302,9 @@ export const commands: CommandDefinition[] = [
         ],
       }),
   })),
+
+  // ------------------------------------- shop, referrals, commissions
+  ...commerceCommands,
 
   // -------------------------------------------------------- support staff
   ...ticketCommands,

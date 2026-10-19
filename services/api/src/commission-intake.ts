@@ -161,7 +161,70 @@ export async function registerCommissionIntake(
           input,
           "discord",
         );
-        return { id: created.id, title: created.title, status: created.status };
+        const ticket = (
+          await pool.query<{ number: number }>(
+            "SELECT t.number FROM commercial_requests r JOIN support_tickets t ON t.id=r.ticket_id AND t.tenant_id=r.tenant_id WHERE r.tenant_id=$1 AND r.id=$2",
+            [tenantId, created.id],
+          )
+        ).rows[0];
+        return {
+          id: created.id,
+          title: created.title,
+          status: created.status,
+          ticketNumber: ticket?.number ?? null,
+        };
+      }),
+  );
+
+  // A member's own commissions, for /commission status in Discord.
+  app.get<{
+    Params: { tenantId: string };
+    Querystring: { discordUserId?: string };
+  }>(
+    "/discord/integration/tenants/:tenantId/commissions/mine",
+    {
+      schema: {
+        params: {
+          type: "object",
+          properties: { tenantId: { type: "string", format: "uuid" } },
+          required: ["tenantId"],
+        },
+      },
+    },
+    async (request, reply) =>
+      handle(reply, async () => {
+        const guildId = bot(request);
+        const { tenantId } = request.params;
+        const tenant = await pool.query(
+          "SELECT 1 FROM support_tenants WHERE id=$1 AND guild_id=$2",
+          [tenantId, guildId],
+        );
+        if (!tenant.rowCount)
+          throw new SupportError(404, "Support resource not found");
+        const discordUserId = z
+          .string()
+          .regex(/^[0-9]{17,20}$/)
+          .parse(request.query.discordUserId);
+        const link = (
+          await pool.query<{ user_id: string }>(
+            "SELECT user_id FROM discord_account_links WHERE tenant_id=$1 AND discord_user_id=$2 AND state='verified'",
+            [tenantId, discordUserId],
+          )
+        ).rows[0];
+        if (!link)
+          throw new SupportError(
+            409,
+            "Link your KUSH account first (type !account) to see your commissions.",
+          );
+        const rows = await pool.query(
+          `SELECT r.id, r.title, r.category, r.status, r.updated_at AS "updatedAt", t.number AS "ticketNumber",
+                  (SELECT q.amount FROM commission_quotes q WHERE q.request_id=r.id AND q.status IN ('proposed','accepted') ORDER BY q.created_at DESC LIMIT 1) AS "quote"
+           FROM commercial_requests r LEFT JOIN support_tickets t ON t.id=r.ticket_id AND t.tenant_id=r.tenant_id
+           WHERE r.tenant_id=$1 AND r.requester_id=$2 AND r.kind='commission'
+           ORDER BY (r.status IN ('completed','cancelled','rejected','refunded')), r.updated_at DESC LIMIT 10`,
+          [tenantId, link.user_id],
+        );
+        return { commissions: rows.rows };
       }),
   );
 }

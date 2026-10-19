@@ -51,6 +51,7 @@ import { RuleWatchTracker } from "./moderation/rule-watch.js";
 import { DiscordTicketChannels } from "./tickets/discord-tickets.js";
 import { configuredRoleId } from "./blueprint.js";
 import { TicketManager } from "./tickets/manager.js";
+import { InviteTracker } from "./commerce/invite-tracker.js";
 
 /** Exit code for configuration errors; the supervisor will not restart on it. */
 export const EXIT_CONFIG = 78;
@@ -82,7 +83,12 @@ async function connect(
   log: Logger,
 ): Promise<Client> {
   // GuildModeration (not privileged): audit-log entries for the mod log.
-  const base = [GatewayIntentBits.Guilds, GatewayIntentBits.GuildModeration];
+  // GuildInvites (not privileged): invite changes, for referral attribution.
+  const base = [
+    GatewayIntentBits.Guilds,
+    GatewayIntentBits.GuildModeration,
+    GatewayIntentBits.GuildInvites,
+  ];
   // Privileged: Server Members (join/leave/role automation) and Message
   // Content (`!` commands). Both are enabled in the Developer Portal.
   const prefix = [
@@ -230,6 +236,17 @@ export async function startBot(): Promise<{
         new Promise<null>((resolve) => setTimeout(() => resolve(null), 10_000)),
       ]);
       return member ? [...member.roles.cache.keys()] : null;
+    },
+    memberDates: async (userId) => {
+      const member = await Promise.race([
+        guild()
+          .members.fetch(userId)
+          .catch(() => null),
+        new Promise<null>((resolve) => setTimeout(() => resolve(null), 10_000)),
+      ]);
+      return member?.joinedAt
+        ? { createdAt: member.user.createdAt, joinedAt: member.joinedAt }
+        : null;
     },
   };
   services.moderation = {
@@ -542,6 +559,20 @@ export async function startBot(): Promise<{
       error: error instanceof Error ? error.message : "unknown",
     }),
   );
+  // Referrals: snapshot invite counts, then attribute each join.
+  const invites = new InviteTracker(api, log);
+  const refreshInvites = () =>
+    client.guilds.cache.has(config.guildId)
+      ? void invites.refresh(guild())
+      : undefined;
+  client.on(Events.ClientReady, refreshInvites);
+  if (client.isReady()) refreshInvites();
+  client.on(Events.InviteCreate, (invite) =>
+    invite.guild?.id === config.guildId ? refreshInvites() : undefined,
+  );
+  client.on(Events.InviteDelete, (invite) =>
+    invite.guild?.id === config.guildId ? refreshInvites() : undefined,
+  );
   if (client.isReady()) onReady();
   client.on(Events.ClientReady, onReady);
   client.on(Events.ShardResume, (_shard, replayed) => {
@@ -581,7 +612,10 @@ export async function startBot(): Promise<{
   );
   client.on(Events.GuildMemberAdd, (member) =>
     member.guild.id === config.guildId
-      ? guarded("member.join.failed", () => onMemberJoin(member, membership))()
+      ? (guarded("member.join.failed", () =>
+          onMemberJoin(member, membership),
+        )(),
+        void invites.joined(member))
       : undefined,
   );
   client.on(Events.GuildMemberUpdate, (before, after) =>
@@ -593,9 +627,10 @@ export async function startBot(): Promise<{
   );
   client.on(Events.GuildMemberRemove, (member) =>
     member.guild.id === config.guildId
-      ? guarded("member.leave.failed", () =>
+      ? (guarded("member.leave.failed", () =>
           onMemberLeave(member, membership),
-        )()
+        )(),
+        guarded("referrals.leave.failed", () => invites.left(member))())
       : undefined,
   );
 

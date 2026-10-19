@@ -41,8 +41,8 @@ phase lands. Status: ✅ done & verified · 🟡 partial · ⏳ not started ·
 | 3 | Catalogue & products | ✅ API (`/public/catalogue`, staff editor routes, Stripe product sync) · 🟡 website still reads its own copy |
 | 4 | Stripe | ✅ test-mode code paths verified with signed fake events · 🔒 no real test keys yet |
 | 5 | Commissions | ✅ full status set, richer quotes, quote checkout, offline payment, revisions |
-| 6 | Discord | 🟡 API routes ready; typed slash commands + invite tracking next |
-| 7 | Referrals & credit | ✅ ledger + referral engine in API · 🟡 Discord join tracking next |
+| 6 | Discord | ✅ typed slash + prefix commands, commission intake, invite tracking · 🔒 slash registration on the live server awaits owner OK |
+| 7 | Referrals & credit | ✅ ledger, referral engine, Discord join/leave tracking and code claims |
 | 8 | Website dashboards | ⏳ |
 | 9 | Security & QA | ⏳ |
 | 10 | Handover | ⏳ |
@@ -61,6 +61,19 @@ Landed in `services/api` (112 API tests passing, against real PostgreSQL):
 - **Commission flow** — submitted → under review → awaiting info → quoted → accepted → payment pending → paid → in development → awaiting review ⇄ revision requested → completed (or cancelled / refunded). Developers can only start work once it is **paid**.
 
 Known gaps: a Stripe refund that succeeds while the API crashes before booking it stays `pending` (visible to staff) until reconciled by hand.
+
+## Phase 6 Discord (2026-10-19)
+
+Commands (each works as `/slash` and `!prefix`, from one definition; account replies are private):
+
+- Customers: `/products` `/buy` `/orders` `/order` `/credit` `/referrals` `/referral rewards|leaderboard|claim` `/commission create|status`
+- Staff (`staff` authority hint; the API re-checks live roles + exact permission): `/commission quote|assign|update|complete` `/product create|edit|archive` `/staff orders|commissions|assign|customer|stats`
+- Tickets: `/ticket create|close|claim|add|transcript` (`!ticket` still opens one)
+- The commission panel button now opens a service picker → form → API commission (with ticket). Members who haven't linked a KUSH account fall back to a commission ticket, as before.
+- Discord staff actions never move money: refunds, offline payments and credit adjustments are website-only (2FA).
+- Invite attribution: unambiguous use-count changes only ("exact" / "probable"); needs Manage Server, otherwise nothing is recorded and referral codes still work.
+
+Tests: API 114, bot 187, all passing.
 
 ## Decisions & assumptions
 

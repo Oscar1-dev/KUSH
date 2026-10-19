@@ -1,3 +1,4 @@
+import { registerDiscordStaff } from "./discord-staff.js";
 import type { FastifyInstance, FastifyRequest } from "fastify";
 import type { Pool } from "@kush/database";
 import { z } from "@kush/contracts";
@@ -488,6 +489,8 @@ export async function registerStaff(
     "/web/staff/audit",
     asStaff(async (ctx) => ({ events: await staff.auditLog(ctx) })),
   );
+
+  registerDiscordStaff(app, { pool, access, staff, workflow });
 
   return { access, asStaff };
 }

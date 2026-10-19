@@ -119,7 +119,17 @@ describe("prefix parsing", () => {
     ]);
     expect(resolvePath(["support"], commands)?.command.path).toEqual([
       "ticket",
+      "create",
     ]);
+    // `!ticket` alone still opens a ticket; `!ticket close` is its own path.
+    expect(resolvePath(["ticket"], commands)?.command.path).toEqual([
+      "ticket",
+      "create",
+    ]);
+    expect(resolvePath(["ticket", "close", "42"], commands)).toMatchObject({
+      command: { path: ["ticket", "close"] },
+      args: ["42"],
+    });
     expect(resolvePath(["apply", "reseller"], commands)?.command.path).toEqual([
       "apply",
       "reseller",
@@ -135,7 +145,32 @@ describe("prefix parsing", () => {
       "!downloads",
       "!guide",
       "!setup guide",
-      "!ticket",
+      "!ticket create",
+      "!ticket close",
+      "!ticket claim",
+      "!ticket add",
+      "!ticket transcript",
+      "!buy",
+      "!orders",
+      "!order",
+      "!credit",
+      "!referrals",
+      "!referral rewards",
+      "!referral leaderboard",
+      "!commission create",
+      "!commission status",
+      "!commission quote",
+      "!commission assign",
+      "!commission update",
+      "!commission complete",
+      "!product create",
+      "!product edit",
+      "!product archive",
+      "!staff orders",
+      "!staff commissions",
+      "!staff assign",
+      "!staff customer",
+      "!staff stats",
       "!status",
       "!licenses",
       "!account",
@@ -279,7 +314,7 @@ describe("command router", () => {
 
   it("marks unconnected workflows as unavailable instead of faking results", async () => {
     const { run } = harness();
-    const result = await run("!products", actor(["member"]));
+    const result = await run("!guide kush", actor(["member"]));
     expect(text(result.publicReplies[0])).toContain("not connected");
     expect(result.privateReplies).toEqual([]);
   });

@@ -184,7 +184,8 @@ export interface StaffContext {
   discordUserId: string;
   roles: StaffRole[];
   permissions: Permission[];
-  session: WebSession;
+  /** The website session, or null for an action taken in Discord. */
+  session: WebSession | null;
 }
 
 export type StaffDenial =
@@ -293,6 +294,49 @@ export class StaffAccess {
       roles,
       permissions: permissionsFor(roles),
       session,
+    };
+  }
+
+  /**
+   * Staff access for a command run in Discord. Discord itself authenticated
+   * the person, and their roles are read live; there is no 2FA step here,
+   * so routes using this must not move money (refunds, credit, payments).
+   */
+  async fromDiscord(
+    tenantId: string,
+    discordUserId: string,
+  ): Promise<StaffContext> {
+    const userId = (
+      await this.pool.query<{ user_id: string }>(
+        "SELECT user_id FROM discord_account_links WHERE tenant_id=$1 AND discord_user_id=$2 AND state='verified'",
+        [tenantId, discordUserId],
+      )
+    ).rows[0]?.user_id;
+    if (!userId)
+      throw new SupportError(
+        403,
+        "Link your KUSH account first (type !account) to use staff commands",
+      );
+    const roles = await this.liveRoles(tenantId, discordUserId);
+    if (roles === "unavailable")
+      throw new StaffAccessError("discord_unavailable");
+    if (roles.length === 0) {
+      await this.audit(userId, "staff.access.denied.discord", tenantId);
+      throw new StaffAccessError("not_staff");
+    }
+    await this.pool.query(
+      `INSERT INTO staff_members(tenant_id,user_id,discord_user_id,roles) VALUES($1,$2,$3,$4)
+       ON CONFLICT (tenant_id,user_id) DO UPDATE SET discord_user_id=EXCLUDED.discord_user_id,roles=EXCLUDED.roles,last_verified_at=now(),
+         offboarded_at=NULL,offboarded_reason=NULL,offboarded_by_discord_id=NULL`,
+      [tenantId, userId, discordUserId, roles],
+    );
+    return {
+      tenantId,
+      userId,
+      discordUserId,
+      roles,
+      permissions: permissionsFor(roles),
+      session: null,
     };
   }
 

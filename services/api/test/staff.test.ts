@@ -1457,4 +1457,150 @@ describe.skipIf(!databaseUrl)("staff dashboard (real PostgreSQL)", () => {
       ).statusCode,
     ).toBe(403);
   });
+
+  it("runs commission and customer tools from Discord on live roles", async () => {
+    const customer = await person([], { mfa: false });
+    const manager = await person([ROLE.manager], { mfa: false });
+    const developer = await person([ROLE.developer], { mfa: false });
+    const support = await person([ROLE.support], { mfa: false });
+    const admin = await person([ROLE.admin], { mfa: false });
+    const created = (
+      await web("POST", "/web/workspace/commissions", customer.token, {
+        requestId: randomUUID(),
+        category: "gaming",
+        title: "TEST Rust server config",
+        details: "TEST: loot tables and a custom kit for a small server.",
+        approximateBudget: null,
+        preferredTimeframe: null,
+      })
+    ).json().commission as { id: string };
+    const ticket = (
+      await pool.query<{ number: number }>(
+        "SELECT t.number FROM commercial_requests r JOIN support_tickets t ON t.id=r.ticket_id WHERE r.id=$1",
+        [created.id],
+      )
+    ).rows[0]!.number;
+    const bot = (method: "GET" | "POST", path: string, payload?: object) =>
+      app.inject({
+        method,
+        url: `/discord/integration/tenants/${tenantId}/staff${path}`,
+        headers: {
+          "x-kush-discord-secret": BOT_SECRET,
+          "x-kush-discord-guild-id": STAFF_GUILD,
+        },
+        ...(payload ? { payload } : {}),
+      });
+    const find = (who: Person) =>
+      bot(
+        "GET",
+        `/commissions/find?actorDiscordId=${who.discordId}&ticket=${ticket}`,
+      );
+
+    // No staff role, no access; the bot's own role check is not trusted.
+    expect((await find(customer)).statusCode).toBe(403);
+    // Developers only see commissions assigned to them.
+    expect((await find(developer)).statusCode).toBe(404);
+    const found = await find(manager);
+    expect(found.statusCode).toBe(200);
+    expect(found.json().commission).toMatchObject({
+      id: created.id,
+      ticketNumber: ticket,
+      status: "submitted",
+    });
+
+    const quote = (who: Person) =>
+      bot("POST", "/commissions/quote", {
+        actorDiscordId: who.discordId,
+        ticket,
+        amountPence: 12_000,
+        summary: "TEST: configs, one kit, one revision round.",
+      });
+    expect((await quote(manager)).statusCode).toBe(409); // not reviewed yet
+    expect(
+      (
+        await bot("POST", "/commissions/status", {
+          actorDiscordId: manager.discordId,
+          ticket,
+          status: "reviewing",
+        })
+      ).statusCode,
+    ).toBe(200);
+    expect((await quote(developer)).statusCode).toBe(404);
+    const quoted = await quote(manager);
+    expect(quoted.statusCode).toBe(200);
+    expect(quoted.json()).toMatchObject({
+      amount: "£120",
+      ticketNumber: ticket,
+    });
+    // A status Discord can't set directly (only paying moves it to paid).
+    expect(
+      (
+        await bot("POST", "/commissions/status", {
+          actorDiscordId: manager.discordId,
+          ticket,
+          status: "paid",
+        })
+      ).statusCode,
+    ).toBe(400);
+
+    // Assign: the developer becomes known by using a staff command once.
+    await bot(
+      "GET",
+      `/commissions?actorDiscordId=${developer.discordId}&scope=assigned`,
+    );
+    const assigned = await bot("POST", "/commissions/assign", {
+      actorDiscordId: manager.discordId,
+      ticket,
+      assigneeDiscordId: developer.discordId,
+    });
+    expect(assigned.json()).toMatchObject({ assigned: true });
+    expect((await find(developer)).statusCode).toBe(200);
+    const mine = (
+      await bot(
+        "GET",
+        `/commissions?actorDiscordId=${developer.discordId}&scope=assigned`,
+      )
+    ).json().commissions;
+    expect(mine.map((c: { id: string }) => c.id)).toContain(created.id);
+    expect(mine[0].ticketNumber).toBeTypeOf("number");
+    // Seeing everyone's needs commissions.manage.
+    expect(
+      (
+        await bot(
+          "GET",
+          `/commissions?actorDiscordId=${developer.discordId}&scope=all`,
+        )
+      ).statusCode,
+    ).toBe(403);
+
+    // Customer lookup and stats need their own permissions.
+    expect(
+      (
+        await bot(
+          "GET",
+          `/customers/${customer.discordId}?actorDiscordId=${support.discordId}`,
+        )
+      ).statusCode,
+    ).toBe(403);
+    const lookup = await bot(
+      "GET",
+      `/customers/${customer.discordId}?actorDiscordId=${manager.discordId}`,
+    );
+    expect(lookup.json().customer).toMatchObject({
+      activeCommissions: 1,
+      creditPence: 0,
+    });
+    expect(
+      (await bot("GET", `/stats?actorDiscordId=${support.discordId}`))
+        .statusCode,
+    ).toBe(403);
+    const stats = (
+      await bot("GET", `/stats?actorDiscordId=${admin.discordId}`)
+    ).json().stats;
+    expect(stats.openQuotes).toBeGreaterThanOrEqual(1);
+
+    // Discord roles vanish → access is gone at once.
+    guild.roles.set(manager.discordId, []);
+    expect((await find(manager)).statusCode).toBe(403);
+  });
 });

@@ -684,6 +684,41 @@ export class SupportService {
   }
 
   /**
+   * Adds someone to a ticket's conversation. Only staff who can already see
+   * the ticket (its assignee, or a moderator for reports, or the owner) may
+   * do this, and only while it's open.
+   */
+  async addParticipant(
+    user: User,
+    id: string,
+    ticketId: string,
+    discordUserId: string,
+  ) {
+    return this.transaction(async (c) => {
+      const { role } = await this.tenant(c, id, user, true);
+      if (role === "customer") return notFound();
+      const ticket = await this.ticket(c, id, ticketId, user, role, true);
+      if (ticket.status === "closed")
+        fail(409, "Closed tickets must be reopened first");
+      const count = await c.query<{ n: number }>(
+        "SELECT count(*)::int AS n FROM support_ticket_participants WHERE tenant_id=$1 AND ticket_id=$2",
+        [id, ticketId],
+      );
+      if (count.rows[0]!.n >= 10)
+        fail(409, "A ticket can have at most 10 added people");
+      const added = await c.query(
+        "INSERT INTO support_ticket_participants(tenant_id,ticket_id,discord_user_id,added_by) VALUES($1,$2,$3,$4) ON CONFLICT DO NOTHING",
+        [id, ticketId, discordUserId, user.id],
+      );
+      if (added.rowCount)
+        await this.event(c, ticket, user, "ticket.participant.added", {
+          discordUserId,
+        });
+      return { ticket: ticketView(ticket), added: Boolean(added.rowCount) };
+    });
+  }
+
+  /**
    * Claim by ticket number. Unassigned staff cannot "see" the ticket yet, so
    * the number is resolved here and claim() applies the queue rules.
    */

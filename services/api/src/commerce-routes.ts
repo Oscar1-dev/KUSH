@@ -5,6 +5,7 @@ import { z } from "@kush/contracts";
 import type { WebSession } from "./account-service.js";
 import type { WebHelpers } from "./accounts.js";
 import { Catalogue } from "./catalogue.js";
+import { businessStats } from "./stats.js";
 import { applyCredit, creditBalance, creditHistory } from "./credit.js";
 import { verifyIntegrationSecret } from "./discord-service.js";
 import { OrderService } from "./orders.js";
@@ -629,42 +630,8 @@ export async function registerCommerce(
     "/web/staff/stats",
     asStaff(async (ctx) => {
       demand(ctx, "stats.view");
-      const one = async (sql: string) =>
-        Number(
-          (await pool.query<{ n: string }>(sql, [ctx.tenantId])).rows[0]?.n ??
-            0,
-        );
       return {
-        customers: await one(
-          "SELECT count(*) AS n FROM support_members WHERE tenant_id=$1 AND role='customer'",
-        ),
-        orders: await one(
-          "SELECT count(*) AS n FROM orders WHERE tenant_id=$1 AND status IN ('paid','partially_refunded','refunded')",
-        ),
-        revenuePence: await one(
-          "SELECT COALESCE(sum(subtotal_pence - refunded_pence),0) AS n FROM orders WHERE tenant_id=$1 AND status IN ('paid','partially_refunded')",
-        ),
-        refundsPence: await one(
-          "SELECT COALESCE(sum(refunded_pence),0) AS n FROM orders WHERE tenant_id=$1",
-        ),
-        openQuotes: await one(
-          "SELECT count(*) AS n FROM commission_quotes WHERE tenant_id=$1 AND status='proposed'",
-        ),
-        activeCommissions: await one(
-          "SELECT count(*) AS n FROM commercial_requests WHERE tenant_id=$1 AND kind='commission' AND status IN ('paid','in_progress','awaiting_review','revision_requested')",
-        ),
-        completedCommissions: await one(
-          "SELECT count(*) AS n FROM commercial_requests WHERE tenant_id=$1 AND kind='commission' AND status='completed'",
-        ),
-        openTickets: await one(
-          "SELECT count(*) AS n FROM support_tickets WHERE tenant_id=$1 AND status NOT IN ('resolved','closed')",
-        ),
-        qualifiedReferrals: await one(
-          "SELECT count(*) AS n FROM referrals WHERE tenant_id=$1 AND status='qualified'",
-        ),
-        flaggedReferrals: await one(
-          "SELECT count(*) AS n FROM referrals WHERE tenant_id=$1 AND status='flagged'",
-        ),
+        ...(await businessStats(pool, ctx.tenantId)),
         payments: gateway.mode,
       };
     }),

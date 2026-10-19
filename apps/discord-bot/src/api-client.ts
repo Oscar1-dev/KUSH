@@ -106,6 +106,8 @@ export interface TicketChannelRecord {
   state: "active" | "archived";
   customerDiscordUserId: string | null;
   assigneeDiscordUserId: string | null;
+  /** People staff added with /ticket add (older APIs omit it). */
+  participantDiscordUserIds?: string[];
 }
 
 export interface DesiredRoles {
@@ -132,6 +134,140 @@ export interface RoleSyncJob {
 export interface DiscordActor {
   discordUserId: string;
   guildId?: string;
+}
+
+// ---------------------------------------------------------------- commerce
+
+export interface PublicProduct {
+  slug: string;
+  name: string;
+  description: string;
+  category: string | null;
+  imageUrl: string | null;
+  pricePence: number;
+  currency: string;
+}
+
+export interface CatalogueService {
+  slug: string;
+  name: string;
+  summary: string;
+  category: string;
+  startingPrice: string | null;
+  offers: {
+    name: string;
+    kind: string;
+    priceLabel: string;
+  }[];
+}
+
+export interface Order {
+  id: string;
+  number: number;
+  kind: string;
+  description: string;
+  status: string;
+  currency: string;
+  subtotalPence: number;
+  creditAppliedPence: number;
+  totalPence: number;
+  refundedPence: number;
+  paidAt: string | null;
+  createdAt: string;
+  payments?: {
+    provider: string;
+    amountPence: number;
+    receiptUrl: string | null;
+  }[];
+}
+
+export interface CreditEntry {
+  amountPence: number;
+  kind: string;
+  reference: string | null;
+  balanceAfterPence: number;
+  createdAt: string;
+}
+
+export interface ReferralSummary {
+  code: string;
+  qualified: number;
+  pending: number;
+  underReview: number;
+  disqualified: number;
+  linked: boolean;
+  rewards: {
+    milestone: number;
+    type: string;
+    valuePence: number | null;
+    status: string;
+    issuedAt: string | null;
+  }[];
+  milestones: { count: number; label: string }[];
+  next: { count: number; label: string; remaining: number } | null;
+  rules: { minAccountAgeDays: number; minMembershipDays: number };
+}
+
+export interface CommissionSummary {
+  id: string;
+  title: string;
+  category: string;
+  status: string;
+  ticketNumber: number | null;
+  updatedAt: string;
+  quote?: string | null;
+  customerName?: string;
+  assigneeName?: string | null;
+}
+
+export interface CommissionDetail {
+  commission: CommissionSummary & {
+    details: string;
+    approximateBudget: string | null;
+    preferredTimeframe: string | null;
+    customerDiscordId: string | null;
+    actions: { statuses: string[]; note: boolean; assign: boolean };
+  };
+  quotes: {
+    amount: string;
+    status: string;
+    summary: string;
+    timeframe: string | null;
+  }[];
+  milestones: { title: string; status: string }[];
+}
+
+export interface CommissionInput {
+  discordUserId: string;
+  requestId: string;
+  category: string;
+  serviceTier: "starter" | "standard" | "premium" | null;
+  title: string;
+  details: string;
+  approximateBudget: string | null;
+  preferredTimeframe: string | null;
+  referenceLinks: string | null;
+  contactPreference: string | null;
+}
+
+export interface BusinessStats {
+  customers: number;
+  orders: number;
+  revenuePence: number;
+  creditSpentPence: number;
+  refundsPence: number;
+  openQuotes: number;
+  activeCommissions: number;
+  completedCommissions: number;
+  openTickets: number;
+  qualifiedReferrals: number;
+  flaggedReferrals: number;
+}
+
+/** Where a staff commission command points: this channel or a ticket number. */
+export interface CommissionTarget {
+  channelId?: string;
+  ticket?: number;
 }
 
 export class DiscordApiClient {
@@ -634,6 +770,281 @@ export class DiscordApiClient {
       input,
     );
     return result.request;
+  }
+
+  // ------------------------------------------------------------ commerce
+
+  async products() {
+    return (
+      await this.#request<{ products: PublicProduct[] }>(
+        "GET",
+        "/public/products",
+      )
+    ).products;
+  }
+
+  async catalogue() {
+    return (
+      await this.#request<{ services: CatalogueService[] }>(
+        "GET",
+        "/public/catalogue",
+      )
+    ).services;
+  }
+
+  /** Starts (or, for the same interaction, resumes) a Stripe Checkout. */
+  async checkout(input: {
+    discordUserId: string;
+    productSlug: string;
+    interactionId: string;
+    useCredit: boolean;
+  }) {
+    return this.#request<{
+      orderNumber: number;
+      status: string;
+      checkoutUrl: string | null;
+      totalPence: number;
+      creditAppliedPence: number;
+    }>("POST", `${this.#tenant}/checkout`, input);
+  }
+
+  async orders(discordUserId: string) {
+    return (
+      await this.#request<{ orders: Order[] }>(
+        "GET",
+        `${this.#tenant}/orders?${new URLSearchParams({ discordUserId })}`,
+      )
+    ).orders;
+  }
+
+  async order(discordUserId: string, number: number) {
+    return (
+      await this.#request<{ order: Order }>(
+        "GET",
+        `${this.#tenant}/orders/${number}?${new URLSearchParams({ discordUserId })}`,
+      )
+    ).order;
+  }
+
+  async credit(discordUserId: string) {
+    return this.#request<{ balancePence: number; history: CreditEntry[] }>(
+      "GET",
+      `${this.#tenant}/credit?${new URLSearchParams({ discordUserId })}`,
+    );
+  }
+
+  async createProduct(actorDiscordId: string, product: object) {
+    return (
+      await this.#request<{ product: PublicProduct & { status: string } }>(
+        "POST",
+        `${this.#tenant}/products`,
+        { actorDiscordId, product },
+      )
+    ).product;
+  }
+
+  async updateProduct(actorDiscordId: string, slug: string, product: object) {
+    return (
+      await this.#request<{ product: PublicProduct & { status: string } }>(
+        "POST",
+        `${this.#tenant}/products/${slug}`,
+        { actorDiscordId, product },
+      )
+    ).product;
+  }
+
+  // ----------------------------------------------------------- referrals
+
+  async referralJoin(input: {
+    invitedDiscordId: string;
+    accountCreatedAt: string;
+    joinedAt: string;
+    inviter: {
+      discordUserId: string;
+      inviteCode: string | null;
+      confidence: "exact" | "probable";
+    } | null;
+  }) {
+    return this.#request<{ recorded: boolean; status?: string }>(
+      "POST",
+      `${this.#tenant}/referrals/joins`,
+      input,
+    );
+  }
+
+  async referralLeave(discordUserId: string) {
+    await this.#request("POST", `${this.#tenant}/referrals/leaves`, {
+      discordUserId,
+    });
+  }
+
+  async referralClaim(input: {
+    invitedDiscordId: string;
+    code: string;
+    accountCreatedAt: string;
+    joinedAt: string;
+  }) {
+    return this.#request<{ inviterDiscordId: string; status: string }>(
+      "POST",
+      `${this.#tenant}/referrals/claim`,
+      input,
+    );
+  }
+
+  async referralSummary(discordUserId: string) {
+    return this.#request<ReferralSummary>(
+      "GET",
+      `${this.#tenant}/referrals/me?${new URLSearchParams({ discordUserId })}`,
+    );
+  }
+
+  async referralLeaderboard() {
+    return (
+      await this.#request<{
+        leaders: { discordUserId: string; qualified: number }[];
+      }>("GET", `${this.#tenant}/referrals/leaderboard`)
+    ).leaders;
+  }
+
+  /** Qualifies waiting referrals and issues milestone rewards (idempotent). */
+  async referralRun() {
+    return this.#request<{ qualified: number; issued: number }>(
+      "POST",
+      `${this.#tenant}/referrals/run`,
+    );
+  }
+
+  // --------------------------------------------------------- commissions
+
+  async createCommission(input: CommissionInput) {
+    return this.#request<{
+      id: string;
+      title: string;
+      status: string;
+      ticketNumber: number | null;
+    }>("POST", `${this.#tenant}/commissions`, input);
+  }
+
+  async myCommissions(discordUserId: string) {
+    return (
+      await this.#request<{ commissions: CommissionSummary[] }>(
+        "GET",
+        `${this.#tenant}/commissions/mine?${new URLSearchParams({ discordUserId })}`,
+      )
+    ).commissions;
+  }
+
+  // --------------------------------------------- staff (API checks roles)
+
+  async staffOrders(actorDiscordId: string) {
+    return (
+      await this.#request<{ orders: Order[] }>(
+        "GET",
+        `${this.#tenant}/staff/orders?${new URLSearchParams({ actorDiscordId })}`,
+      )
+    ).orders;
+  }
+
+  async staffCommissions(actorDiscordId: string, scope: "assigned" | "all") {
+    return (
+      await this.#request<{ commissions: CommissionSummary[] }>(
+        "GET",
+        `${this.#tenant}/staff/commissions?${new URLSearchParams({ actorDiscordId, scope })}`,
+      )
+    ).commissions;
+  }
+
+  async findCommission(actorDiscordId: string, target: CommissionTarget) {
+    const query = new URLSearchParams({ actorDiscordId });
+    if (target.ticket) query.set("ticket", String(target.ticket));
+    else if (target.channelId) query.set("channelId", target.channelId);
+    return this.#request<CommissionDetail>(
+      "GET",
+      `${this.#tenant}/staff/commissions/find?${query}`,
+    );
+  }
+
+  async commissionStatus(
+    actorDiscordId: string,
+    target: CommissionTarget,
+    status: string,
+  ) {
+    return this.#request<{ ticketNumber: number; status: string }>(
+      "POST",
+      `${this.#tenant}/staff/commissions/status`,
+      { actorDiscordId, ...target, status },
+    );
+  }
+
+  async commissionAssign(
+    actorDiscordId: string,
+    target: CommissionTarget,
+    assigneeDiscordId: string | null,
+  ) {
+    return this.#request<{ ticketNumber: number; assigned: boolean }>(
+      "POST",
+      `${this.#tenant}/staff/commissions/assign`,
+      { actorDiscordId, ...target, assigneeDiscordId },
+    );
+  }
+
+  async commissionQuote(
+    actorDiscordId: string,
+    target: CommissionTarget,
+    quote: {
+      amountPence: number;
+      summary: string;
+      timeframe: string | null;
+      revisions: number | null;
+    },
+  ) {
+    return this.#request<{ ticketNumber: number; amount: string }>(
+      "POST",
+      `${this.#tenant}/staff/commissions/quote`,
+      { actorDiscordId, ...target, ...quote },
+    );
+  }
+
+  async staffCustomer(actorDiscordId: string, discordUserId: string) {
+    return (
+      await this.#request<{
+        customer: {
+          name: string;
+          since: string;
+          paidOrders: number;
+          activeCommissions: number;
+          openTickets: number;
+          qualifiedReferrals: number;
+          creditPence: number;
+        };
+      }>(
+        "GET",
+        `${this.#tenant}/staff/customers/${discordUserId}?${new URLSearchParams({ actorDiscordId })}`,
+      )
+    ).customer;
+  }
+
+  async staffStats(actorDiscordId: string) {
+    return (
+      await this.#request<{ stats: BusinessStats }>(
+        "GET",
+        `${this.#tenant}/staff/stats?${new URLSearchParams({ actorDiscordId })}`,
+      )
+    ).stats;
+  }
+
+  /** Adds someone to the ticket in this channel (the API checks the actor). */
+  async addTicketParticipant(
+    actor: DiscordActor,
+    channelId: string,
+    discordUserId: string,
+  ) {
+    return this.#request<{ ticket: Ticket; added: boolean }>(
+      "POST",
+      `${this.#tenant}/tickets/by-channel/${channelId}/participants`,
+      { discordUserId },
+      actor,
+    );
   }
 
   /** Unauthenticated liveness probe of the KUSH API. */

@@ -332,8 +332,9 @@ export const accessFromRecord = (
   queue: record.queue,
   number: record.number,
   creatorId: record.customerDiscordUserId,
-  assigneeIds: record.assigneeDiscordUserId
-    ? [record.assigneeDiscordUserId]
-    : [],
+  assigneeIds: [
+    ...(record.assigneeDiscordUserId ? [record.assigneeDiscordUserId] : []),
+    ...(record.participantDiscordUserIds ?? []),
+  ],
   closed: record.status === "closed",
 });
