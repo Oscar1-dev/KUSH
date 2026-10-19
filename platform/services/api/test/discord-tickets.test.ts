@@ -500,4 +500,33 @@ describe.skipIf(!databaseUrl)("Discord ticket system (real PostgreSQL)", () => {
     });
     expect(response.statusCode).toBe(404);
   });
+
+  it("lets the ticket's staff add people, and shows them in channel access", async () => {
+    const member = discordId();
+    const helper = discordId();
+    const ticket = (await createTicket(member)).json().ticket;
+    const channelId = "623456789012345678";
+    await as(member, "PUT", `/tickets/${ticket.id}/channel`, {
+      channelId,
+      queue: "support",
+    });
+    const add = (who: string, target = helper) =>
+      as(who, "POST", `/tickets/by-channel/${channelId}/participants`, {
+        discordUserId: target,
+      });
+    // The customer and unassigned staff can't add anyone.
+    expect((await add(member)).statusCode).toBe(404);
+    expect((await add(people.staff)).statusCode).toBe(404);
+    await as(people.staff, "POST", `/tickets/by-channel/${channelId}/claim`);
+    const added = await add(people.staff);
+    expect(added.statusCode).toBe(200);
+    expect(added.json()).toMatchObject({ added: true });
+    // Adding twice is harmless.
+    expect((await add(people.staff)).json()).toMatchObject({ added: false });
+    expect((await add(people.staff, "not-a-snowflake")).statusCode).toBe(400);
+    const record = (await as(member, "GET", "/ticket-channels"))
+      .json()
+      .channels.find((c: { channelId: string }) => c.channelId === channelId);
+    expect(record.participantDiscordUserIds).toEqual([helper]);
+  });
 });

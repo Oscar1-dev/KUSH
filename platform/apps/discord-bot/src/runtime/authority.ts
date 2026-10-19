@@ -11,6 +11,8 @@ export type Authority =
   | "support-lead"
   /** Anyone who works tickets: support staff, support lead or moderators. */
   | "ticket-handler"
+  /** Any staff role; the API then checks the exact KUSH permission. */
+  | "staff"
   | "moderator"
   | "administrator"
   | "owner";
@@ -38,6 +40,14 @@ const grantedBy: Record<
   "support-lead": ["owner", "support-lead"],
   "support-staff": ["owner", "support-lead", "support-staff"],
   "ticket-handler": ["owner", "support-lead", "support-staff", "moderator"],
+  staff: [
+    "owner",
+    "administrator",
+    "developer",
+    "support-lead",
+    "support-staff",
+    "moderator",
+  ],
 };
 
 export function hasAuthority(actor: Actor, required: Authority): boolean {

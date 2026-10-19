@@ -100,6 +100,16 @@ export class CommissionWorkflow {
       "UPDATE commercial_requests SET ticket_id=$3 WHERE tenant_id=$1 AND id=$2 AND ticket_id IS NULL",
       [tenantId, commission.id, ticket.id],
     );
+    // Same as a website ticket: the bot opens its private Discord channel,
+    // so the commission conversation is live in Discord from the start.
+    await enqueueNotification(
+      this.pool,
+      tenantId,
+      "ticket.created",
+      ticket.id,
+      {},
+      `ticket.created:${ticket.id}`,
+    );
     return ticket.id;
   }
 
@@ -107,7 +117,9 @@ export class CommissionWorkflow {
   async extras(tenantId: string, requestId: string) {
     const [quotes, milestones, ticket] = await Promise.all([
       this.pool.query(
-        `SELECT id,amount,summary,timeframe,status,created_at AS "createdAt",decided_at AS "decidedAt",decline_reason AS "declineReason"
+        `SELECT id,amount,summary,timeframe,status,created_at AS "createdAt",decided_at AS "decidedAt",decline_reason AS "declineReason",
+                amount_pence AS "amountPence",deliverables,revisions,optional_services AS "optionalServices",expires_at AS "expiresAt",
+                (status='proposed' AND expires_at IS NOT NULL AND expires_at < now()) AS expired
          FROM commission_quotes WHERE tenant_id=$1 AND request_id=$2 ORDER BY created_at DESC`,
         [tenantId, requestId],
       ),
@@ -164,7 +176,17 @@ export class CommissionWorkflow {
   async propose(
     staff: StaffContext,
     requestId: string,
-    input: { amount: string; summary: string; timeframe: string | null },
+    input: {
+      amount: string;
+      summary: string;
+      timeframe: string | null;
+      /** What the customer pays through Stripe for this quote, in pence. */
+      amountPence?: number | null;
+      deliverables?: string | null;
+      revisions?: number | null;
+      optionalServices?: string | null;
+      expiresInDays?: number | null;
+    },
   ) {
     if (!can(staff, "commissions.manage"))
       fail(403, "Your staff role does not allow this");
@@ -174,7 +196,8 @@ export class CommissionWorkflow {
         fail(409, "Quotes can be sent while the commission is under review");
       const quote = (
         await c.query<{ id: string }>(
-          "INSERT INTO commission_quotes(tenant_id,request_id,amount,summary,timeframe,created_by) VALUES($1,$2,$3,$4,$5,$6) RETURNING id",
+          `INSERT INTO commission_quotes(tenant_id,request_id,amount,summary,timeframe,created_by,amount_pence,deliverables,revisions,optional_services,expires_at)
+           VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,CASE WHEN $11::int IS NULL THEN NULL ELSE now() + make_interval(days => $11::int) END) RETURNING id`,
           [
             staff.tenantId,
             requestId,
@@ -182,6 +205,11 @@ export class CommissionWorkflow {
             input.summary,
             input.timeframe,
             staff.userId,
+            input.amountPence ?? null,
+            input.deliverables ?? null,
+            input.revisions ?? null,
+            input.optionalServices ?? null,
+            input.expiresInDays ?? null,
           ],
         )
       ).rows[0]!;
@@ -305,6 +333,30 @@ export class CommissionWorkflow {
 
   // --------------------------------------------------------------- customer
 
+  /** The customer asks for changes to delivered work. */
+  async requestRevision(userId: string, tenantId: string, requestId: string) {
+    return this.tx(async (c) => {
+      const row = await this.lockCommission(c, tenantId, requestId);
+      if (row.requester_id !== userId) notFound();
+      if (row.status !== "awaiting_review")
+        fail(
+          409,
+          "Revisions can be requested once work is ready for your review",
+        );
+      await this.bump(c, tenantId, requestId, "revision_requested");
+      await this.audit(c, userId, "commission.revision.requested", tenantId);
+      await enqueueNotification(
+        c,
+        tenantId,
+        "commission.status",
+        requestId,
+        { status: "revision_requested" },
+        `commission.status:${requestId}:revision:${Date.now()}`,
+      );
+      return { status: "revision_requested" };
+    });
+  }
+
   async decide(
     userId: string,
     tenantId: string,
@@ -318,7 +370,8 @@ export class CommissionWorkflow {
       if (row.requester_id !== userId) notFound();
       const quote = await c.query(
         `UPDATE commission_quotes SET status=$4,decided_at=now(),decline_reason=$5
-         WHERE tenant_id=$1 AND request_id=$2 AND id=$3 AND status='proposed' RETURNING id`,
+         WHERE tenant_id=$1 AND request_id=$2 AND id=$3 AND status='proposed'
+           AND (expires_at IS NULL OR expires_at > now() OR $4 = 'declined') RETURNING id`,
         [
           tenantId,
           requestId,
@@ -327,10 +380,15 @@ export class CommissionWorkflow {
           decision === "decline" ? reason : null,
         ],
       );
-      if (!quote.rowCount) fail(409, "That quote is no longer open");
+      if (!quote.rowCount)
+        fail(
+          409,
+          "That quote is no longer open (it may have expired). Ask the team for an updated quote",
+        );
       if (row.status !== "quoted")
         fail(409, "This commission is not waiting on a quote");
-      const status = decision === "accept" ? "accepted" : "reviewing";
+      // Accepted quotes wait for the deposit; staff confirm it by hand.
+      const status = decision === "accept" ? "payment_pending" : "reviewing";
       await this.bump(c, tenantId, requestId, status);
       await this.audit(
         c,

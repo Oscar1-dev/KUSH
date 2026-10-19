@@ -32,6 +32,8 @@ export interface DiscordTicketChannel {
   state: "active" | "archived";
   customerDiscordUserId: string | null;
   assigneeDiscordUserId: string | null;
+  /** People staff added to the conversation (see the bot's /ticket add). */
+  participantDiscordUserIds: string[];
 }
 
 /** Queue summary for claiming. Deliberately excludes the description. */

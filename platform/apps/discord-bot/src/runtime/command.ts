@@ -45,6 +45,10 @@ export interface BotServices {
   tickets: import("../tickets/manager.js").TicketManager;
   /** Role IDs of a guild member, or null if they are not in the guild. */
   memberRoleIds(userId: string): Promise<string[] | null>;
+  /** When the account was created and joined the server (referral checks). */
+  memberDates?: (
+    userId: string,
+  ) => Promise<{ createdAt: Date; joinedAt: Date } | null>;
   audit(event: AuditEvent): void;
   /** Backend gateway (KUSH API). Typed loosely here; see api-client.ts. */
   api: import("../api-client.js").DiscordApiClient;
@@ -55,6 +59,8 @@ export interface CommandContext {
   actor: Actor;
   guildId: string;
   channelId: string;
+  /** The Discord message or interaction ID: a stable key for retries. */
+  invocationId?: string;
   args: string[];
   /** Prefix: visible in the channel. Slash: ephemeral. Never put private data here. */
   reply(message: BotReply): Promise<void>;
@@ -78,6 +84,15 @@ export interface SlashOption {
   name: string;
   description: string;
   required?: boolean;
+  /**
+   * How Discord asks for it. Values still reach the handler as text args,
+   * so prefix and slash share one parser: a member becomes `<@id>` and a
+   * ticket number becomes `#42`.
+   */
+  type?: "string" | "integer" | "user" | "ticket";
+  choices?: readonly { name: string; value: string }[];
+  minValue?: number;
+  maxValue?: number;
 }
 
 export interface CommandDefinition extends Routable {

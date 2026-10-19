@@ -1,3 +1,4 @@
+import { registerDiscordStaff } from "./discord-staff.js";
 import type { FastifyInstance, FastifyRequest } from "fastify";
 import type { Pool } from "@kush/database";
 import { z } from "@kush/contracts";
@@ -225,6 +226,17 @@ export async function registerStaff(
       amount: z.string().trim().min(1).max(60),
       summary: z.string().trim().min(10).max(5000),
       timeframe: z.string().trim().max(200).nullable(),
+      amountPence: z
+        .number()
+        .int()
+        .min(50)
+        .max(100_000_00)
+        .nullable()
+        .default(null),
+      deliverables: z.string().trim().max(4000).nullable().default(null),
+      revisions: z.number().int().min(0).max(50).nullable().default(null),
+      optionalServices: z.string().trim().max(2000).nullable().default(null),
+      expiresInDays: z.number().int().min(1).max(90).nullable().default(null),
     })
     .strict();
   const milestoneSchema = z
@@ -477,6 +489,8 @@ export async function registerStaff(
     "/web/staff/audit",
     asStaff(async (ctx) => ({ events: await staff.auditLog(ctx) })),
   );
+
+  registerDiscordStaff(app, { pool, access, staff, workflow });
 
   return { access, asStaff };
 }

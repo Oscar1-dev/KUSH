@@ -11,13 +11,17 @@ export const commercialStatuses = [
   "awaiting_customer",
   "quoted",
   "accepted",
+  "payment_pending",
+  "paid",
   "in_progress",
   "awaiting_review",
+  "revision_requested",
   "approved",
   "published",
   "completed",
   "rejected",
   "cancelled",
+  "refunded",
 ] as const;
 
 const text = (maximum: number) => z.string().trim().min(1).max(maximum);
@@ -31,6 +35,13 @@ export const commercialRequestInputSchema = z
     approximateBudget: z.string().trim().max(120).nullable().default(null),
     preferredTimeframe: z.string().trim().max(200).nullable().default(null),
     productUrl: z.url().max(2_000).nullable().default(null),
+    serviceTier: z
+      .enum(["starter", "standard", "premium"])
+      .nullable()
+      .default(null),
+    referenceLinks: z.string().trim().max(2_000).nullable().default(null),
+    contactPreference: z.string().trim().max(200).nullable().default(null),
+    origin: z.enum(["website", "discord"]).default("website"),
   })
   .strict();
 
@@ -78,4 +89,8 @@ export interface CommercialRequest {
   version: number;
   createdAt: string;
   updatedAt: string;
+  serviceTier: "starter" | "standard" | "premium" | null;
+  referenceLinks: string | null;
+  contactPreference: string | null;
+  origin: "website" | "discord";
 }

@@ -37,14 +37,36 @@ const addOptions = (
   builder: SlashCommandBuilder | SlashCommandSubcommandBuilder,
   options: SlashOption[],
 ) => {
-  for (const option of options)
-    builder.addStringOption((item) =>
-      item
-        .setName(option.name)
-        .setDescription(describe(option.description))
-        .setRequired(Boolean(option.required))
-        .setMaxLength(1_000),
-    );
+  for (const option of options) {
+    if (option.type === "user")
+      builder.addUserOption((item) =>
+        item
+          .setName(option.name)
+          .setDescription(describe(option.description))
+          .setRequired(Boolean(option.required)),
+      );
+    else if (option.type === "integer" || option.type === "ticket")
+      builder.addIntegerOption((item) => {
+        item
+          .setName(option.name)
+          .setDescription(describe(option.description))
+          .setRequired(Boolean(option.required));
+        if (option.type === "ticket") item.setMinValue(1);
+        if (option.minValue !== undefined) item.setMinValue(option.minValue);
+        if (option.maxValue !== undefined) item.setMaxValue(option.maxValue);
+        return item;
+      });
+    else
+      builder.addStringOption((item) => {
+        item
+          .setName(option.name)
+          .setDescription(describe(option.description))
+          .setRequired(Boolean(option.required))
+          .setMaxLength(1_000);
+        if (option.choices?.length) item.addChoices(...option.choices);
+        return item;
+      });
+  }
 };
 
 export function buildSlashCommands(registry: readonly CommandDefinition[]) {

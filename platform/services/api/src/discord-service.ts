@@ -222,10 +222,12 @@ export class DiscordService {
       state: "active" | "archived";
       customer_discord: string | null;
       assignee_discord: string | null;
+      participants: string[];
     }>(
       `SELECT d.ticket_id,t.number,t.status,t.category,t.priority,d.channel_id,d.queue,d.state,
          COALESCE(cl.discord_user_id, ci.discord_user_id) AS customer_discord,
-         al.discord_user_id AS assignee_discord
+         al.discord_user_id AS assignee_discord,
+         ARRAY(SELECT p.discord_user_id FROM support_ticket_participants p WHERE p.tenant_id=t.tenant_id AND p.ticket_id=t.id ORDER BY p.created_at) AS participants
        FROM discord_ticket_channels d
        JOIN support_tickets t ON t.tenant_id=d.tenant_id AND t.id=d.ticket_id
        LEFT JOIN discord_account_links cl ON cl.tenant_id=t.tenant_id AND cl.user_id=t.customer_id AND cl.state='verified'
@@ -245,6 +247,7 @@ export class DiscordService {
       state: row.state,
       customerDiscordUserId: row.customer_discord,
       assigneeDiscordUserId: row.assignee_discord,
+      participantDiscordUserIds: row.participants,
     }));
   }
 

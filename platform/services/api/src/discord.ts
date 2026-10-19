@@ -339,6 +339,29 @@ export async function registerDiscord(app: FastifyInstance, { pool }: Options) {
       }),
   );
 
+  app.post<{ Params: { tenantId: string; channelId: string }; Body: unknown }>(
+    `${base}/tickets/by-channel/:channelId/participants`,
+    { schema: { params: params(["tenantId"], channelId) } },
+    async (request, reply) =>
+      handle(reply, async () => {
+        const user = await actor(request, request.params.tenantId);
+        const { discordUserId } = z
+          .object({ discordUserId: z.string().regex(/^[0-9]{17,20}$/) })
+          .strict()
+          .parse(request.body);
+        const ticketId = await discord.ticketIdForChannel(
+          request.params.tenantId,
+          request.params.channelId,
+        );
+        return support.addParticipant(
+          user,
+          request.params.tenantId,
+          ticketId,
+          discordUserId,
+        );
+      }),
+  );
+
   app.patch<{ Params: { tenantId: string; ticketId: string }; Body: unknown }>(
     `${base}/tickets/:ticketId`,
     {

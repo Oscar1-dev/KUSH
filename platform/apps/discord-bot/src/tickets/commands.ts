@@ -314,3 +314,45 @@ export const ticketCommands: CommandDefinition[] = [
     },
   },
 ];
+
+/**
+ * `/ticket close|claim|transcript` mirror the short commands (same handler,
+ * same checks); `/ticket add` brings someone into this ticket's channel.
+ */
+const nested = (name: "close" | "claim" | "transcript") => {
+  const base = ticketCommands.find((command) => command.path[0] === name)!;
+  return {
+    ...base,
+    path: ["ticket", name],
+    aliases: [],
+    usage: base.usage.replace(`!${name}`, `!ticket ${name}`),
+  } satisfies CommandDefinition;
+};
+
+ticketCommands.push(nested("close"), nested("claim"), nested("transcript"), {
+  path: ["ticket", "add"],
+  group: "Support staff",
+  authority: "ticket-handler",
+  summary: "Add someone to this ticket's conversation",
+  usage: "!ticket add <@member>",
+  options: [
+    { name: "member", description: "Who to add", required: true, type: "user" },
+  ],
+  run: async (context) => {
+    const id = MENTION.exec(context.args[0] ?? "")?.[1];
+    if (!id) throw new CommandError("Usage: `!ticket add <@member>`");
+    if (!inTicketChannel(context))
+      throw new CommandError("Run this inside the ticket's channel.");
+    const result = await context.services.api.addTicketParticipant(
+      actorOf(context),
+      context.channelId,
+      id,
+    );
+    await resync(context, result.ticket.id);
+    await context.reply({
+      content: result.added
+        ? `<@${id}> can now see and reply in ticket #${result.ticket.number}.`
+        : `<@${id}> is already in this ticket.`,
+    });
+  },
+});

@@ -48,10 +48,14 @@ import type { BotReply, BotServices, CommandRouter } from "./command.js";
 import {
   ONBOARDING_ACCEPT,
   applicationModal,
+  commissionModal,
+  commissionServiceMenu,
+  linkButton,
   linkModal,
   ticketCategoryMenu,
   ticketModal,
 } from "./components.js";
+import { loadCommissionChoices } from "../commerce/commands.js";
 import { tokenise } from "./prefix.js";
 
 export interface BindingDependencies {
@@ -141,6 +145,7 @@ export async function handleMessage(
     actor,
     guildId: message.guildId,
     channelId: message.channelId,
+    invocationId: message.id,
     args: resolved.args,
     services,
     deleteTrigger: async () => {
@@ -296,7 +301,18 @@ async function handleSlash(
           `!${interaction.options.getString(ARGUMENTS_OPTION) ?? ""}`.trimEnd(),
         ) ?? [])
       : options
-          .map((option) => interaction.options.getString(option.name))
+          .map((option) => {
+            if (option.type === "user") {
+              const user = interaction.options.getUser(option.name);
+              return user ? `<@${user.id}>` : null;
+            }
+            if (option.type === "integer" || option.type === "ticket") {
+              const value = interaction.options.getInteger(option.name);
+              if (value === null) return null;
+              return option.type === "ticket" ? `#${value}` : String(value);
+            }
+            return interaction.options.getString(option.name);
+          })
           .filter((value): value is string => Boolean(value));
   const actor = actorFromMember(interaction.member, services.config.roleIds);
   await router.dispatch(command, {
@@ -304,6 +320,7 @@ async function handleSlash(
     actor,
     guildId: interaction.guildId,
     channelId: interaction.channelId,
+    invocationId: interaction.id,
     args,
     services,
     reply: (reply) => respond(interaction, reply),
@@ -392,8 +409,23 @@ async function handleComponent(
     const categoryKey = /^ticket:open:([a-z-]+)$/.exec(
       interaction.customId,
     )?.[1];
-    if (categoryKey || interaction.customId === PUBLIC_COMMISSION_BUTTON) {
-      const category = ticketCategory(categoryKey ?? "commission");
+    // The commission panel button starts the commission intake.
+    if (interaction.customId === PUBLIC_COMMISSION_BUTTON) {
+      await respond(interaction, {
+        content:
+          "Pick a service. You'll get a written quote before anything is charged.",
+        components: [
+          commissionServiceMenu(
+            signerFor(services),
+            userId,
+            await loadCommissionChoices(services.api),
+          ),
+        ],
+      });
+      return;
+    }
+    if (categoryKey) {
+      const category = ticketCategory(categoryKey);
       if (!category) return;
       await interaction.showModal(
         ticketModal(
@@ -616,6 +648,84 @@ async function handleComponent(
       await respond(interaction, {
         content: `Your ${programme} application was received (status: ${created.status}). KUSH will review it privately; applying does not create an agreement.`,
       });
+      return;
+    }
+    case "commission-service": {
+      if (!interaction.isStringSelectMenu()) return;
+      const category = interaction.values[0] ?? "";
+      const choices = await loadCommissionChoices(services.api);
+      const choice = choices.find((item) => item.category === category);
+      if (!choice) return;
+      await interaction.showModal(
+        commissionModal(
+          signerFor(services),
+          userId,
+          choice.category,
+          choice.label,
+        ),
+      );
+      return;
+    }
+    case "commission-modal": {
+      if (!interaction.isModalSubmit()) return;
+      const category = verified.data;
+      if (!/^[a-z-]{2,30}$/.test(category)) return;
+      await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+      const field = (id: string) =>
+        interaction.fields.getTextInputValue(id).trim();
+      const optional = (id: string) => field(id) || null;
+      try {
+        const created = await services.api.createCommission({
+          discordUserId: userId,
+          requestId: requestUuid(interaction.id),
+          category,
+          serviceTier: null,
+          title: field("title"),
+          details: field("details"),
+          approximateBudget: optional("budget"),
+          preferredTimeframe: optional("timeframe"),
+          referenceLinks: optional("references"),
+          contactPreference: "Discord",
+        });
+        services.audit({
+          action: "commission.created.discord",
+          actorId: userId,
+          outcome: "ok",
+        });
+        await respond(interaction, {
+          content: `✅ **${created.title}** is with KUSH${created.ticketNumber ? ` (ticket #${created.ticketNumber}; its private channel opens in a moment)` : ""}. You'll get a quote to accept on the website before anything is charged. Track it any time with \`/commission status\`.`,
+        });
+      } catch (error) {
+        // Not linked yet: keep the request as a commission ticket instead,
+        // so nobody is turned away; staff can quote once they link.
+        if (!(error instanceof ApiError) || error.status !== 409) throw error;
+        const created = await services.api.create({
+          discordUserId: userId,
+          guildId,
+          interactionId: interaction.id,
+          category: "commission",
+          description: [
+            `Commission request (${category}): ${field("title")}`,
+            field("details"),
+            optional("budget") ? `Budget: ${field("budget")}` : "",
+            optional("timeframe") ? `Timeframe: ${field("timeframe")}` : "",
+            optional("references") ? `References: ${field("references")}` : "",
+          ]
+            .filter(Boolean)
+            .join("\n\n")
+            .slice(0, 2_000),
+        });
+        const channelId = await services.tickets.open({
+          ticket: created.ticket,
+          queue: created.queue,
+          creatorId: userId,
+          existingChannelId: created.channel?.channel_id ?? null,
+        });
+        await respond(interaction, {
+          content: `Your request is in <#${channelId}> (ticket ${created.reference}). Link your KUSH account so you can accept quotes and pay securely on the website:`,
+          components: [linkButton(signerFor(services), userId)],
+        });
+      }
       return;
     }
     case "ticket-modal": {
