@@ -1,8 +1,11 @@
+import { randomUUID } from "node:crypto";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
+import { PayQuoteForm, RevisionForm } from "@/components/account/commerce-forms";
 import { QuoteDecision } from "@/components/account/workspace-forms";
 import styles from "@/components/account/account.module.css";
+import { money } from "@/lib/commerce";
 import { ApiError, kushApi } from "@/lib/server/kush-api";
 import { requireAccount } from "@/lib/server/session";
 import {
@@ -45,17 +48,19 @@ export default async function CommissionPage({
     throw error;
   }
 
-  const cancelled = commission.status === "cancelled";
-  // "Waiting for you" sits between review and quote in the journey.
-  const position = commissionStages.findIndex(
-    (s) =>
-      s.status ===
-      (commission.status === "awaiting_customer"
-        ? "reviewing"
-        : commission.status === "accepted"
-          ? "payment_pending"
-          : commission.status),
-  );
+  const cancelled = commission.status === "cancelled" || commission.status === "refunded";
+  // Off-path statuses sit on the stage they belong to.
+  const onPath: Partial<Record<string, string>> = {
+    awaiting_customer: "reviewing",
+    accepted: "payment_pending",
+    revision_requested: "in_progress",
+  };
+  const position = commissionStages.findIndex((s) => s.status === (onPath[commission.status] ?? commission.status));
+  const accepted = quotes.find((q) => q.status === "accepted");
+  const awaitingPayment = ["payment_pending", "accepted"].includes(commission.status);
+  const creditPence = awaitingPayment
+    ? (await kushApi<{ balancePence: number }>("/web/workspace/credit", { token })).balancePence
+    : 0;
 
   return (
     <>
@@ -86,7 +91,7 @@ export default async function CommissionPage({
             PROGRESS
           </p>
           {cancelled ? (
-            <p className={styles.cardValue}>Cancelled</p>
+            <p className={styles.cardValue}>{commissionLabel[commission.status]}</p>
           ) : (
             <ol className={styles.timeline}>
               {commissionStages.map((stage, index) => (
@@ -103,11 +108,36 @@ export default async function CommissionPage({
               ))}
             </ol>
           )}
-          {needsYou(commission.status) ? (
+          {awaitingPayment && accepted?.amountPence ? (
+            <div style={{ marginTop: 10 }}>
+              <p className={styles.cardText} style={{ marginBottom: 12 }}>
+                Your quote is accepted. Pay {money(accepted.amountPence)} to book your slot; work starts once it&apos;s
+                paid.
+              </p>
+              <PayQuoteForm
+                commissionId={commission.id}
+                quoteId={accepted.id}
+                requestId={randomUUID()}
+                amount={money(accepted.amountPence)}
+                creditPence={creditPence}
+              />
+            </div>
+          ) : awaitingPayment ? (
             <p className={`${styles.notice} ${styles.badgeWarn}`} style={{ marginTop: 6 }}>
-              {commission.status === "payment_pending"
-                ? "Deposit pending: the team will confirm payment details with you on Discord. Card payments aren't switched on here yet, so never pay anywhere you weren't sent by KUSH staff."
-                : `${commissionLabel[commission.status]}: the team will contact you on Discord with the details.`}
+              Quote accepted. The team will confirm how to pay. Only ever pay through this site or a link KUSH staff
+              send you in your ticket.
+            </p>
+          ) : commission.status === "awaiting_review" ? (
+            <div style={{ marginTop: 10 }}>
+              <p className={styles.cardText} style={{ marginBottom: 12 }}>
+                Happy with it? Say so in the conversation and the team will mark it delivered. Want changes? Ask here,
+                then describe them in the conversation.
+              </p>
+              <RevisionForm commissionId={commission.id} />
+            </div>
+          ) : needsYou(commission.status) ? (
+            <p className={`${styles.notice} ${styles.badgeWarn}`} style={{ marginTop: 6 }}>
+              {commissionLabel[commission.status]}: the team will contact you on Discord with the details.
             </p>
           ) : null}
         </section>
@@ -155,17 +185,44 @@ export default async function CommissionPage({
             <div key={q.id} className={styles.card} style={{ marginBottom: 12, borderColor: q.status === "proposed" ? "rgba(167,250,67,.45)" : undefined }}>
               <div className={styles.headerRow}>
                 <p className={styles.cardValue}>{q.amount}</p>
-                <span className={`${styles.badge} ${q.status === "proposed" ? styles.badgeWarn : q.status === "accepted" ? styles.badgeOn : ""}`}>
-                  {q.status === "proposed" ? "AWAITING YOUR DECISION" : q.status.toUpperCase()}
+                <span
+                  className={`${styles.badge} ${q.status === "proposed" && !q.expired ? styles.badgeWarn : q.status === "accepted" ? styles.badgeOn : ""}`}
+                >
+                  {q.expired ? "EXPIRED" : q.status === "proposed" ? "AWAITING YOUR DECISION" : q.status.toUpperCase()}
                 </span>
               </div>
               <p className={styles.prose} style={{ marginTop: 12 }}>
                 {q.summary}
               </p>
+              {q.deliverables ? (
+                <div className={styles.row}>
+                  <span className={styles.rowMeta}>You get</span>
+                  <span className={styles.prose} style={{ textAlign: "right" }}>
+                    {q.deliverables}
+                  </span>
+                </div>
+              ) : null}
+              {q.revisions !== null ? (
+                <div className={styles.row}>
+                  <span className={styles.rowMeta}>Revision rounds</span>
+                  <span>{q.revisions}</span>
+                </div>
+              ) : null}
+              {q.optionalServices ? (
+                <div className={styles.row}>
+                  <span className={styles.rowMeta}>Optional extras</span>
+                  <span className={styles.prose} style={{ textAlign: "right" }}>
+                    {q.optionalServices}
+                  </span>
+                </div>
+              ) : null}
               <p className={styles.rowMeta} style={{ marginTop: 10 }}>
                 {q.timeframe ? `Timeframe: ${q.timeframe} · ` : ""}Sent {dateTime.format(new Date(q.createdAt))}
+                {q.expiresAt && q.status === "proposed"
+                  ? ` · ${q.expired ? "expired" : "valid until"} ${dateTime.format(new Date(q.expiresAt))}`
+                  : ""}
               </p>
-              {q.status === "proposed" ? (
+              {q.status === "proposed" && !q.expired ? (
                 <div style={{ marginTop: 16 }}>
                   <QuoteDecision requestId={commission.id} quoteId={q.id} />
                 </div>

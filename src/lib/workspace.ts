@@ -28,10 +28,13 @@ export type CommissionStatus =
   | "quoted"
   | "accepted"
   | "payment_pending"
+  | "paid"
   | "in_progress"
   | "awaiting_review"
+  | "revision_requested"
   | "completed"
-  | "cancelled";
+  | "cancelled"
+  | "refunded";
 
 export interface Ticket {
   id: string;
@@ -65,7 +68,10 @@ export interface TicketMessage {
   fromYou: boolean;
 }
 
-/** The six catalogue services are the commission categories. */
+/**
+ * Commission categories when the live catalogue can't be read (the API's
+ * catalogue is the source of truth; see lib/server/catalogue.ts).
+ */
 export const commissionCategories = services.map((service) => ({ key: service.slug, label: service.name }));
 
 /** Label for any category, including ones from before the catalogue. */
@@ -81,9 +87,10 @@ export const commissionStages: { status: CommissionStatus; label: string; text: 
   { status: "quoted", label: "Quote ready", text: "Review the quote we've sent you." },
   {
     status: "payment_pending",
-    label: "Deposit",
-    text: "Quote accepted. We'll confirm the deposit with you directly before work starts. Nothing is charged on this site.",
+    label: "Payment",
+    text: "Quote accepted. Pay securely with Stripe to book your slot; work starts once it's paid.",
   },
+  { status: "paid", label: "Paid", text: "Payment received. Your project is in the queue." },
   { status: "in_progress", label: "In progress", text: "We're building it." },
   { status: "awaiting_review", label: "Ready for your review", text: "Check the work and tell us what you think." },
   { status: "completed", label: "Delivered", text: "All done." },
@@ -95,11 +102,14 @@ export const commissionLabel: Record<CommissionStatus, string> = {
   awaiting_customer: "Waiting for you",
   quoted: "Quote ready",
   accepted: "Accepted",
-  payment_pending: "Deposit pending",
+  payment_pending: "Awaiting payment",
+  paid: "Paid",
   in_progress: "In progress",
   awaiting_review: "Ready for your review",
+  revision_requested: "Revision requested",
   completed: "Delivered",
   cancelled: "Cancelled",
+  refunded: "Refunded",
 };
 
 export const ticketLabel: Record<TicketStatus, string> = {
@@ -128,6 +138,13 @@ export interface Quote {
   createdAt: string;
   decidedAt: string | null;
   declineReason: string | null;
+  /** What the customer pays through Stripe, when the quote is payable. */
+  amountPence: number | null;
+  deliverables: string | null;
+  revisions: number | null;
+  optionalServices: string | null;
+  expiresAt: string | null;
+  expired: boolean;
 }
 
 export interface Milestone {

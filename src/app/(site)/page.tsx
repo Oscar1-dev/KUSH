@@ -9,6 +9,7 @@ import site from "@/components/site/site.module.css";
 import SplitText from "@/components/site/split-text";
 import SyncDemo from "@/components/site/sync-demo";
 import { kushApi } from "@/lib/server/kush-api";
+import { countWord } from "@/lib/catalogue";
 import { principles, process, services } from "@/lib/site-content";
 
 import styles from "./home.module.css";
@@ -86,14 +87,14 @@ export default async function Home() {
         </a>
       </section>
 
-      <Marquee words={["Software", "Websites", "Web apps", "Desktop", "UI/UX", "Branding", "Discord bots"]} />
+      <Marquee words={["Websites", "Web apps", "Discord bots", "Software", "Rust servers", "Tech support", "UI/UX", "Automation"]} />
 
       {/* -------------------------------------------------------- services */}
       <section className={site.section} id="services">
         <div className="container">
           <SectionHead eyebrow="01 — What we do" title="What we" accent="make.">
             <p className={site.lede}>
-              Six services, from a £10 fix to a full build. Design, code and brand come from the same small team, so
+              {countWord(services.length)} services, from a £10 fix to a full build. Design, code and brand come from the same small team, so
               everything actually fits together.
             </p>
           </SectionHead>

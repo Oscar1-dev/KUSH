@@ -4,7 +4,8 @@ import Link from "next/link";
 import { Arrow, PageHero, SectionHead } from "@/components/site/blocks";
 import site from "@/components/site/site.module.css";
 import { currentAccount } from "@/lib/server/session";
-import { process, serviceBySlug, services, startingPrice, type TierKey } from "@/lib/site-content";
+import { loadServices } from "@/lib/server/catalogue";
+import { process, startingPrice, type TierKey } from "@/lib/site-content";
 
 import styles from "./commission.module.css";
 
@@ -23,7 +24,8 @@ export default async function CommissionPage({
   searchParams: Promise<{ service?: string; tier?: string }>;
 }) {
   const params = await searchParams;
-  const chosen = params.service ? serviceBySlug(params.service) : undefined;
+  const services = await loadServices();
+  const chosen = params.service ? services.find((service) => service.slug === params.service) : undefined;
   const tier = tiers.includes(params.tier as TierKey) ? (params.tier as TierKey) : undefined;
   const account = await currentAccount().catch(() => null);
 

@@ -1,0 +1,1227 @@
+[
+  {
+    "id": "fallback-websites",
+    "slug": "websites",
+    "category": "websites",
+    "name": "Websites & Portfolios",
+    "summary": "Personal, portfolio and business websites, landing pages and redesigns.",
+    "body": {
+      "headline": [
+        "Sites that",
+        "do the work."
+      ],
+      "intro": "Custom websites with personality, built properly underneath: fast on a phone, easy to update, and made for your audience instead of a template's.",
+      "offerings": [
+        {
+          "title": "Personal & portfolio sites",
+          "text": "A home for you and your work that looks as good as the work itself."
+        },
+        {
+          "title": "Business websites",
+          "text": "Clear pages that explain what you do and get people in touch."
+        },
+        {
+          "title": "Landing pages",
+          "text": "One focused page for a launch, a product or a campaign."
+        },
+        {
+          "title": "Redesigns & maintenance",
+          "text": "Refresh, speed up or look after a site you already have."
+        },
+        {
+          "title": "E-commerce",
+          "text": "Online shops with product pages and checkout, quoted per project."
+        }
+      ],
+      "deliverables": [
+        "The finished site, live or ready to go live",
+        "Source code you own",
+        "A short guide to updating it",
+        "Support after launch"
+      ],
+      "goodFit": [
+        "You need a site that doesn't look like everyone else's",
+        "You want a portfolio that sells your work",
+        "Your current site is slow, broken or dated"
+      ],
+      "availability": {
+        "now": [
+          "Design and build",
+          "Responsive layouts",
+          "Contact forms",
+          "Basic SEO",
+          "Redesigns and maintenance"
+        ],
+        "partner": [
+          "Domain names and hosting (billed by the provider)",
+          "Business email (billed by the provider)",
+          "Payment processing for shops (needs your own Stripe or PayPal account)"
+        ]
+      },
+      "faqs": [
+        {
+          "q": "Do I need hosting and a domain already?",
+          "a": "No. We can recommend options and set them up with you. They're paid to the provider directly, not to KUSH."
+        },
+        {
+          "q": "Can I edit the site myself afterwards?",
+          "a": "Yes, if you want to. We'll agree up front how content gets updated and show you how."
+        },
+        {
+          "q": "How long does it take?",
+          "a": "It depends on the scope, so you'll get a timeline with your quote instead of a guess here."
+        }
+      ]
+    },
+    "fulfilment": "in_house",
+    "position": 0,
+    "offers": [
+      {
+        "id": "fallback-websites-0",
+        "kind": "tier",
+        "tierKey": "starter",
+        "name": "Portfolio website",
+        "description": "A focused one- or two-page site for you or your work.",
+        "includes": [
+          "Custom design, not a theme",
+          "Mobile-first",
+          "Contact links or form"
+        ],
+        "pricing": "from",
+        "amountPence": 4000,
+        "maxPence": null,
+        "currency": "GBP",
+        "deliveryEstimate": null,
+        "priceLabel": "from £40"
+      },
+      {
+        "id": "fallback-websites-1",
+        "kind": "tier",
+        "tierKey": "standard",
+        "name": "Business website",
+        "description": "A small multi-page site for a business.",
+        "includes": [
+          "Up to five pages",
+          "Contact form",
+          "Basic SEO setup",
+          "Google Maps and socials"
+        ],
+        "pricing": "from",
+        "amountPence": 8000,
+        "maxPence": null,
+        "currency": "GBP",
+        "deliveryEstimate": null,
+        "priceLabel": "from £80"
+      },
+      {
+        "id": "fallback-websites-2",
+        "kind": "tier",
+        "tierKey": "premium",
+        "name": "Advanced website project",
+        "description": "A complete, art-directed site. Larger builds are quoted individually.",
+        "includes": [
+          "Several pages and sections",
+          "Motion and interactions",
+          "Editable content",
+          "Accessibility and speed pass"
+        ],
+        "pricing": "range",
+        "amountPence": 30000,
+        "maxPence": 70000,
+        "currency": "GBP",
+        "deliveryEstimate": null,
+        "priceLabel": "£300–£700"
+      },
+      {
+        "id": "fallback-websites-3",
+        "kind": "addon",
+        "tierKey": null,
+        "name": "Quick fix or small change",
+        "description": null,
+        "includes": [],
+        "pricing": "from",
+        "amountPence": 1000,
+        "maxPence": null,
+        "currency": "GBP",
+        "deliveryEstimate": null,
+        "priceLabel": "from £10"
+      },
+      {
+        "id": "fallback-websites-4",
+        "kind": "addon",
+        "tierKey": null,
+        "name": "Extra pages",
+        "description": null,
+        "includes": [],
+        "pricing": "quote",
+        "amountPence": null,
+        "maxPence": null,
+        "currency": "GBP",
+        "deliveryEstimate": null,
+        "priceLabel": "Quoted individually"
+      },
+      {
+        "id": "fallback-websites-5",
+        "kind": "addon",
+        "tierKey": null,
+        "name": "Online shop / e-commerce",
+        "description": null,
+        "includes": [],
+        "pricing": "quote",
+        "amountPence": null,
+        "maxPence": null,
+        "currency": "GBP",
+        "deliveryEstimate": null,
+        "priceLabel": "Quoted individually"
+      },
+      {
+        "id": "fallback-websites-6",
+        "kind": "addon",
+        "tierKey": null,
+        "name": "Ongoing maintenance",
+        "description": null,
+        "includes": [],
+        "pricing": "quote",
+        "amountPence": null,
+        "maxPence": null,
+        "currency": "GBP",
+        "deliveryEstimate": null,
+        "priceLabel": "Quoted individually"
+      }
+    ],
+    "startingPrice": "from £40"
+  },
+  {
+    "id": "fallback-web-apps",
+    "slug": "web-apps",
+    "category": "web-apps",
+    "name": "Web Apps & Dashboards",
+    "summary": "Custom web applications, customer dashboards, admin panels and API integrations.",
+    "body": {
+      "headline": [
+        "Your data,",
+        "under control."
+      ],
+      "intro": "Web applications people sign in to: dashboards, admin panels, client portals and internal tools, with proper accounts, permissions and the boring-but-vital security work done right.",
+      "offerings": [
+        {
+          "title": "Customer dashboards",
+          "text": "Give your customers their own signed-in space."
+        },
+        {
+          "title": "Admin panels",
+          "text": "Manage users, orders, content or bookings without touching a database."
+        },
+        {
+          "title": "Internal tools",
+          "text": "Swap a messy spreadsheet for something your team can actually use."
+        },
+        {
+          "title": "API integrations",
+          "text": "Connect your app to the services you already use."
+        }
+      ],
+      "deliverables": [
+        "The working app",
+        "Source code you own",
+        "Technical documentation",
+        "Handover session"
+      ],
+      "goodFit": [
+        "Your team lives in spreadsheets",
+        "Customers keep asking for an account area",
+        "You need a dashboard for data you already have"
+      ],
+      "availability": {
+        "now": [
+          "Accounts, roles and 2FA",
+          "Databases and APIs",
+          "Dashboards and admin panels",
+          "Discord-connected features"
+        ],
+        "partner": [
+          "Taking payments (needs your own Stripe or PayPal account)",
+          "Server hosting (billed by the provider)",
+          "Native mobile apps"
+        ]
+      },
+      "faqs": [
+        {
+          "q": "Can it connect to tools I already use?",
+          "a": "Usually. Tell us which ones and we'll check what their APIs allow before quoting."
+        },
+        {
+          "q": "Is it secure?",
+          "a": "Sign-in, permissions and audit logs are built in from the start, the same way the KUSH platform works."
+        }
+      ]
+    },
+    "fulfilment": "in_house",
+    "position": 1,
+    "offers": [
+      {
+        "id": "fallback-web-apps-0",
+        "kind": "tier",
+        "tierKey": "starter",
+        "name": "Small feature or fix",
+        "description": null,
+        "includes": [
+          "A new page, chart or form",
+          "Bug fixes",
+          "Testing before hand-over"
+        ],
+        "pricing": "from",
+        "amountPence": 4000,
+        "maxPence": null,
+        "currency": "GBP",
+        "deliveryEstimate": null,
+        "priceLabel": "from £40"
+      },
+      {
+        "id": "fallback-web-apps-1",
+        "kind": "tier",
+        "tierKey": "standard",
+        "name": "Custom web application",
+        "description": null,
+        "includes": [
+          "Sign-in and roles",
+          "Database and API",
+          "Responsive interface",
+          "Deployment help"
+        ],
+        "pricing": "from",
+        "amountPence": 15000,
+        "maxPence": null,
+        "currency": "GBP",
+        "deliveryEstimate": null,
+        "priceLabel": "from £150"
+      },
+      {
+        "id": "fallback-web-apps-2",
+        "kind": "tier",
+        "tierKey": "premium",
+        "name": "Full platform",
+        "description": null,
+        "includes": [
+          "Scoping session",
+          "Accounts, 2FA and audit logs",
+          "Integrations",
+          "Milestone delivery"
+        ],
+        "pricing": "quote",
+        "amountPence": null,
+        "maxPence": null,
+        "currency": "GBP",
+        "deliveryEstimate": null,
+        "priceLabel": "Quoted individually"
+      },
+      {
+        "id": "fallback-web-apps-3",
+        "kind": "addon",
+        "tierKey": null,
+        "name": "Two-factor authentication",
+        "description": null,
+        "includes": [],
+        "pricing": "quote",
+        "amountPence": null,
+        "maxPence": null,
+        "currency": "GBP",
+        "deliveryEstimate": null,
+        "priceLabel": "Quoted individually"
+      },
+      {
+        "id": "fallback-web-apps-4",
+        "kind": "addon",
+        "tierKey": null,
+        "name": "Exports and reports",
+        "description": null,
+        "includes": [],
+        "pricing": "quote",
+        "amountPence": null,
+        "maxPence": null,
+        "currency": "GBP",
+        "deliveryEstimate": null,
+        "priceLabel": "Quoted individually"
+      },
+      {
+        "id": "fallback-web-apps-5",
+        "kind": "addon",
+        "tierKey": null,
+        "name": "Discord integration",
+        "description": null,
+        "includes": [],
+        "pricing": "quote",
+        "amountPence": null,
+        "maxPence": null,
+        "currency": "GBP",
+        "deliveryEstimate": null,
+        "priceLabel": "Quoted individually"
+      }
+    ],
+    "startingPrice": "from £40"
+  },
+  {
+    "id": "fallback-discord",
+    "slug": "discord",
+    "category": "discord",
+    "name": "Discord Bots & Servers",
+    "summary": "Custom bots, moderation, tickets, verification, economy systems and server setup.",
+    "body": {
+      "headline": [
+        "Your server,",
+        "fully loaded."
+      ],
+      "intro": "Discord servers that run themselves. Clean channel and role setups, plus custom bots for tickets, moderation, verification and more. Our own server runs on a bot we built, so you can try the ideas first.",
+      "offerings": [
+        {
+          "title": "Server setup",
+          "text": "Channels, roles and permissions organised properly, with locked info channels."
+        },
+        {
+          "title": "Ticket & moderation bots",
+          "text": "Private tickets, claims, transcripts, warnings, timeouts and case logs."
+        },
+        {
+          "title": "Verification & economy",
+          "text": "Verification flows, levels, currencies and custom commands."
+        },
+        {
+          "title": "Website integrations",
+          "text": "Link your server to a website or store, so roles follow purchases."
+        }
+      ],
+      "deliverables": [
+        "Your bot, running in your server",
+        "Source code you own",
+        "A setup guide for your staff",
+        "Support after launch"
+      ],
+      "goodFit": [
+        "Your support is lost in DMs and general chat",
+        "Your mods need better tools",
+        "You want Discord roles tied to your website or store"
+      ],
+      "availability": {
+        "now": [
+          "Server design and permissions",
+          "Custom bots and commands",
+          "Tickets, moderation, verification and economy",
+          "Website and role sync"
+        ],
+        "partner": [
+          "24/7 bot hosting (billed by the host)"
+        ]
+      },
+      "faqs": [
+        {
+          "q": "Where will the bot run?",
+          "a": "On hosting you choose, and we'll help you set it up. The host bills you directly."
+        },
+        {
+          "q": "Can I see an example?",
+          "a": "Yes. Join the KUSH Discord: tickets, moderation, vouches and staff applications all run on our own bot."
+        }
+      ]
+    },
+    "fulfilment": "in_house",
+    "position": 2,
+    "offers": [
+      {
+        "id": "fallback-discord-0",
+        "kind": "tier",
+        "tierKey": "starter",
+        "name": "Discord server setup",
+        "description": null,
+        "includes": [
+          "Channels and categories",
+          "Roles and permissions",
+          "Read-only info channels"
+        ],
+        "pricing": "from",
+        "amountPence": 1500,
+        "maxPence": null,
+        "currency": "GBP",
+        "deliveryEstimate": null,
+        "priceLabel": "from £15"
+      },
+      {
+        "id": "fallback-discord-1",
+        "kind": "tier",
+        "tierKey": "standard",
+        "name": "Basic Discord bot",
+        "description": null,
+        "includes": [
+          "Custom commands",
+          "Embeds styled to your brand",
+          "Setup help"
+        ],
+        "pricing": "from",
+        "amountPence": 2500,
+        "maxPence": null,
+        "currency": "GBP",
+        "deliveryEstimate": null,
+        "priceLabel": "from £25"
+      },
+      {
+        "id": "fallback-discord-2",
+        "kind": "tier",
+        "tierKey": "premium",
+        "name": "Advanced bot system",
+        "description": null,
+        "includes": [
+          "Tickets, moderation or economy",
+          "Website and role sync",
+          "Staff dashboard",
+          "Milestone delivery"
+        ],
+        "pricing": "quote",
+        "amountPence": null,
+        "maxPence": null,
+        "currency": "GBP",
+        "deliveryEstimate": null,
+        "priceLabel": "Quoted individually"
+      },
+      {
+        "id": "fallback-discord-3",
+        "kind": "addon",
+        "tierKey": null,
+        "name": "Ticket transcripts",
+        "description": null,
+        "includes": [],
+        "pricing": "quote",
+        "amountPence": null,
+        "maxPence": null,
+        "currency": "GBP",
+        "deliveryEstimate": null,
+        "priceLabel": "Quoted individually"
+      },
+      {
+        "id": "fallback-discord-4",
+        "kind": "addon",
+        "tierKey": null,
+        "name": "Verification flow",
+        "description": null,
+        "includes": [],
+        "pricing": "quote",
+        "amountPence": null,
+        "maxPence": null,
+        "currency": "GBP",
+        "deliveryEstimate": null,
+        "priceLabel": "Quoted individually"
+      },
+      {
+        "id": "fallback-discord-5",
+        "kind": "addon",
+        "tierKey": null,
+        "name": "Economy system",
+        "description": null,
+        "includes": [],
+        "pricing": "quote",
+        "amountPence": null,
+        "maxPence": null,
+        "currency": "GBP",
+        "deliveryEstimate": null,
+        "priceLabel": "Quoted individually"
+      }
+    ],
+    "startingPrice": "from £15"
+  },
+  {
+    "id": "fallback-software",
+    "slug": "software",
+    "category": "software",
+    "name": "Desktop Software & Tools",
+    "summary": "Custom desktop applications, Windows utilities, business tools and improvements to existing software.",
+    "body": {
+      "headline": [
+        "Software",
+        "with substance."
+      ],
+      "intro": "Desktop apps and tools that feel at home on the machine they run on, from a small utility that saves you an hour a day to a full application.",
+      "offerings": [
+        {
+          "title": "Windows utilities",
+          "text": "Automate the repetitive thing you do every day."
+        },
+        {
+          "title": "Custom desktop apps",
+          "text": "Proper applications with a real interface, built around one job."
+        },
+        {
+          "title": "Business tools",
+          "text": "Replace the fragile script someone wrote three years ago."
+        },
+        {
+          "title": "Improvements",
+          "text": "Fix, extend or modernise software you already have."
+        }
+      ],
+      "deliverables": [
+        "Builds ready to run",
+        "Installer",
+        "User guide",
+        "Source code"
+      ],
+      "goodFit": [
+        "You repeat the same steps every day",
+        "Your users live on the desktop",
+        "Existing software needs fixing or extending"
+      ],
+      "availability": {
+        "now": [
+          "Windows tools and utilities",
+          "Cross-platform desktop apps",
+          "API development"
+        ],
+        "partner": [
+          "Code-signing certificates (bought from a certificate provider)",
+          "App-store publishing (needs your developer account)"
+        ]
+      },
+      "faqs": [
+        {
+          "q": "Will it work on Mac and Linux?",
+          "a": "Many tools can be cross-platform. Some things are Windows-only, and we'll say which in your quote."
+        },
+        {
+          "q": "Why does Windows warn about an unknown publisher?",
+          "a": "Unsigned software triggers that warning. A code-signing certificate removes it, but it's bought from a provider."
+        }
+      ]
+    },
+    "fulfilment": "in_house",
+    "position": 3,
+    "offers": [
+      {
+        "id": "fallback-software-0",
+        "kind": "tier",
+        "tierKey": "starter",
+        "name": "Windows utility or script",
+        "description": null,
+        "includes": [
+          "One task, automated",
+          "Instructions to run it"
+        ],
+        "pricing": "from",
+        "amountPence": 2000,
+        "maxPence": null,
+        "currency": "GBP",
+        "deliveryEstimate": null,
+        "priceLabel": "from £20"
+      },
+      {
+        "id": "fallback-software-1",
+        "kind": "tier",
+        "tierKey": "standard",
+        "name": "Custom desktop software",
+        "description": null,
+        "includes": [
+          "Proper interface",
+          "Settings and saved data",
+          "Installer"
+        ],
+        "pricing": "from",
+        "amountPence": 10000,
+        "maxPence": null,
+        "currency": "GBP",
+        "deliveryEstimate": null,
+        "priceLabel": "from £100"
+      },
+      {
+        "id": "fallback-software-2",
+        "kind": "tier",
+        "tierKey": "premium",
+        "name": "Bespoke application",
+        "description": null,
+        "includes": [
+          "Auto-updates",
+          "Licensing",
+          "Milestone delivery"
+        ],
+        "pricing": "quote",
+        "amountPence": null,
+        "maxPence": null,
+        "currency": "GBP",
+        "deliveryEstimate": null,
+        "priceLabel": "Quoted individually"
+      },
+      {
+        "id": "fallback-software-3",
+        "kind": "addon",
+        "tierKey": null,
+        "name": "Auto-updates",
+        "description": null,
+        "includes": [],
+        "pricing": "quote",
+        "amountPence": null,
+        "maxPence": null,
+        "currency": "GBP",
+        "deliveryEstimate": null,
+        "priceLabel": "Quoted individually"
+      },
+      {
+        "id": "fallback-software-4",
+        "kind": "addon",
+        "tierKey": null,
+        "name": "Licence keys",
+        "description": null,
+        "includes": [],
+        "pricing": "quote",
+        "amountPence": null,
+        "maxPence": null,
+        "currency": "GBP",
+        "deliveryEstimate": null,
+        "priceLabel": "Quoted individually"
+      }
+    ],
+    "startingPrice": "from £20"
+  },
+  {
+    "id": "fallback-gaming",
+    "slug": "gaming",
+    "category": "gaming",
+    "name": "Gaming & Rust Servers",
+    "summary": "Rust server configuration, plugins and maps, plus community websites and admin tools.",
+    "body": {
+      "headline": [
+        "Game on,",
+        "properly."
+      ],
+      "intro": "Everything a game community needs behind the scenes: Rust server configuration, custom plugins and maps, community websites, Discord systems and the admin tools that keep it all running.",
+      "offerings": [
+        {
+          "title": "Rust server configuration",
+          "text": "Rates, kits, loot tables and permissions set up the way you want."
+        },
+        {
+          "title": "Rust plugins",
+          "text": "Custom plugins and changes to existing ones."
+        },
+        {
+          "title": "Rust maps",
+          "text": "Custom maps and monuments for your server."
+        },
+        {
+          "title": "Community websites & tools",
+          "text": "Sites, Discord systems and admin tools for your community."
+        }
+      ],
+      "deliverables": [
+        "Config or plugin files",
+        "Install notes",
+        "Source for custom work",
+        "Support after launch"
+      ],
+      "goodFit": [
+        "You're launching or relaunching a server",
+        "You need a plugin that doesn't exist yet",
+        "Your community needs a website or better tools"
+      ],
+      "availability": {
+        "now": [
+          "Rust server configuration",
+          "Rust plugin development",
+          "Rust map creation",
+          "Community websites and Discord systems"
+        ],
+        "partner": [
+          "Game server hosting (billed by the host)"
+        ]
+      },
+      "faqs": [
+        {
+          "q": "Do you host the server?",
+          "a": "No. You keep your own host; we configure and build for it."
+        },
+        {
+          "q": "Will plugins break on Rust updates?",
+          "a": "Monthly game updates can affect plugins. Fixes after updates can be quoted per change or as an ongoing plan."
+        }
+      ]
+    },
+    "fulfilment": "in_house",
+    "position": 4,
+    "offers": [
+      {
+        "id": "fallback-gaming-0",
+        "kind": "tier",
+        "tierKey": "starter",
+        "name": "Rust server configuration",
+        "description": null,
+        "includes": [
+          "Rates, kits and permissions",
+          "Install notes"
+        ],
+        "pricing": "from",
+        "amountPence": 2000,
+        "maxPence": null,
+        "currency": "GBP",
+        "deliveryEstimate": null,
+        "priceLabel": "from £20"
+      },
+      {
+        "id": "fallback-gaming-1",
+        "kind": "tier",
+        "tierKey": "standard",
+        "name": "Rust plugin development",
+        "description": null,
+        "includes": [
+          "Custom plugin",
+          "Config file",
+          "One round of changes"
+        ],
+        "pricing": "from",
+        "amountPence": 2500,
+        "maxPence": null,
+        "currency": "GBP",
+        "deliveryEstimate": null,
+        "priceLabel": "from £25"
+      },
+      {
+        "id": "fallback-gaming-2",
+        "kind": "tier",
+        "tierKey": "premium",
+        "name": "Rust map creation",
+        "description": null,
+        "includes": [
+          "Custom map",
+          "Monument placement",
+          "Map file"
+        ],
+        "pricing": "from",
+        "amountPence": 4000,
+        "maxPence": null,
+        "currency": "GBP",
+        "deliveryEstimate": null,
+        "priceLabel": "from £40"
+      },
+      {
+        "id": "fallback-gaming-3",
+        "kind": "addon",
+        "tierKey": null,
+        "name": "Game community website",
+        "description": null,
+        "includes": [],
+        "pricing": "quote",
+        "amountPence": null,
+        "maxPence": null,
+        "currency": "GBP",
+        "deliveryEstimate": null,
+        "priceLabel": "Quoted individually"
+      },
+      {
+        "id": "fallback-gaming-4",
+        "kind": "addon",
+        "tierKey": null,
+        "name": "Gaming Discord system",
+        "description": null,
+        "includes": [],
+        "pricing": "quote",
+        "amountPence": null,
+        "maxPence": null,
+        "currency": "GBP",
+        "deliveryEstimate": null,
+        "priceLabel": "Quoted individually"
+      },
+      {
+        "id": "fallback-gaming-5",
+        "kind": "addon",
+        "tierKey": null,
+        "name": "Server admin tools",
+        "description": null,
+        "includes": [],
+        "pricing": "quote",
+        "amountPence": null,
+        "maxPence": null,
+        "currency": "GBP",
+        "deliveryEstimate": null,
+        "priceLabel": "Quoted individually"
+      }
+    ],
+    "startingPrice": "from £20"
+  },
+  {
+    "id": "fallback-technical",
+    "slug": "technical",
+    "category": "technical",
+    "name": "Technical Support & Setup",
+    "summary": "Windows troubleshooting, domains and DNS, software setup and system integration.",
+    "body": {
+      "headline": [
+        "Fixed,",
+        "not fiddled with."
+      ],
+      "intro": "Practical technical help: sorting out a misbehaving Windows PC, pointing a domain at the right place, installing and configuring software, or getting systems to work together.",
+      "offerings": [
+        {
+          "title": "Windows troubleshooting",
+          "text": "Slow machines, errors, broken updates and odd behaviour."
+        },
+        {
+          "title": "Domains & DNS",
+          "text": "Connect a domain to your website and email, the right way."
+        },
+        {
+          "title": "Software setup",
+          "text": "Installation and configuration, done once and done properly."
+        },
+        {
+          "title": "System integration",
+          "text": "Get your tools and services talking to each other."
+        }
+      ],
+      "deliverables": [
+        "The fix or setup",
+        "A short note of what was done",
+        "Follow-up if it comes back"
+      ],
+      "goodFit": [
+        "Something stopped working and you don't know why",
+        "You've bought a domain and it isn't connected",
+        "You want software set up without the headache"
+      ],
+      "availability": {
+        "now": [
+          "Remote Windows troubleshooting",
+          "Domain and DNS configuration",
+          "Software installation and configuration"
+        ],
+        "partner": [
+          "Hardware repairs (needs a local repair shop)",
+          "Domain purchases (billed by the registrar)"
+        ]
+      },
+      "faqs": [
+        {
+          "q": "Is it remote?",
+          "a": "Yes. Most jobs are done remotely with your permission, using a screen-sharing tool you control."
+        },
+        {
+          "q": "What if it can't be fixed?",
+          "a": "We'll tell you honestly, and explain what we found."
+        }
+      ]
+    },
+    "fulfilment": "in_house",
+    "position": 5,
+    "offers": [
+      {
+        "id": "fallback-technical-0",
+        "kind": "tier",
+        "tierKey": "starter",
+        "name": "Small technical task",
+        "description": null,
+        "includes": [
+          "One problem or setup",
+          "Done remotely"
+        ],
+        "pricing": "from",
+        "amountPence": 1000,
+        "maxPence": null,
+        "currency": "GBP",
+        "deliveryEstimate": null,
+        "priceLabel": "from £10"
+      },
+      {
+        "id": "fallback-technical-1",
+        "kind": "tier",
+        "tierKey": "standard",
+        "name": "Windows troubleshooting & support",
+        "description": null,
+        "includes": [
+          "Diagnosis",
+          "Fix where possible",
+          "Summary of what changed"
+        ],
+        "pricing": "from",
+        "amountPence": 1000,
+        "maxPence": null,
+        "currency": "GBP",
+        "deliveryEstimate": null,
+        "priceLabel": "from £10"
+      },
+      {
+        "id": "fallback-technical-2",
+        "kind": "tier",
+        "tierKey": "premium",
+        "name": "Domains, DNS & system integration",
+        "description": null,
+        "includes": [
+          "Domain and DNS setup",
+          "Email records",
+          "Integration work"
+        ],
+        "pricing": "quote",
+        "amountPence": null,
+        "maxPence": null,
+        "currency": "GBP",
+        "deliveryEstimate": null,
+        "priceLabel": "Quoted individually"
+      }
+    ],
+    "startingPrice": "from £10"
+  },
+  {
+    "id": "fallback-creative",
+    "slug": "creative",
+    "category": "creative",
+    "name": "Design & Creative",
+    "summary": "UI/UX and website design, graphics and branding, motion graphics, video editing and VFX.",
+    "body": {
+      "headline": [
+        "Look",
+        "different."
+      ],
+      "intro": "Visual work with a point of view: interface and website design, graphics and branding, and video work, art-directed so it feels like one brand. Some motion and VFX work involves partners and is quote-only.",
+      "offerings": [
+        {
+          "title": "UI/UX & website design",
+          "text": "Screens and flows for apps and sites, with every state designed."
+        },
+        {
+          "title": "Graphics & branding",
+          "text": "Logos, banners, brand kits and Discord art."
+        },
+        {
+          "title": "Video editing & GFX",
+          "text": "Edits, thumbnails and graphics for your content."
+        },
+        {
+          "title": "Motion graphics & VFX",
+          "text": "Animated logos, promos and effects, quoted per project."
+        }
+      ],
+      "deliverables": [
+        "Master artwork files",
+        "Exports for every platform",
+        "Usage rights as agreed"
+      ],
+      "goodFit": [
+        "You're launching something new",
+        "Your brand looks different everywhere",
+        "Your content needs a sharper edit"
+      ],
+      "availability": {
+        "now": [
+          "UI/UX and website design",
+          "Graphics, logos and banners",
+          "Video editing and GFX"
+        ],
+        "partner": [
+          "Advanced motion graphics and VFX (quote-only, may involve a partner)",
+          "Promotional video shoots",
+          "Print production (billed by the printer)"
+        ]
+      },
+      "faqs": [
+        {
+          "q": "Do I own the designs?",
+          "a": "Usage rights are written into your quote before you accept it."
+        },
+        {
+          "q": "How many revisions do I get?",
+          "a": "Each quote states the number of revision rounds. More can be added."
+        }
+      ]
+    },
+    "fulfilment": "in_house",
+    "position": 6,
+    "offers": [
+      {
+        "id": "fallback-creative-0",
+        "kind": "tier",
+        "tierKey": "starter",
+        "name": "Video editing or GFX",
+        "description": null,
+        "includes": [
+          "One edit or graphic",
+          "Exports for the platform"
+        ],
+        "pricing": "from",
+        "amountPence": 1500,
+        "maxPence": null,
+        "currency": "GBP",
+        "deliveryEstimate": null,
+        "priceLabel": "from £15"
+      },
+      {
+        "id": "fallback-creative-1",
+        "kind": "tier",
+        "tierKey": "standard",
+        "name": "UI/UX design",
+        "description": null,
+        "includes": [
+          "Screens or flow",
+          "Design files"
+        ],
+        "pricing": "from",
+        "amountPence": 2000,
+        "maxPence": null,
+        "currency": "GBP",
+        "deliveryEstimate": null,
+        "priceLabel": "from £20"
+      },
+      {
+        "id": "fallback-creative-2",
+        "kind": "tier",
+        "tierKey": "premium",
+        "name": "Branding, motion graphics & VFX",
+        "description": null,
+        "includes": [
+          "Brand identity or motion work",
+          "Guidelines or project files"
+        ],
+        "pricing": "quote",
+        "amountPence": null,
+        "maxPence": null,
+        "currency": "GBP",
+        "deliveryEstimate": null,
+        "priceLabel": "Quoted individually"
+      },
+      {
+        "id": "fallback-creative-3",
+        "kind": "addon",
+        "tierKey": null,
+        "name": "Logo",
+        "description": null,
+        "includes": [],
+        "pricing": "quote",
+        "amountPence": null,
+        "maxPence": null,
+        "currency": "GBP",
+        "deliveryEstimate": null,
+        "priceLabel": "Quoted individually"
+      },
+      {
+        "id": "fallback-creative-4",
+        "kind": "addon",
+        "tierKey": null,
+        "name": "Promotional media",
+        "description": null,
+        "includes": [],
+        "pricing": "quote",
+        "amountPence": null,
+        "maxPence": null,
+        "currency": "GBP",
+        "deliveryEstimate": null,
+        "priceLabel": "Quoted individually"
+      }
+    ],
+    "startingPrice": "from £15"
+  },
+  {
+    "id": "fallback-automation",
+    "slug": "automation",
+    "category": "automation",
+    "name": "Automation & APIs",
+    "summary": "Automation software, API development and integrations that remove the busywork.",
+    "body": {
+      "headline": [
+        "Let the",
+        "machines do it."
+      ],
+      "intro": "Integrations and automation that take boring jobs off your plate: tools talking to each other, scheduled jobs that just run, and alerts when something needs a person.",
+      "offerings": [
+        {
+          "title": "Integrations",
+          "text": "Get your tools sharing data automatically."
+        },
+        {
+          "title": "Webhooks & alerts",
+          "text": "Get told in Discord or by email when something important happens."
+        },
+        {
+          "title": "Scheduled jobs",
+          "text": "Reports, clean-ups and syncs that run on time."
+        },
+        {
+          "title": "APIs & back-ends",
+          "text": "A proper back-end for your app, site or bot."
+        }
+      ],
+      "deliverables": [
+        "Working automation",
+        "Source code you own",
+        "Technical docs"
+      ],
+      "goodFit": [
+        "You copy data between tools by hand",
+        "Things break and nobody notices",
+        "You need a back-end for your app or bot"
+      ],
+      "availability": {
+        "now": [
+          "APIs and webhooks",
+          "Scheduled jobs",
+          "Discord and email alerts"
+        ],
+        "partner": [
+          "Paid third-party APIs (billed by the provider)",
+          "Server hosting (billed by the provider)"
+        ]
+      },
+      "faqs": [
+        {
+          "q": "What if my tool has no API?",
+          "a": "Then we'll tell you honestly what's possible."
+        }
+      ]
+    },
+    "fulfilment": "in_house",
+    "position": 7,
+    "offers": [
+      {
+        "id": "fallback-automation-0",
+        "kind": "tier",
+        "tierKey": "starter",
+        "name": "Small automation",
+        "description": null,
+        "includes": [
+          "One trigger, one action"
+        ],
+        "pricing": "from",
+        "amountPence": 1500,
+        "maxPence": null,
+        "currency": "GBP",
+        "deliveryEstimate": null,
+        "priceLabel": "from £15"
+      },
+      {
+        "id": "fallback-automation-1",
+        "kind": "tier",
+        "tierKey": "standard",
+        "name": "API integration",
+        "description": null,
+        "includes": [
+          "Two tools kept in sync",
+          "Retries and alerts"
+        ],
+        "pricing": "quote",
+        "amountPence": null,
+        "maxPence": null,
+        "currency": "GBP",
+        "deliveryEstimate": null,
+        "priceLabel": "Quoted individually"
+      },
+      {
+        "id": "fallback-automation-2",
+        "kind": "tier",
+        "tierKey": "premium",
+        "name": "Automated workflows & back-ends",
+        "description": null,
+        "includes": [
+          "Custom API or service",
+          "Monitoring",
+          "Milestone delivery"
+        ],
+        "pricing": "quote",
+        "amountPence": null,
+        "maxPence": null,
+        "currency": "GBP",
+        "deliveryEstimate": null,
+        "priceLabel": "Quoted individually"
+      }
+    ],
+    "startingPrice": "from £15"
+  }
+]

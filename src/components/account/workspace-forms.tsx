@@ -212,8 +212,8 @@ export function QuoteDecision({ requestId, quoteId }: { requestId: string; quote
         <input type="hidden" name="quoteId" value={quoteId} />
         <input type="hidden" name="decision" value="accept" />
         <label className={styles.rowMeta}>
-          <input type="checkbox" name="confirm" value="yes" /> I accept this quote. I understand no payment is taken on
-          the website; the team will confirm next steps.
+          <input type="checkbox" name="confirm" value="yes" /> I accept this quote. Accepting doesn&apos;t charge me;
+          I&apos;ll pay securely with Stripe on the next step.
         </label>
         <div className={styles.formRow}>
           <button className={`${styles.button} ${styles.buttonPrimary}`} disabled={pending}>

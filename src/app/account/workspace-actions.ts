@@ -128,5 +128,5 @@ export async function decideQuote(_previous: ActionState, form: FormData): Promi
     return failure(error);
   }
   revalidatePath(`/account/commissions/${requestId}`);
-  return { success: decision === "accept" ? "Quote accepted. The team will schedule your project." : "Quote declined. The team will be in touch." };
+  return { success: decision === "accept" ? "Quote accepted. You can now pay for it securely." : "Quote declined. The team will be in touch." };
 }

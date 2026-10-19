@@ -6,16 +6,21 @@ import { notFound } from "next/navigation";
 import { Arrow, Cta, PageHero, SectionHead } from "@/components/site/blocks";
 import site from "@/components/site/site.module.css";
 import { conceptsFor } from "@/lib/showcase";
-import { process, serviceBySlug, services, startingPrice } from "@/lib/site-content";
+import { loadServices } from "@/lib/server/catalogue";
+import { process, services as builtIn, startingPrice } from "@/lib/site-content";
 
 import styles from "../services.module.css";
 
+// Prices are edited by staff in the API; pages refresh within a minute.
+export const revalidate = 60;
+
 export function generateStaticParams() {
-  return services.map((service) => ({ slug: service.slug }));
+  return builtIn.map((service) => ({ slug: service.slug }));
 }
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
-  const service = serviceBySlug((await params).slug);
+  const { slug } = await params;
+  const service = (await loadServices()).find((item) => item.slug === slug);
   return service ? { title: service.name, description: service.summary } : {};
 }
 
@@ -23,7 +28,9 @@ const delay = (i: number) => ({ "--reveal-i": i }) as React.CSSProperties;
 const request = (slug: string, tier?: string) => `/commission?service=${slug}${tier ? `&tier=${tier}` : ""}`;
 
 export default async function ServicePage({ params }: { params: Promise<{ slug: string }> }) {
-  const service = serviceBySlug((await params).slug);
+  const { slug } = await params;
+  const services = await loadServices();
+  const service = services.find((item) => item.slug === slug);
   if (!service) notFound();
   const at = services.indexOf(service);
   const next = services[(at + 1) % services.length]!;
@@ -33,7 +40,7 @@ export default async function ServicePage({ params }: { params: Promise<{ slug: 
   return (
     <>
       <PageHero
-        eyebrow={`Service ${service.index} / 0${services.length}`}
+        eyebrow={`Service ${service.index} / ${String(services.length).padStart(2, "0")}`}
         title={service.headline}
         lede={service.intro}
         aside={

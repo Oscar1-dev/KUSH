@@ -10,6 +10,7 @@ import Wordmark from "./wordmark";
 
 const links = [
   { href: "/services", label: "Services" },
+  { href: "/pricing", label: "Pricing" },
   { href: "/work", label: "Work" },
   { href: "/about", label: "About" },
   { href: "/vouches", label: "Vouches" },

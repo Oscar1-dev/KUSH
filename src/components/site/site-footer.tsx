@@ -19,9 +19,19 @@ const columns = [
     title: "Help",
     links: [
       { href: "/commission", label: "Start a project" },
+      { href: "/pricing", label: "Pricing" },
+      { href: "/support", label: "Support" },
       { href: "/contact", label: "Contact" },
       { href: "/faq", label: "FAQ" },
       { href: "/account", label: "Your account" },
+    ],
+  },
+  {
+    title: "Policies",
+    links: [
+      { href: "/terms", label: "Terms" },
+      { href: "/privacy", label: "Privacy" },
+      { href: "/refunds", label: "Refunds" },
     ],
   },
 ];

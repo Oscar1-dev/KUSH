@@ -5,20 +5,25 @@ import { Arrow, Cta, PageHero, SectionHead } from "@/components/site/blocks";
 import Marquee from "@/components/site/marquee";
 import ServiceList from "@/components/site/service-list";
 import site from "@/components/site/site.module.css";
-import { process, services } from "@/lib/site-content";
+import { countWord } from "@/lib/catalogue";
+import { loadServices } from "@/lib/server/catalogue";
+import { process } from "@/lib/site-content";
 
 export const metadata: Metadata = {
   title: "Services",
   description: "Custom development, websites and web apps, desktop software, UI/UX design and branding from KUSH.",
 };
 
-export default function ServicesPage() {
+export const revalidate = 60;
+
+export default async function ServicesPage() {
+  const services = await loadServices();
   return (
     <>
       <PageHero
         eyebrow="Services"
-        title={["Five things,", "done properly."]}
-        lede="Software, websites, apps, interfaces and brands. Most projects use more than one, and that's the point: it's the same small team doing all of it."
+        title={[`${countWord(services.length)} things,`, "done properly."]}
+        lede="Websites, apps, Discord bots, software, game servers, tech support, design and automation. Most projects use more than one, and that's the point: it's the same small team doing all of it."
       >
         <Link href="/commission" className={site.button} data-magnetic>
           Start a project <Arrow />

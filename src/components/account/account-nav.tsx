@@ -15,6 +15,8 @@ import {
   PenTool,
   ShieldCheck,
   UserRound,
+  Users,
+  Wallet,
 } from "lucide-react";
 
 import styles from "./account.module.css";
@@ -35,7 +37,9 @@ const groups = [
     links: [
       { href: "/account/commissions", label: "My Commissions", icon: PenTool },
       { href: "/account/support", label: "Support Tickets", icon: LifeBuoy },
-      { href: "/account/billing", label: "Orders & Billing", icon: CreditCard },
+      { href: "/account/orders", label: "Orders & Payments", icon: CreditCard },
+      { href: "/account/credit", label: "Store Credit", icon: Wallet },
+      { href: "/account/referrals", label: "Referrals", icon: Users },
       { href: "/account/applications", label: "Staff Applications", icon: BadgeCheck },
     ],
   },
