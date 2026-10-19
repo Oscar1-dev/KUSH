@@ -196,6 +196,19 @@ export async function registerCommerce(
       ),
     })),
   );
+  app.post(
+    "/web/workspace/orders/:orderId/resume",
+    { schema: { params: params("orderId") } },
+    signedIn((session: WebSession, request) =>
+      provider(() =>
+        orders.resumeFor(
+          tenantId(),
+          p<{ orderId: string }>(request).orderId,
+          session.userId,
+        ),
+      ),
+    ),
+  );
   app.get(
     "/web/workspace/credit",
     signedIn(async (session: WebSession) => ({
@@ -532,7 +545,7 @@ export async function registerCommerce(
         payments: gateway.mode,
         products: (
           await pool.query(
-            `SELECT id, slug, name, category, price_pence AS "pricePence", currency, visibility, status, reward_eligible AS "rewardEligible",
+            `SELECT id, slug, name, description, category, image_url AS "imageUrl", price_pence AS "pricePence", currency, visibility, status, reward_eligible AS "rewardEligible",
                     stripe_product_id IS NOT NULL AS "inStripe", updated_at AS "updatedAt"
              FROM products WHERE tenant_id=$1 ORDER BY status, name`,
             [ctx.tenantId],

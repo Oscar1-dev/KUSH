@@ -202,6 +202,24 @@ export class OrderService {
     };
   }
 
+  /** The live checkout link for a customer's own pending order, if any. */
+  async resumeFor(tenantId: string, orderId: string, customerId: string) {
+    const order = (
+      await this.pool.query<OrderRow & { stripeSession: string | null }>(
+        `SELECT ${orderColumns}, stripe_checkout_session_id AS "stripeSession" FROM orders WHERE tenant_id=$1 AND id=$2 AND customer_id=$3`,
+        [tenantId, orderId, customerId],
+      )
+    ).rows[0];
+    if (!order) fail(404, "Order not found");
+    const { checkoutUrl } = await this.resume(order!);
+    if (!checkoutUrl)
+      fail(
+        409,
+        "This checkout has closed. Start a new one from the product or quote.",
+      );
+    return { checkoutUrl };
+  }
+
   async checkoutProduct(
     tenantId: string,
     userId: string,

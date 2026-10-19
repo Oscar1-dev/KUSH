@@ -43,7 +43,7 @@ phase lands. Status: ✅ done & verified · 🟡 partial · ⏳ not started ·
 | 5 | Commissions | ✅ full status set, richer quotes, quote checkout, offline payment, revisions |
 | 6 | Discord | ✅ typed slash + prefix commands, commission intake, invite tracking · 🔒 slash registration on the live server awaits owner OK |
 | 7 | Referrals & credit | ✅ ledger, referral engine, Discord join/leave tracking and code claims |
-| 8 | Website dashboards | ⏳ |
+| 8 | Website dashboards | ✅ customer orders/credit/referrals/pay quote; staff orders+refunds, products, prices, referrals, stats; public pricing/support + draft policies |
 | 9 | Security & QA | ⏳ |
 | 10 | Handover | ⏳ |
 
@@ -74,6 +74,13 @@ Commands (each works as `/slash` and `!prefix`, from one definition; account rep
 - Invite attribution: unambiguous use-count changes only ("exact" / "probable"); needs Manage Server, otherwise nothing is recorded and referral codes still work.
 
 Tests: API 114, bot 187, all passing.
+
+## Phase 8 website (2026-10-19)
+
+- Public: services, pricing and commission pages read the API catalogue (fallback generated from the API seed, so they never disagree); `/pricing`, `/support`, and **draft** `/terms`, `/privacy`, `/refunds` with a visible owner-review banner and [bracketed] placeholders for business details.
+- Customer: `/account/orders` (+ detail, receipts, resume checkout), `/account/credit`, `/account/referrals`; pay an accepted quote with Stripe; request a revision. Redirects only ever go to `checkout.stripe.com`.
+- Staff: `/staff/orders` (+ refund form), `/staff/products`, `/staff/catalogue` (prices), `/staff/referrals` (review flagged, deliver vouchers), business numbers on `/staff`, full quote form (price, deliverables, revisions, extras, expiry) and offline payment on commissions.
+- Verified: typecheck + lint; signed-out redirects; customer pages rendered with a temporary TEST session (removed). Staff pages need a real staff login (live Discord roles + 2FA) to view.
 
 ## Decisions & assumptions
 
