@@ -18,7 +18,7 @@ const nextConfig: NextConfig = {
     "192.168.50.111",
   ],
 
-  // Service pages that were renamed when the catalogue grew to six.
+  // Service pages that were renamed as the catalogue grew.
   async redirects() {
     return [
       { source: "/services/custom-development", destination: "/services/automation", permanent: true },
