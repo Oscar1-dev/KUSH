@@ -24,6 +24,12 @@ import {
   staffSetMilestone,
   staffHideVouch,
   staffOffboard,
+  staffOfflinePayment,
+  staffRefund,
+  staffSaveProduct,
+  staffSaveOffer,
+  staffReviewReferral,
+  staffRedeemReward,
 } from "@/app/staff/actions";
 import { FormMessage } from "@/components/account/form-message";
 import styles from "@/components/account/account.module.css";
@@ -49,6 +55,12 @@ const actions = {
   setMilestone: staffSetMilestone,
   hideVouch: staffHideVouch,
   offboard: staffOffboard,
+  offlinePayment: staffOfflinePayment,
+  refund: staffRefund,
+  saveProduct: staffSaveProduct,
+  saveOffer: staffSaveOffer,
+  reviewReferral: staffReviewReferral,
+  redeemReward: staffRedeemReward,
 };
 
 /**

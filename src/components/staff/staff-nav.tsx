@@ -4,7 +4,9 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   Activity,
+  BadgeDollarSign,
   Contact,
+  CreditCard,
   FileSignature,
   Gavel,
   Gauge,
@@ -16,6 +18,7 @@ import {
   ShieldAlert,
   UserPlus,
   Users,
+  UsersRound,
 } from "lucide-react";
 
 import styles from "@/components/account/account.module.css";
@@ -30,7 +33,11 @@ type Section =
   | "operations"
   | "team"
   | "moderation"
-  | "audit";
+  | "audit"
+  | "orders"
+  | "products"
+  | "catalogue"
+  | "referrals";
 
 const links: { href: string; label: string; icon: typeof Gauge; section?: Section }[] = [
   { href: "/staff", label: "Overview", icon: Gauge },
@@ -41,7 +48,11 @@ const links: { href: string; label: string; icon: typeof Gauge; section?: Sectio
   { href: "/staff/applications", label: "Applications", icon: UserPlus, section: "applications" },
   { href: "/staff/agreements", label: "Agreements", icon: FileSignature, section: "agreements" },
   { href: "/staff/customers", label: "Customers", icon: Contact, section: "customers" },
-  { href: "/staff/catalog", label: "Products & orders", icon: Package, section: "operations" },
+  { href: "/staff/orders", label: "Orders & refunds", icon: CreditCard, section: "orders" },
+  { href: "/staff/products", label: "Products", icon: Package, section: "products" },
+  { href: "/staff/catalogue", label: "Services & prices", icon: BadgeDollarSign, section: "catalogue" },
+  { href: "/staff/referrals", label: "Referrals", icon: UsersRound, section: "referrals" },
+  { href: "/staff/catalog", label: "Entitlements", icon: Package, section: "operations" },
   { href: "/staff/team", label: "Team", icon: Users, section: "team" },
   { href: "/staff/operations", label: "Discord & operations", icon: Activity, section: "operations" },
   { href: "/staff/audit", label: "Audit log", icon: ScrollText, section: "audit" },

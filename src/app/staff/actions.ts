@@ -183,11 +183,127 @@ export async function staffRetryJob(_p: ActionState, form: FormData) {
 export async function staffProposeQuote(_p: ActionState, form: FormData) {
   const requestId = id(form, "requestId");
   if (!requestId) return { error: "Commission not found." };
+  const amountPence = pence(text(form, "price"));
+  if (!amountPence) return { error: "Enter the price in pounds, e.g. 120 or 120.50." };
+  const revisions = text(form, "revisions");
+  const expires = text(form, "expiresInDays");
   return call(
     `/web/staff/commissions/${requestId}/quotes`,
-    { amount: text(form, "amount"), summary: text(form, "summary"), timeframe: text(form, "timeframe") || null },
+    {
+      amount: pounds(amountPence),
+      amountPence,
+      summary: text(form, "summary"),
+      timeframe: text(form, "timeframe") || null,
+      deliverables: text(form, "deliverables") || null,
+      revisions: revisions ? Number(revisions) : null,
+      optionalServices: text(form, "optionalServices") || null,
+      expiresInDays: expires ? Number(expires) : null,
+    },
     `/staff/commissions/${requestId}`,
-    "Quote sent to the customer.",
+    "Quote sent. The customer can accept and pay it from their account.",
+  );
+}
+
+/** "120", "£120.50" → pence; null if it isn't a price. */
+function pence(value: string) {
+  const match = /^£?\s*(\d{1,6})(?:\.(\d{1,2}))?$/.exec(value);
+  return match ? Number(match[1]) * 100 + Number((match[2] ?? "0").padEnd(2, "0")) : null;
+}
+const pounds = (p: number) => `£${(p / 100).toFixed(p % 100 === 0 ? 0 : 2)}`;
+
+export async function staffOfflinePayment(_p: ActionState, form: FormData) {
+  const commissionId = id(form, "commissionId");
+  const quoteId = id(form, "quoteId");
+  const requestId = id(form, "requestId");
+  if (!commissionId || !quoteId || !requestId) return { error: "Quote not found." };
+  if (form.get("confirm") !== "yes") return { error: "Tick the box to confirm the money has actually arrived." };
+  const amountPence = pence(text(form, "price"));
+  if (!amountPence) return { error: "Enter the amount received, e.g. 120." };
+  return call(
+    `/web/staff/commissions/${commissionId}/quotes/${quoteId}/offline-payment`,
+    { amountPence, note: text(form, "note"), requestId },
+    `/staff/commissions/${commissionId}`,
+    "Payment recorded. The commission is now paid.",
+  );
+}
+
+export async function staffRefund(_p: ActionState, form: FormData) {
+  const orderId = id(form, "orderId");
+  const requestId = id(form, "requestId");
+  if (!orderId || !requestId) return { error: "Order not found." };
+  if (form.get("confirm") !== "yes") return { error: "Tick the box to confirm the refund." };
+  const amountPence = pence(text(form, "price"));
+  if (!amountPence) return { error: "Enter the amount to refund, e.g. 15 or 7.50." };
+  return call(
+    `/web/staff/orders/${orderId}/refund`,
+    { amountPence, reason: text(form, "reason"), requestId },
+    `/staff/orders/${orderId}`,
+    "Refund sent.",
+  );
+}
+
+export async function staffSaveProduct(_p: ActionState, form: FormData) {
+  const productId = text(form, "productId");
+  const pricePence = pence(text(form, "price"));
+  if (!pricePence) return { error: "Enter the price in pounds, e.g. 15." };
+  const body = {
+    name: text(form, "name"),
+    description: text(form, "description"),
+    category: text(form, "category") || null,
+    imageUrl: text(form, "imageUrl") || null,
+    pricePence,
+    visibility: text(form, "visibility") || "public",
+    status: text(form, "status") || "draft",
+    rewardEligible: form.get("rewardEligible") === "yes",
+  };
+  if (productId) {
+    if (!/^[0-9a-f-]{36}$/.test(productId)) return { error: "Product not found." };
+    return call(`/web/staff/products/${productId}`, body, "/staff/products", "Product saved.");
+  }
+  return call("/web/staff/products", { ...body, slug: text(form, "slug").toLowerCase() }, "/staff/products", "Product created.");
+}
+
+export async function staffSaveOffer(_p: ActionState, form: FormData) {
+  const offerId = id(form, "offerId");
+  if (!offerId) return { error: "Price not found." };
+  const pricing = text(form, "pricing");
+  const amount = text(form, "price");
+  const max = text(form, "max");
+  const amountPence = pricing === "quote" ? null : pence(amount);
+  if (pricing !== "quote" && !amountPence) return { error: "Enter a price, or choose “Quoted individually”." };
+  return call(
+    `/web/staff/catalogue/offers/${offerId}`,
+    {
+      pricing,
+      amountPence,
+      maxPence: pricing === "range" ? pence(max) : null,
+      status: text(form, "status"),
+    },
+    "/staff/catalogue",
+    "Price saved. The website updates within a minute.",
+  );
+}
+
+export async function staffReviewReferral(_p: ActionState, form: FormData) {
+  const referralId = id(form, "referralId");
+  if (!referralId) return { error: "Referral not found." };
+  const decision = text(form, "decision") === "approve" ? "approve" : "disqualify";
+  return call(
+    `/web/staff/referrals/${referralId}/review`,
+    { decision, reason: text(form, "reason") },
+    "/staff/referrals",
+    decision === "approve" ? "Approved: it counts once the membership rules are met." : "Referral disqualified.",
+  );
+}
+
+export async function staffRedeemReward(_p: ActionState, form: FormData) {
+  const rewardId = id(form, "rewardId");
+  if (!rewardId) return { error: "Reward not found." };
+  return call(
+    `/web/staff/referrals/rewards/${rewardId}/redeem`,
+    { note: text(form, "note") },
+    "/staff/referrals",
+    "Reward marked as delivered.",
   );
 }
 

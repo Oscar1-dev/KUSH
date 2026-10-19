@@ -1,10 +1,11 @@
+import { randomUUID } from "node:crypto";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import ActionForm from "@/components/staff/action-form";
 import styles from "@/components/account/account.module.css";
 import { ApiError, kushApi } from "@/lib/server/kush-api";
-import { requireStaff } from "@/lib/server/staff";
+import { has, requireStaff } from "@/lib/server/staff";
 import { categoryLabel,  commissionLabel, dateTime, milestoneLabel, type CommissionStatus, type Milestone, type Quote } from "@/lib/workspace";
 
 interface Detail {
@@ -51,6 +52,7 @@ export default async function StaffCommission({ params }: { params: Promise<{ id
     : [];
   const v = { requestId: c.id, expectedVersion: c.version };
   const openQuote = quotes.find((q) => q.status === "proposed");
+  const acceptedQuote = quotes.find((q) => q.status === "accepted");
 
   return (
     <>
@@ -201,14 +203,48 @@ export default async function StaffCommission({ params }: { params: Promise<{ id
                 </>
               ) : c.status === "reviewing" || c.status === "awaiting_customer" ? (
                 <ActionForm action="proposeQuote" hidden={{ requestId: c.id }} submit="SEND QUOTE">
-                  <input name="amount" className={styles.input} required maxLength={60} placeholder="Amount, e.g. £450" aria-label="Amount" />
-                  <textarea name="summary" className={styles.input} rows={4} required minLength={10} maxLength={5000} placeholder="What's included, deliverables, revisions…" aria-label="Quote summary" />
+                  <input name="price" className={styles.input} required inputMode="decimal" pattern="£?\s*\d{1,6}(\.\d{1,2})?" placeholder="Price in £, e.g. 120" aria-label="Price in pounds" />
+                  <textarea name="summary" className={styles.input} rows={3} required minLength={10} maxLength={5000} placeholder="Summary: what you'll build" aria-label="Quote summary" />
+                  <textarea name="deliverables" className={styles.input} rows={3} maxLength={4000} placeholder="Deliverables (optional), one per line" aria-label="Deliverables" />
+                  <div className={styles.formRow}>
+                    <input name="revisions" type="number" min={0} max={50} className={styles.input} placeholder="Revision rounds" aria-label="Revision rounds" />
+                    <input name="expiresInDays" type="number" min={1} max={90} defaultValue={14} className={styles.input} aria-label="Quote valid for (days)" title="Quote valid for (days)" />
+                  </div>
                   <input name="timeframe" className={styles.input} maxLength={200} placeholder="Timeframe (optional)" aria-label="Timeframe" />
-                  <p className={styles.rowMeta}>A written proposal only; no payment is taken by the website.</p>
+                  <input name="optionalServices" className={styles.input} maxLength={2000} placeholder="Optional extras they can add (optional)" aria-label="Optional extras" />
+                  <p className={styles.rowMeta}>The customer accepts it, then pays this price through Stripe from their account.</p>
                 </ActionForm>
               ) : (
                 <p className={styles.rowMeta}>Move the commission to “Under review” to send a quote.</p>
               )}
+            </div>
+          ) : null}
+          {acceptedQuote && ["payment_pending", "accepted"].includes(c.status) && has(gate.me, "payments.manage") ? (
+            <div className={styles.card} key={`paid-${c.version}`}>
+              <p className={styles.cardLabel}>PAID ANOTHER WAY?</p>
+              <p className={styles.rowMeta}>
+                Only if the customer paid {acceptedQuote.amount} outside Stripe (e.g. bank transfer) and the money has
+                arrived. It&apos;s recorded as an offline payment and audited.
+              </p>
+              <ActionForm
+                action="offlinePayment"
+                hidden={{ commissionId: c.id, quoteId: acceptedQuote.id, requestId: randomUUID() }}
+                submit="RECORD PAYMENT"
+                tone="plain"
+              >
+                <input
+                  name="price"
+                  className={styles.input}
+                  required
+                  defaultValue={acceptedQuote.amountPence ? (acceptedQuote.amountPence / 100).toString() : ""}
+                  placeholder="Amount received in £"
+                  aria-label="Amount received in pounds"
+                />
+                <input name="note" className={styles.input} required minLength={3} maxLength={500} placeholder="How it was paid, reference" aria-label="Payment note" />
+                <label className={styles.rowMeta}>
+                  <input type="checkbox" name="confirm" value="yes" /> The money is in the account
+                </label>
+              </ActionForm>
             </div>
           ) : null}
           {quotes.filter((q) => q.status !== "proposed").map((q) => (

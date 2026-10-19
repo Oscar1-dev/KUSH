@@ -27,7 +27,15 @@ export type Permission =
   | "operations.view"
   | "moderation.view"
   | "vouches.manage"
-  | "team.offboard";
+  | "team.offboard"
+  | "catalogue.manage"
+  | "products.manage"
+  | "orders.view"
+  | "payments.manage"
+  | "refunds.manage"
+  | "credit.adjust"
+  | "referrals.review"
+  | "stats.view";
 
 export interface StaffMe {
   roles: StaffRole[];
