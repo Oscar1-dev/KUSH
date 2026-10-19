@@ -47,6 +47,14 @@ export const permissions = [
   "moderation.view", // moderation cases (also recorded from Discord)
   "vouches.manage", // remove fake or abusive vouches
   "team.offboard", // remove someone from the staff team
+  "catalogue.manage", // services, offers and prices
+  "products.manage", // sellable products and their Stripe records
+  "orders.view", // orders and payment status
+  "payments.manage", // record offline payments
+  "refunds.manage", // issue refunds
+  "credit.adjust", // manual store-credit adjustments
+  "referrals.review", // review flagged referrals, rewards
+  "stats.view", // business overview numbers
 ] as const;
 export type Permission = (typeof permissions)[number];
 
@@ -68,6 +76,10 @@ const grants: Record<StaffRole, Permission[]> = {
     "applications.review",
     "customers.view",
     "moderation.view",
+    "catalogue.manage",
+    "orders.view",
+    "referrals.review",
+    "stats.view",
   ],
   administrator: [
     "tickets.assigned",
@@ -89,6 +101,14 @@ const grants: Record<StaffRole, Permission[]> = {
     "moderation.view",
     "vouches.manage",
     "team.offboard",
+    "catalogue.manage",
+    "products.manage",
+    "orders.view",
+    "payments.manage",
+    "refunds.manage",
+    "credit.adjust",
+    "referrals.review",
+    "stats.view",
   ],
   owner: [...permissions],
 };

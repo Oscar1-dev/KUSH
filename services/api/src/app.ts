@@ -17,6 +17,10 @@ import { registerEntitlements } from "./entitlements.js";
 import { registerModeration } from "./moderation.js";
 import { registerCommunity } from "./community.js";
 import { registerCommissionIntake } from "./commission-intake.js";
+import { registerCatalogue } from "./catalogue.js";
+import { registerCommerce } from "./commerce-routes.js";
+import { registerReferrals } from "./referrals.js";
+import { StripeGateway, type PaymentGateway } from "./stripe-gateway.js";
 import { registerAccounts } from "./accounts.js";
 import { registerWorkspace } from "./web-workspace.js";
 import { registerStaff } from "./web-staff.js";
@@ -33,6 +37,8 @@ export async function buildApp(
   options: {
     oauth?: () => DiscordOAuth | null;
     members?: () => DiscordMembers | null;
+    /** Tests pass a fake; production uses Stripe from the environment. */
+    payments?: PaymentGateway;
   } = {},
 ) {
   const app = Fastify({
@@ -246,6 +252,7 @@ export async function buildApp(
   await registerModeration(app, { pool });
   await registerCommunity(app, { pool });
   await registerCommissionIntake(app, { pool });
+  await registerCatalogue(app, { pool });
   const web = await registerAccounts(app, { pool, oauth: options.oauth });
   await registerWorkspace(app, { pool, web });
   const staff = await registerStaff(app, {
@@ -254,6 +261,13 @@ export async function buildApp(
     members: options.members,
   });
   await registerRecruitment(app, { pool, web, staff });
+  await registerCommerce(app, {
+    pool,
+    web,
+    staff,
+    gateway: options.payments ?? new StripeGateway(),
+  });
+  await registerReferrals(app, { pool, web, staff });
   await registerInsights(app, { pool, web, staff });
   await registerDownloads(app, { pool, web });
   await registerNotifications(app, { pool });
@@ -286,10 +300,11 @@ export async function buildApp(
             "0021_vouches_offboarding",
             "0022_staff_parity",
             "0023_commission_pipeline",
+            "0024_commerce",
           ],
         ],
       );
-      if (readiness.rows[0]?.applied !== 23)
+      if (readiness.rows[0]?.applied !== 24)
         throw new Error("Database migrations pending");
       await pool.query(
         "SELECT disabled FROM users LIMIT 0; SELECT created_at FROM sessions LIMIT 0; SELECT ip_hash FROM login_attempts LIMIT 0; SELECT endpoint FROM connection_profiles LIMIT 0; SELECT version FROM clients LIMIT 0; SELECT document FROM projects LIMIT 0; SELECT tenant_id FROM audit_events LIMIT 0; SELECT id FROM support_tenants LIMIT 0; SELECT create_category FROM support_tickets LIMIT 0; SELECT version FROM commercial_requests LIMIT 0; SELECT state FROM discord_account_links LIMIT 0; SELECT failed_attempts FROM discord_link_attempts LIMIT 0; SELECT kind FROM users LIMIT 0; SELECT user_id FROM discord_identities LIMIT 0; SELECT channel_id FROM discord_ticket_channels LIMIT 0; SELECT status FROM entitlements LIMIT 0; SELECT status FROM role_sync_jobs LIMIT 0; SELECT result FROM purchase_events LIMIT 0; SELECT subject FROM user_identities LIMIT 0; SELECT kind FROM sessions LIMIT 0; SELECT enabled_at FROM mfa_totp LIMIT 0; SELECT staff_role FROM staff_role_mappings LIMIT 0; SELECT status FROM notification_jobs LIMIT 0; SELECT status FROM staff_applications LIMIT 0; SELECT status FROM agreements LIMIT 0",

@@ -7,6 +7,7 @@ import type { DiscordMembers, MemberLookup } from "../src/staff-access.js";
 import { permissionsFor } from "../src/staff-access.js";
 import { currentStep, totpCode } from "../src/totp.js";
 import { tokenHash } from "../src/password.js";
+import { FakeStripeGateway } from "../src/stripe-gateway.js";
 
 const databaseUrl = process.env.KUSH_TEST_DATABASE_URL;
 const WEBSITE = "test-website-secret-at-least-32-chars!!";
@@ -76,6 +77,7 @@ describe.skipIf(!databaseUrl)("staff dashboard (real PostgreSQL)", () => {
   let tenantId: string;
   const discord = new FakeDiscord();
   const guild = new FakeGuild();
+  const stripe = new FakeStripeGateway();
   const previous = {
     website: process.env.KUSH_WEBSITE_SECRET,
     tenant: process.env.KUSH_SUPPORT_TENANT_ID,
@@ -176,6 +178,7 @@ describe.skipIf(!databaseUrl)("staff dashboard (real PostgreSQL)", () => {
     app = await buildApp(databaseUrl!, false, {
       oauth: () => discord,
       members: () => guild,
+      payments: stripe,
     });
     tenantId = (
       await pool.query<{ id: string }>(
@@ -446,13 +449,57 @@ describe.skipIf(!databaseUrl)("staff dashboard (real PostgreSQL)", () => {
         )
       ).statusCode,
     ).toBe(200);
-    // Manager walks it to "accepted" (review → quote → accepted).
-    for (const status of ["reviewing", "quoted", "accepted"]) {
-      v = (await commission(manager)).json().commission.version;
-      expect(
-        (await update(manager, { expectedVersion: v, status })).statusCode,
-      ).toBe(200);
-    }
+    // Work starts only once paid: review → quote → customer accepts →
+    // an administrator records the (offline) payment.
+    v = (await commission(manager)).json().commission.version;
+    expect(
+      (await update(manager, { expectedVersion: v, status: "reviewing" }))
+        .statusCode,
+    ).toBe(200);
+    // Quoting is its own action; a manager can't just flip the status.
+    v = (await commission(manager)).json().commission.version;
+    expect(
+      (await update(manager, { expectedVersion: v, status: "accepted" }))
+        .statusCode,
+    ).toBe(409);
+    const quoteId = (
+      await web(
+        "POST",
+        `/web/staff/commissions/${created.id}/quotes`,
+        manager.token,
+        {
+          amount: "£120",
+          amountPence: 12_000,
+          summary: "TEST: stock dashboard, one revision round.",
+          timeframe: "2 weeks",
+        },
+      )
+    ).json().quoteId as string;
+    expect(
+      (
+        await web(
+          "POST",
+          `/web/workspace/commissions/${created.id}/quotes/${quoteId}/accept`,
+          customer.token,
+          {},
+        )
+      ).json(),
+    ).toEqual({ status: "payment_pending" });
+    const offline = (who: Person) =>
+      web(
+        "POST",
+        `/web/staff/commissions/${created.id}/quotes/${quoteId}/offline-payment`,
+        who.token,
+        {
+          amountPence: 12_000,
+          note: "TEST bank transfer",
+          requestId: randomUUID(),
+        },
+      );
+    expect((await offline(manager)).statusCode).toBe(403);
+    const admin = await person([ROLE.admin]);
+    expect((await offline(admin)).statusCode).toBe(200);
+    expect((await commission(manager)).json().commission.status).toBe("paid");
     v = (await commission(developer)).json().commission.version;
     // Developers cannot quote, cancel or write review notes...
     expect(
@@ -1271,5 +1318,143 @@ describe.skipIf(!databaseUrl)("staff dashboard (real PostgreSQL)", () => {
       [owner.userId],
     );
     expect(entitlements.rowCount).toBe(0);
+  });
+
+  it("lets administrators sell, refund and report, without double refunds", async () => {
+    const admin = await person([ROLE.admin]);
+    const manager = await person([ROLE.manager]);
+    const customer = await person([], { mfa: false });
+    const product = {
+      slug: `test-pack-${randomBytes(3).toString("hex")}`,
+      name: "TEST Starter pack",
+      pricePence: 2_000,
+      status: "active",
+    };
+    // Only roles with products.manage can create products; it syncs to Stripe.
+    expect(
+      (await web("POST", "/web/staff/products", manager.token, product))
+        .statusCode,
+    ).toBe(403);
+    const created = await web(
+      "POST",
+      "/web/staff/products",
+      admin.token,
+      product,
+    );
+    expect(created.statusCode).toBe(200);
+    const listed = (
+      await web("GET", "/web/staff/products", admin.token)
+    ).json();
+    expect(listed.payments).toBe("test");
+    expect(
+      listed.products.find((p: { slug: string }) => p.slug === product.slug),
+    ).toMatchObject({ inStripe: true, pricePence: 2_000 });
+
+    // The customer buys it; Stripe's signed webhook marks it paid.
+    const bought = await web(
+      "POST",
+      "/web/workspace/checkout/product",
+      customer.token,
+      { productSlug: product.slug, requestId: randomUUID(), useCredit: false },
+    );
+    const { order } = bought.json();
+    const session = (
+      await pool.query<{ s: string }>(
+        "SELECT stripe_checkout_session_id AS s FROM orders WHERE id=$1",
+        [order.id],
+      )
+    ).rows[0]!.s;
+    const intent = `pi_test_${randomBytes(6).toString("hex")}`;
+    const deliver = (type: string, object: object) => {
+      const signed = stripe.sign({
+        id: `evt_${randomBytes(8).toString("hex")}`,
+        object: "event",
+        type,
+        livemode: false,
+        created: Math.floor(Date.now() / 1000),
+        data: { object },
+      });
+      return app.inject({
+        method: "POST",
+        url: "/webhooks/stripe",
+        headers: {
+          "content-type": "application/json",
+          "stripe-signature": signed.signature,
+        },
+        payload: signed.payload,
+      });
+    };
+    await deliver("checkout.session.completed", {
+      id: session,
+      object: "checkout.session",
+      payment_status: "paid",
+      amount_total: 2_000,
+      currency: "gbp",
+      payment_intent: intent,
+      metadata: { kush_order_id: order.id, kush_tenant_id: tenantId },
+    });
+    const staffOrder = (id: string) =>
+      web("GET", `/web/staff/orders/${id}`, admin.token);
+    expect((await staffOrder(order.id)).json().order.status).toBe("paid");
+
+    // Managers can see orders but not refund them.
+    const refund = (
+      who: Person,
+      amountPence: number,
+      requestId = randomUUID(),
+    ) =>
+      web("POST", `/web/staff/orders/${order.id}/refund`, who.token, {
+        amountPence,
+        reason: "TEST partial refund",
+        requestId,
+      });
+    expect((await staffOrder(order.id)).statusCode).toBe(200);
+    expect((await refund(manager, 500)).statusCode).toBe(403);
+    // More than was paid is refused.
+    expect((await refund(admin, 2_001)).statusCode).toBe(400);
+    const requestId = randomUUID();
+    expect((await refund(admin, 500, requestId)).json()).toMatchObject({
+      status: "succeeded",
+    });
+    // A retry with the same request ID refunds nothing more.
+    expect((await refund(admin, 500, requestId)).json()).toMatchObject({
+      duplicate: true,
+    });
+    // Two staff refunding the remaining £15 at once: only one gets it.
+    const racing = await Promise.all([
+      refund(admin, 1_500),
+      refund(admin, 1_500),
+    ]);
+    // The loser sees "too much" (400) or "already refunded" (409).
+    const codes = racing.map((r) => r.statusCode).sort();
+    expect(codes[0]).toBe(200);
+    expect([400, 409]).toContain(codes[1]);
+    expect(
+      stripe.refunds.filter((r) => r.paymentIntentId === intent),
+    ).toHaveLength(2);
+    // Stripe then reports the total refunded: already booked, not counted twice.
+    await deliver("charge.refunded", {
+      id: `ch_${randomBytes(6).toString("hex")}`,
+      object: "charge",
+      payment_intent: intent,
+      amount_refunded: 2_000,
+    });
+    expect((await staffOrder(order.id)).json().order).toMatchObject({
+      status: "refunded",
+      refundedPence: 2_000,
+    });
+
+    const stats = (await web("GET", "/web/staff/stats", manager.token)).json();
+    expect(stats).toMatchObject({ refundsPence: expect.any(Number) });
+    expect(stats.refundsPence).toBeGreaterThanOrEqual(2_000);
+    expect(
+      (
+        await web(
+          "GET",
+          "/web/staff/stats",
+          (await person([ROLE.support])).token,
+        )
+      ).statusCode,
+    ).toBe(403);
   });
 });

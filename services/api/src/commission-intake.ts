@@ -22,6 +22,8 @@ export const commissionCategories = [
   "discord",
   "creative",
   "automation",
+  "gaming",
+  "technical",
   // Legacy keys from before the catalogue; still valid for old requests.
   "website",
 ] as const;

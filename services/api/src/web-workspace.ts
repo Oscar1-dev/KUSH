@@ -110,6 +110,18 @@ export async function registerWorkspace(
   const decisionSchema = z
     .object({ reason: z.string().trim().max(2000).optional() })
     .strict();
+  app.post(
+    "/web/workspace/commissions/:requestId/revision",
+    { schema: { params: uuidParam("requestId") } },
+    signedIn(async (session, request) => {
+      const user = await customer(session);
+      return workflow.requestRevision(
+        user.id,
+        tenantId(),
+        params<{ requestId: string }>(request).requestId,
+      );
+    }),
+  );
   for (const decision of ["accept", "decline"] as const)
     app.post(
       `/web/workspace/commissions/:requestId/quotes/:quoteId/${decision}`,

@@ -20,10 +20,13 @@ const fail = (status: number, message: string): never => {
 const notFound = () => fail(404, "Not found");
 
 /** Developers may only move work along; managers run the whole journey. */
+// Developers start only once the work is paid for ("accepted" means the
+// customer agreed a quote but hasn't paid yet).
 const developerMoves: Record<string, string[]> = {
-  accepted: ["in_progress"],
+  paid: ["in_progress"],
   in_progress: ["awaiting_review"],
   awaiting_review: ["in_progress"],
+  revision_requested: ["in_progress", "awaiting_review"],
 };
 
 export type TicketScope = "assigned" | "queue" | "all" | "reports";

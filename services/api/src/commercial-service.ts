@@ -75,12 +75,23 @@ export const transitions: Record<
     awaiting_customer: ["reviewing", "cancelled"],
     // Accepting a quote moves straight to payment_pending; staff confirm
     // the deposit by hand (moving to in_progress). Nothing is charged here.
-    quoted: ["accepted", "payment_pending", "cancelled"],
-    accepted: ["payment_pending", "in_progress", "cancelled"],
-    payment_pending: ["in_progress", "cancelled"],
+    // "paid" and "refunded" are set only by the payment system (a verified
+    // Stripe webhook, a store-credit settlement or a recorded offline
+    // payment), never by hand, so a payment can't be faked from a dropdown.
+    quoted: ["cancelled"],
+    accepted: ["payment_pending", "cancelled"],
+    payment_pending: ["cancelled"],
+    paid: ["in_progress", "cancelled"],
     in_progress: ["awaiting_review", "cancelled"],
-    awaiting_review: ["in_progress", "completed", "cancelled"],
+    awaiting_review: [
+      "in_progress",
+      "revision_requested",
+      "completed",
+      "cancelled",
+    ],
+    revision_requested: ["in_progress", "awaiting_review", "cancelled"],
     completed: [],
+    refunded: [],
     cancelled: [],
   },
   marketplace: {

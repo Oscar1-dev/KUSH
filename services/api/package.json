@@ -17,7 +17,8 @@
     "@kush/database": "workspace:*",
     "drizzle-orm": "^0.45.2",
     "fastify": "^5.6.0",
-    "pdf-lib": "1.17.1"
+    "pdf-lib": "1.17.1",
+    "stripe": "18.5.0"
   },
   "devDependencies": {
     "@types/node": "^24.0.0",

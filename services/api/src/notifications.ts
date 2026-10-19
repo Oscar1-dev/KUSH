@@ -28,7 +28,10 @@ export type NotificationKind =
   | "agreement.issued"
   | "staff.role_grant"
   | "vouch.hidden"
-  | "staff.offboarded";
+  | "staff.offboarded"
+  | "order.paid"
+  | "order.refunded"
+  | "referral.reward";
 
 type Queryable = Pick<PoolClient, "query">;
 
@@ -119,7 +122,10 @@ const commissionLabels: Record<string, string> = {
   awaiting_customer: "waiting for you",
   quoted: "quote ready",
   accepted: "accepted",
-  payment_pending: "quote accepted, waiting for your deposit",
+  payment_pending: "quote accepted, waiting for payment",
+  paid: "paid, thank you! Work is being scheduled",
+  revision_requested: "revision requested",
+  refunded: "refunded",
   in_progress: "in progress",
   awaiting_review: "ready for your review",
   completed: "delivered",
@@ -159,6 +165,60 @@ export class NotificationService {
     )
       return this.renderRecruitment(job);
     // Website-initiated staff actions: the bot does the Discord side.
+    // Payments and rewards: one job per audience (staff channel or customer DM).
+    if (job.kind === "order.paid" || job.kind === "order.refunded") {
+      const order = (
+        await c.query<{
+          number: number;
+          description: string;
+          customer_id: string;
+          total_pence: number;
+          credit_applied_pence: number;
+          subtotal_pence: number;
+          kind: string;
+        }>(
+          "SELECT number, description, customer_id, total_pence, credit_applied_pence, subtotal_pence, kind FROM orders WHERE tenant_id=$1 AND id=$2",
+          [job.tenant_id, job.subject_id],
+        )
+      ).rows[0];
+      if (!order) return { target: "none", reason: "order no longer exists" };
+      const money = (pence: number) => `£${(pence / 100).toFixed(2)}`;
+      if (job.detail.audience === "staff")
+        // Staff see the order and amount, never card or personal details.
+        return {
+          target: "channel",
+          channelKey:
+            order.kind === "commission"
+              ? "staff:commission-management"
+              : "staff:ticket-queue",
+          content:
+            job.kind === "order.paid"
+              ? `💷 Order #${order.number} paid: ${clip(order.description, 120)} (${money(order.subtotal_pence)}${order.credit_applied_pence ? `, ${money(order.credit_applied_pence)} store credit` : ""}, via ${job.detail.provider ?? "card"}). ${site()}/staff/orders/${job.subject_id}`
+              : `↩️ Order #${order.number} refunded ${money(Number(job.detail.amountPence ?? 0))}. ${site()}/staff/orders/${job.subject_id}`,
+        };
+      const discordUserId = await this.customerDiscord(
+        c,
+        job.tenant_id,
+        order.customer_id,
+      );
+      if (!discordUserId)
+        return { target: "none", reason: "customer has no linked Discord" };
+      return {
+        target: "dm",
+        discordUserId,
+        content:
+          job.kind === "order.paid"
+            ? `✅ Payment received for order #${order.number}: ${clip(order.description, 120)}. Thank you! Details and receipt: ${site()}/account/orders/${job.subject_id}`
+            : `↩️ A refund of ${money(Number(job.detail.amountPence ?? 0))} has been issued for order #${order.number}. Card refunds usually take 5–10 days to appear. ${site()}/account/orders/${job.subject_id}`,
+      };
+    }
+    if (job.kind === "referral.reward") {
+      return {
+        target: "dm",
+        discordUserId: job.detail.discordUserId!,
+        content: `🎁 You've reached ${job.detail.milestone} qualified referrals and earned: ${job.detail.label}. ${job.detail.type === "credit" ? `It's already in your store credit: ${site()}/account/credit` : "Open a ticket with !ticket to claim it, or see it in your account."}`,
+      };
+    }
     if (job.kind === "vouch.hidden")
       return job.detail.messageId
         ? {
