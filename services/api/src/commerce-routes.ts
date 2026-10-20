@@ -8,7 +8,7 @@ import { Catalogue } from "./catalogue.js";
 import { businessStats } from "./stats.js";
 import { applyCredit, creditBalance, creditHistory } from "./credit.js";
 import { verifyIntegrationSecret } from "./discord-service.js";
-import { OrderService } from "./orders.js";
+import { creditSpendable, OrderService } from "./orders.js";
 import {
   can,
   demand,
@@ -214,6 +214,7 @@ export async function registerCommerce(
     signedIn(async (session: WebSession) => ({
       balancePence: await creditBalance(pool, tenantId(), session.userId),
       history: await creditHistory(pool, tenantId(), session.userId),
+      spendable: creditSpendable(),
     })),
   );
 
@@ -829,6 +830,7 @@ export async function registerCommerce(
         return {
           balancePence: await creditBalance(pool, tenant, userId),
           history: await creditHistory(pool, tenant, userId, 5),
+          spendable: creditSpendable(),
         };
       }),
   );

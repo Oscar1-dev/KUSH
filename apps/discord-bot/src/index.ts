@@ -49,7 +49,7 @@ import { offboardInDiscord } from "./community/offboard.js";
 import { UptimeWatcher } from "./runtime/uptime.js";
 import { RuleWatchTracker } from "./moderation/rule-watch.js";
 import { DiscordTicketChannels } from "./tickets/discord-tickets.js";
-import { configuredRoleId } from "./blueprint.js";
+import { configuredRoleId, staffGrantableRoles } from "./blueprint.js";
 import { TicketManager } from "./tickets/manager.js";
 import { InviteTracker } from "./commerce/invite-tracker.js";
 
@@ -341,6 +341,12 @@ export async function startBot(): Promise<{
     member: configuredRoleId(config.roleIds, "member"),
     verifiedCustomer: configuredRoleId(config.roleIds, "verified-customer"),
     restricted: configuredRoleId(config.roleIds, "restricted"),
+    grantable: Object.fromEntries(
+      staffGrantableRoles.flatMap((key) => {
+        const id = configuredRoleId(config.roleIds, key);
+        return id ? [[key, id]] : [];
+      }),
+    ),
   });
   const roleSync = new RoleSyncWorker(
     api,

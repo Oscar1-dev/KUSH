@@ -1603,4 +1603,140 @@ describe.skipIf(!databaseUrl)("staff dashboard (real PostgreSQL)", () => {
     guild.roles.set(manager.discordId, []);
     expect((await find(manager)).statusCode).toBe(403);
   });
+
+  it("grants and revokes allowlisted roles from the website and Discord alike", async () => {
+    const customer = await person([], { mfa: false });
+    const manager = await person([ROLE.manager]);
+    const support = await person([ROLE.support]);
+    const grant = (who: Person, payload: object, userId = customer.userId) =>
+      web("POST", `/web/staff/customers/${userId}/roles`, who.token, {
+        requestId: randomUUID(),
+        reason: "TEST beta access",
+        ...payload,
+      });
+    expect(
+      (await grant(support, { roleKey: "beta-tester", action: "grant" }))
+        .statusCode,
+    ).toBe(403);
+    // Staff roles are never grantable here.
+    expect(
+      (await grant(manager, { roleKey: "administrator", action: "grant" }))
+        .statusCode,
+    ).toBe(400);
+    expect(
+      (
+        await grant(
+          manager,
+          { roleKey: "beta-tester", action: "grant" },
+          manager.userId,
+        )
+      ).statusCode,
+    ).toBe(409);
+    const requestId = randomUUID();
+    const granted = await grant(manager, {
+      roleKey: "beta-tester",
+      action: "grant",
+      requestId,
+    });
+    expect(granted.json()).toMatchObject({
+      state: "granted",
+      duplicate: false,
+    });
+    expect(
+      (
+        await grant(manager, {
+          roleKey: "beta-tester",
+          action: "grant",
+          requestId,
+        })
+      ).json(),
+    ).toMatchObject({ duplicate: true });
+
+    // The bot's role sync sees it, and a sync job was queued.
+    const desired = (
+      await app.inject({
+        method: "GET",
+        url: `/discord/integration/tenants/${tenantId}/members/${customer.discordId}/roles`,
+        headers: {
+          "x-kush-discord-secret": BOT_SECRET,
+          "x-kush-discord-guild-id": STAFF_GUILD,
+        },
+      })
+    ).json();
+    expect(desired.grantedRoleKeys).toEqual(["beta-tester"]);
+    const jobs = await pool.query(
+      "SELECT reason FROM role_sync_jobs WHERE tenant_id=$1 AND discord_user_id=$2",
+      [tenantId, customer.discordId],
+    );
+    expect(jobs.rows[0]?.reason).toContain("staff-role:beta-tester");
+
+    // Discord's /staff role runs the same operation.
+    const revoked = await app.inject({
+      method: "POST",
+      url: `/discord/integration/tenants/${tenantId}/staff/roles`,
+      headers: {
+        "x-kush-discord-secret": BOT_SECRET,
+        "x-kush-discord-guild-id": STAFF_GUILD,
+      },
+      payload: {
+        actorDiscordId: manager.discordId,
+        discordUserId: customer.discordId,
+        roleKey: "beta-tester",
+        action: "revoke",
+        reason: "TEST beta ended",
+        requestId: randomUUID(),
+      },
+    });
+    expect(revoked.json()).toMatchObject({ state: "revoked" });
+
+    const view = (
+      await web("GET", `/web/staff/customers/${customer.userId}`, manager.token)
+    ).json();
+    expect(view.customer.discordId).toBe(customer.discordId);
+    expect(view.roles.grants).toMatchObject([
+      { roleKey: "beta-tester", state: "revoked" },
+    ]);
+    expect(view.roles.history.map((h: { source: string }) => h.source)).toEqual(
+      ["discord", "website"],
+    );
+    expect(view.can).toEqual({ adjustCredit: false, manageRoles: true });
+    expect(view.credit.balancePence).toBe(0);
+    expect(
+      (
+        await web(
+          "GET",
+          `/web/staff/customers/${customer.userId}`,
+          support.token,
+        )
+      ).statusCode,
+    ).toBe(403);
+  });
+
+  it("sets ticket priority from the website, only once claimed", async () => {
+    const customer = await person([], { mfa: false });
+    const agent = await person([ROLE.support]);
+    const ticket = await openTicket(customer, "technical");
+    const setPriority = (version: number) =>
+      web("POST", `/web/staff/tickets/${ticket.id}/priority`, agent.token, {
+        expectedVersion: version,
+        priority: "urgent",
+      });
+    expect((await setPriority(ticket.version)).statusCode).toBe(403);
+    const claimed = await web(
+      "POST",
+      `/web/staff/tickets/${ticket.id}/claim`,
+      agent.token,
+      {
+        expectedVersion: ticket.version,
+      },
+    );
+    expect(claimed.statusCode).toBe(200);
+    const current = (
+      await web("GET", `/web/staff/tickets/${ticket.id}`, agent.token)
+    ).json().ticket;
+    expect((await setPriority(current.version)).json()).toEqual({
+      priority: "urgent",
+    });
+    expect((await setPriority(current.version)).statusCode).toBe(409); // stale version
+  });
 });

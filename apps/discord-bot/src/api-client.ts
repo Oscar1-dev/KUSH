@@ -116,6 +116,10 @@ export interface DesiredRoles {
   productRoleIds: string[];
   managedProductRoleIds: string[];
   linked: boolean;
+  /** Allowlisted role keys staff granted (older APIs omit these). */
+  grantedRoleKeys?: string[];
+  /** Keys staff revoked: removed only if the member still holds them. */
+  revokedRoleKeys?: string[];
 }
 
 export type { NotificationJob } from "./automation/notifications.js";
@@ -827,7 +831,12 @@ export class DiscordApiClient {
   }
 
   async credit(discordUserId: string) {
-    return this.#request<{ balancePence: number; history: CreditEntry[] }>(
+    return this.#request<{
+      balancePence: number;
+      history: CreditEntry[];
+      /** False until the owner switches credit spending on. */
+      spendable?: boolean;
+    }>(
       "GET",
       `${this.#tenant}/credit?${new URLSearchParams({ discordUserId })}`,
     );
@@ -1031,6 +1040,22 @@ export class DiscordApiClient {
         `${this.#tenant}/staff/stats?${new URLSearchParams({ actorDiscordId })}`,
       )
     ).stats;
+  }
+
+  /** Grants or revokes an allowlisted role (the API checks the actor). */
+  async setStaffRole(input: {
+    actorDiscordId: string;
+    discordUserId: string;
+    roleKey: string;
+    action: "grant" | "revoke";
+    reason: string;
+    requestId: string;
+  }) {
+    return this.#request<{
+      roleKey: string;
+      state: string;
+      duplicate: boolean;
+    }>("POST", `${this.#tenant}/staff/roles`, input);
   }
 
   /** Adds someone to the ticket in this channel (the API checks the actor). */

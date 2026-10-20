@@ -208,6 +208,7 @@ describe("slash commands", () => {
       "commissions",
       "customer",
       "orders",
+      "role",
       "stats",
     ]);
     for (const name of [

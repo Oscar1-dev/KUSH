@@ -5,14 +5,17 @@ export interface SyncRoleIds {
   member?: string;
   verifiedCustomer?: string;
   restricted?: string;
+  /** Role key → ID for roles staff may grant (see staffGrantableRoles). */
+  grantable?: Record<string, string>;
 }
 
 /**
  * Discord role changes needed to match the backend's desired roles.
  *
  * Only roles this system owns are ever touched: Member (add only),
- * Verified Customer and product roles. Everything else a member holds —
- * staff, partner, beta, notification roles — is left exactly as it is.
+ * Customer, product roles, and allowlisted roles staff granted or revoked.
+ * Everything else a member holds (staff, notification roles, partner roles
+ * given by hand in Discord) is left exactly as it is.
  *
  * - Member is never removed: members may hold it from before acceptance was
  *   recorded, and taking it away is a moderation decision, not a sync one.
@@ -27,13 +30,27 @@ export function computeRoleChanges(
   const restricted = Boolean(ids.restricted && current.has(ids.restricted));
   const wanted = new Set<string>();
   if (desired.member && ids.member) wanted.add(ids.member);
+  const granted = new Set(desired.grantedRoleKeys ?? []);
   if (!restricted) {
     if (desired.verifiedCustomer && ids.verifiedCustomer)
       wanted.add(ids.verifiedCustomer);
     for (const id of desired.productRoleIds) wanted.add(id);
+    // Roles staff granted on the website or with /staff role.
+    for (const key of granted) {
+      const id = ids.grantable?.[key];
+      if (id) wanted.add(id);
+    }
   }
   const removable = new Set<string>(desired.managedProductRoleIds);
-  if (ids.verifiedCustomer) removable.add(ids.verifiedCustomer);
+  // Customer is ours unless staff granted it by hand.
+  if (ids.verifiedCustomer && !granted.has("verified-customer"))
+    removable.add(ids.verifiedCustomer);
+  // A revoked grant removes the role, but a role staff gave in Discord
+  // directly (never granted here) is left alone.
+  for (const key of desired.revokedRoleKeys ?? []) {
+    const id = ids.grantable?.[key];
+    if (id) removable.add(id);
+  }
 
   const add = [...wanted].filter((id) => !current.has(id)).sort();
   const remove = [...current]
