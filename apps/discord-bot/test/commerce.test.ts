@@ -330,7 +330,7 @@ describe("staff commission commands", () => {
     ]);
     await run(
       "!commission quote 99 Logo and banner pack",
-      actor(["support-lead"]),
+      actor(["staff-manager"]),
       {
         channelId: TICKET_CHANNEL,
       },

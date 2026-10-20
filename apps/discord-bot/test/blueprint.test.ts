@@ -4,6 +4,9 @@ import { ChannelType, PermissionFlagsBits as P } from "discord.js";
 import {
   blueprint,
   botManagedRoles,
+  selfAssignableRoles,
+  staffGrantableRoles,
+  staffRoles,
   participation,
   requiredBotPermissions,
   rolesAfterRestriction,
@@ -62,27 +65,63 @@ describe("blueprint v2 structure", () => {
     expect(blueprint.roles.map((role) => role.name)).toEqual([
       "Owner",
       "Administrator",
-      "Developer",
-      "Support Lead",
-      "Support Staff",
-      "Moderator",
       "KUSH Bot",
-      "Creative Partner",
-      "Verified Reseller",
-      "Approved Seller",
-      "Verified Customer",
+      "─── Staff ───",
+      "Staff Manager",
+      "Developer",
+      "Ticket Staff",
+      "Moderator",
+      "─── Partners ───",
+      "Creative Team",
+      "Verified Seller",
+      "Reseller",
+      "─── Community ───",
+      "Customer",
       "Beta Tester",
       "Member",
       "Restricted",
+      "─── Notifications ───",
+      "Announcements",
+      "Product Updates",
+      "Development Updates",
+      "Community Events",
     ]);
+    expect(new Set(blueprint.roles.map((role) => role.key)).size).toBe(
+      blueprint.roles.length,
+    );
     const keys = blueprint.channels.map((channel) => channel.key);
     expect(new Set(keys).size).toBe(keys.length);
   });
 
-  it("places the bot directly above exactly the roles it manages", () => {
+  it("places the bot directly under Administrator, above every role it assigns", () => {
     const order = blueprint.roles.map((role) => role.key);
-    const botIndex = order.indexOf("kush-bot");
-    expect(order.slice(botIndex + 1)).toEqual(botManagedRoles);
+    expect(order.indexOf("kush-bot")).toBe(order.indexOf("administrator") + 1);
+    const below = order.slice(order.indexOf("kush-bot") + 1);
+    for (const key of botManagedRoles) expect(below).toContain(key);
+    // It can order staff roles, but never assigns them.
+    for (const key of staffRoles) expect(botManagedRoles).not.toContain(key);
+    for (const key of staffGrantableRoles)
+      expect(staffRoles).not.toContain(key);
+  });
+
+  it("keeps dividers and notification roles powerless and colourless", () => {
+    for (const role of blueprint.roles.filter(
+      (item) =>
+        item.key.startsWith("divider-") || item.key.startsWith("notify-"),
+    )) {
+      expect(role.permissions, role.key).toBe(0n);
+      expect(role.colour, role.key).toBe(0);
+      expect(role.hoist, role.key).toBe(false);
+    }
+    for (const key of selfAssignableRoles) expect(key).toMatch(/^notify-/);
+  });
+
+  it("orders every category exactly once", () => {
+    const categories = blueprint.channels
+      .filter((channel) => channel.type === 4)
+      .map((channel) => channel.key)
+      .sort();
+    expect([...blueprint.categoryOrder].sort()).toEqual(categories);
   });
 
   // Owner decision, 18 Oct 2026: the Administrator role holds Discord
@@ -220,11 +259,11 @@ describe("effective permissions by role", () => {
   });
 
   it("gives support staff the queue but not moderation or owner channels", () => {
-    expect(cell("staff:ticket-queue", "support-staff")).toBe("write");
-    expect(cell("staff:moderation-log", "support-staff")).toBe("none");
+    expect(cell("staff:ticket-queue", "ticket-staff")).toBe("write");
+    expect(cell("staff:moderation-log", "ticket-staff")).toBe("none");
     for (const key of channelsWhere((key) => key.startsWith("owner:")))
-      expect(cell(key, "support-staff"), key).toBe("none");
-    expect(cell("staff:ticket-queue", "support-lead")).toBe("manage");
+      expect(cell(key, "ticket-staff"), key).toBe("none");
+    expect(cell("staff:ticket-queue", "staff-manager")).toBe("manage");
   });
 
   it("gives developers engineering access without owner or moderation access", () => {
@@ -278,7 +317,7 @@ describe("restriction", () => {
         "member",
         "verified-customer",
         "beta-tester",
-        "support-staff",
+        "ticket-staff",
       ]).sort(),
     ).toEqual(["member", "restricted"]);
   });
@@ -353,13 +392,13 @@ describe("private tickets", () => {
     expect(
       evaluate("support", {
         memberId: "assigned-staff",
-        roles: ["member", "support-staff"],
+        roles: ["member", "ticket-staff"],
       }),
     ).toBe("write");
     expect(
       evaluate("support", {
         memberId: "lead",
-        roles: ["member", "support-lead"],
+        roles: ["member", "staff-manager"],
       }),
     ).toBe("write");
     expect(evaluate("support", { memberId: "bot", roles: ["kush-bot"] })).toBe(
@@ -377,7 +416,7 @@ describe("private tickets", () => {
     expect(
       evaluate("support", {
         memberId: "other-staff",
-        roles: ["member", "support-staff"],
+        roles: ["member", "ticket-staff"],
       }),
     ).toBe("none");
     expect(
@@ -389,7 +428,7 @@ describe("private tickets", () => {
     expect(
       evaluate(
         "report",
-        { memberId: "lead", roles: ["member", "support-lead"] },
+        { memberId: "lead", roles: ["member", "staff-manager"] },
         "creator",
         [],
       ),
@@ -397,7 +436,7 @@ describe("private tickets", () => {
     expect(
       evaluate(
         "report",
-        { memberId: "staff", roles: ["member", "support-staff"] },
+        { memberId: "staff", roles: ["member", "ticket-staff"] },
         "creator",
         [],
       ),

@@ -181,7 +181,7 @@ describe("honeypot", () => {
 
   it("exempts staff and the owner but not members, customers or partners", () => {
     expect(isHoneypotExempt(actor(["member", "moderator"]))).toBe(true);
-    expect(isHoneypotExempt(actor(["member", "support-staff"]))).toBe(true);
+    expect(isHoneypotExempt(actor(["member", "ticket-staff"]))).toBe(true);
     expect(isHoneypotExempt(actor([], true))).toBe(true);
     expect(isHoneypotExempt(actor(["member"]))).toBe(false);
     expect(

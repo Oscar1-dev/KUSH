@@ -1,7 +1,6 @@
 import { createHash } from "node:crypto";
 import { PermissionFlagsBits as P } from "discord.js";
 import {
-  botManagedRoles,
   requiredBotPermissions,
   type Blueprint,
   type DesiredChannel,
@@ -45,6 +44,8 @@ export interface ObservedChannel {
   parentId: string | null;
   topic?: string | null;
   overwrites?: ObservedOverwrite[];
+  /** Sort position within its level. Omitted in older snapshots. */
+  position?: number;
 }
 export interface ObservedGuild {
   /** Also the @everyone role ID. */
@@ -80,6 +81,8 @@ export type ProvisionOperation =
       changes: string[];
     }
   | { action: "position-roles"; keys: RoleKey[] }
+  /** Category IDs in their desired order, top first. */
+  | { action: "position-categories"; ids: string[] }
   | { action: "update-everyone"; permissions: bigint; changes: string[] }
   | { action: "create-channel"; key: string; desired: DesiredChannel }
   | {
@@ -303,10 +306,12 @@ export function planProvisioning(
     (key) => roleById.get(roleIds[key] ?? "")?.position !== undefined,
   );
   const position = (key: RoleKey) => roleById.get(roleIds[key]!)!.position!;
+  // Everything the blueprint places under the bot, the bot can put in order
+  // itself (ordering is cosmetic; who may *assign* a role is botManagedRoles).
+  const reorderable = order.slice(order.indexOf("kush-bot") + 1);
   let reorderBotManaged = operations.some(
     (operation) =>
-      operation.action === "create-role" &&
-      botManagedRoles.includes(operation.key),
+      operation.action === "create-role" && reorderable.includes(operation.key),
   );
   const hierarchy = new Map<string, Conflict>();
   const requireAbove = (higher: RoleKey, lower: RoleKey) =>
@@ -328,7 +333,7 @@ export function planProvisioning(
     const higher = positioned[index - 1]!;
     const lower = positioned[index]!;
     if (position(higher) > position(lower)) continue;
-    if (botManagedRoles.includes(higher) && botManagedRoles.includes(lower))
+    if (reorderable.includes(higher) && reorderable.includes(lower))
       reorderBotManaged = true;
     else if (higher !== "kush-bot" && lower !== "kush-bot")
       requireAbove(higher, lower);
@@ -337,7 +342,7 @@ export function planProvisioning(
   if (reorderBotManaged)
     operations.push({
       action: "position-roles",
-      keys: order.filter((key) => botManagedRoles.includes(key)),
+      keys: reorderable,
     });
 
   // ---- permission model of the observed guild (for exposure checks).
@@ -523,6 +528,25 @@ export function planProvisioning(
         overwrites: toEvaluated(item.overwrites),
       }),
     }));
+  // ---- category order (navigation). Only when every category is mapped
+  // and positions were observed, so an offline snapshot never reorders.
+  const orderedIds = (desired.categoryOrder ?? [])
+    .map((key) => channelIds[key])
+    .filter((id): id is string => Boolean(id));
+  const observedCategories = orderedIds.map((id) =>
+    observed.channels.find((item) => item.id === id),
+  );
+  if (
+    orderedIds.length === (desired.categoryOrder ?? []).length &&
+    observedCategories.every((item) => item?.position !== undefined)
+  ) {
+    const current = [...observedCategories]
+      .sort((a, b) => a!.position! - b!.position!)
+      .map((item) => item!.id);
+    if (current.join() !== orderedIds.join())
+      operations.push({ action: "position-categories", ids: orderedIds });
+  }
+
   if (options.restrictUnmanaged)
     for (const item of unmanagedChannels)
       if (item.visibleToMembers)
@@ -580,6 +604,11 @@ export interface GuildAdapter {
   updateRole(id: string, input: RoleInput, reason: string): Promise<void>;
   setEveryonePermissions(permissions: bigint, reason: string): Promise<void>;
   setRolePositions(
+    positions: { id: string; position: number }[],
+    reason: string,
+  ): Promise<void>;
+  /** Reorders top-level channels (categories). */
+  setChannelPositions(
     positions: { id: string; position: number }[],
     reason: string,
   ): Promise<void>;
@@ -721,6 +750,14 @@ export async function applyPlan(
         applyReason,
       );
     });
+
+  for (const operation of ofKind("position-categories"))
+    await step("order categories", () =>
+      adapter.setChannelPositions(
+        operation.ids.map((id, position) => ({ id, position })),
+        applyReason,
+      ),
+    );
 
   // Blueprint order lists each category before its children.
   for (const operation of ofKind("create-channel"))

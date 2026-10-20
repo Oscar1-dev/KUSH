@@ -10,8 +10,8 @@ import { createLogger } from "../src/runtime/logger.js";
 const GUILD = "100000000000000001";
 const ROLE = {
   administrator: "200000000000000001",
-  "support-lead": "200000000000000002",
-  "support-staff": "200000000000000003",
+  "staff-manager": "200000000000000002",
+  "ticket-staff": "200000000000000003",
   moderator: "200000000000000004",
 };
 
@@ -87,8 +87,8 @@ describe("application channels", () => {
     expect(ids).toContain("500000000000000001");
     expect(ids).toContain(ROLE.administrator);
     // Support staff and moderators never see applicants' details.
-    expect(ids).not.toContain(ROLE["support-lead"]);
-    expect(ids).not.toContain(ROLE["support-staff"]);
+    expect(ids).not.toContain(ROLE["staff-manager"]);
+    expect(ids).not.toContain(ROLE["ticket-staff"]);
     expect(ids).not.toContain(ROLE.moderator);
     expect(discord.created[0]!.name).toBe("application-0007");
   });

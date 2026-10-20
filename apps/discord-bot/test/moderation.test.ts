@@ -70,7 +70,7 @@ function harness(options: { canBan?: boolean } = {}) {
       guildId: "22345678901234567",
       apiBaseUrl: "http://127.0.0.1:4310",
       supportTenantId: "11111111-1111-4111-8111-111111111111",
-      roleIds: { moderator: MOD_ROLE, "support-staff": SUPPORT_ROLE },
+      roleIds: { moderator: MOD_ROLE, "ticket-staff": SUPPORT_ROLE },
       channelIds: {
         "community:vouches": "888888888888888881",
         "staff:bot-log": "888888888888888882",

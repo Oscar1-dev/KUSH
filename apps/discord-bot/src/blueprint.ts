@@ -1,7 +1,7 @@
 import { ChannelType, PermissionFlagsBits as P } from "discord.js";
 
 /**
- * KUSH Discord server blueprint, version 2.
+ * KUSH Discord server blueprint, version 3.
  *
  * Design rules (verified by test/blueprint.test.ts and documented in
  * docs/discord/PERMISSIONS.md):
@@ -13,7 +13,8 @@ import { ChannelType, PermissionFlagsBits as P } from "discord.js";
  * - Elevated access (staff, customer, partner, beta) is granted by channel
  *   role allows. Restriction therefore strips those roles
  *   (see rolesAfterRestriction) instead of relying on overwrite precedence.
- * - Only the Owner role carries Administrator.
+ * - Only Owner and Administrator carry Administrator. Separator and
+ *   notification roles carry no permissions at all.
  * - Private channels deny @everyone ViewChannel and allow named roles.
  * - Downloads/setup channels contain instructions only; actual links are
  *   issued privately by the bot after a backend entitlement check.
@@ -23,8 +24,8 @@ export type RoleKey =
   | "owner"
   | "administrator"
   | "developer"
-  | "support-lead"
-  | "support-staff"
+  | "staff-manager"
+  | "ticket-staff"
   | "moderator"
   | "kush-bot"
   | "creative-partner"
@@ -33,7 +34,17 @@ export type RoleKey =
   | "verified-customer"
   | "beta-tester"
   | "member"
-  | "restricted";
+  | "restricted"
+  // Decorative dividers in the role list (no permissions, never hoisted).
+  | "divider-staff"
+  | "divider-partners"
+  | "divider-community"
+  | "divider-notifications"
+  // Opt-in ping roles members toggle themselves in #roles.
+  | "notify-announcements"
+  | "notify-products"
+  | "notify-development"
+  | "notify-events";
 
 export type Principal = RoleKey | "everyone";
 
@@ -134,52 +145,99 @@ const role = (
 /** Guild-level permissions for @everyone (unverified visitors). */
 export const everyonePermissions = read | P.UseApplicationCommands;
 
+/**
+ * Role colours: a cool lilac-to-mint run for staff, warm tones for partners,
+ * the KUSH green for customers and quiet greys for everyone else. Dividers
+ * and notification roles have no colour so they never tint a name.
+ */
+const colour = {
+  owner: 0xcbbcff,
+  administrator: 0xa78bfa,
+  staffManager: 0x818cf8,
+  developer: 0x7dd3fc,
+  ticketStaff: 0x5eead4,
+  moderator: 0x86efac,
+  creative: 0xf9a8d4,
+  seller: 0xfcd34d,
+  reseller: 0xfdba74,
+  customer: 0xa7fa43,
+  beta: 0x93c5fd,
+  member: 0xd4d4d8,
+  restricted: 0x71717a,
+  none: 0,
+} as const;
+
+/** A zero-permission divider; only ever organises the role list. */
+const divider = (key: RoleKey, label: string) =>
+  role(key, `─── ${label} ───`, colour.none, 0n);
+
 /** Ordered highest to lowest. Array order is the required role hierarchy. */
 export const roles: DesiredRole[] = [
-  role("owner", "Owner", 0x7c3aed, P.Administrator, {
+  role("owner", "Owner", colour.owner, P.Administrator, {
     hoist: true,
     legacyKeys: ["owner"],
   }),
   // Discord Administrator approved by the owner on 18 Oct 2026: holders are
   // verified administrators who have signed the staff NDA. The role is only
   // ever granted by an explicit administrator activation (never by signing).
-  role("administrator", "Administrator", 0x166534, P.Administrator, {
-    hoist: true,
-    legacyKeys: ["administrator"],
-  }),
-  role("developer", "Developer", 0x15803d, 0n, {
-    hoist: true,
-    legacyKeys: ["developer"],
-  }),
-  role("support-lead", "Support Lead", 0x0e7490, 0n, { hoist: true }),
-  role("support-staff", "Support Staff", 0x16a34a, 0n, {
-    hoist: true,
-    legacyKeys: ["support-team"],
-  }),
-  role("moderator", "Moderator", 0x22c55e, P.ModerateMembers, {
-    hoist: true,
-    legacyKeys: ["moderator"],
-  }),
+  role(
+    "administrator",
+    "Administrator",
+    colour.administrator,
+    P.Administrator,
+    {
+      hoist: true,
+      legacyKeys: ["administrator"],
+    },
+  ),
+  // The bot sits just under Administrator so it can keep every role below
+  // in line with this blueprint. It still never assigns staff roles.
   role("kush-bot", "KUSH Bot", 0x22c55e, requiredBotPermissions, {
     managed: true,
   }),
-  role("creative-partner", "Creative Partner", 0x9333ea, 0n),
-  role("verified-reseller", "Verified Reseller", 0xa855f7, 0n, {
-    legacyKeys: ["reseller"],
+  divider("divider-staff", "Staff"),
+  // Was "Management" (same role ID, so the API's manager mapping holds);
+  // takes over what Support Lead did.
+  role("staff-manager", "Staff Manager", colour.staffManager, 0n, {
+    hoist: true,
+    legacyKeys: ["management"],
   }),
-  role("approved-seller", "Approved Seller", 0x7e22ce, 0n, {
+  role("developer", "Developer", colour.developer, 0n, {
+    hoist: true,
+    legacyKeys: ["developer"],
+  }),
+  role("ticket-staff", "Ticket Staff", colour.ticketStaff, 0n, {
+    hoist: true,
+    legacyKeys: ["support-staff", "support-team"],
+  }),
+  role("moderator", "Moderator", colour.moderator, P.ModerateMembers, {
+    hoist: true,
+    legacyKeys: ["moderator"],
+  }),
+  divider("divider-partners", "Partners"),
+  role("creative-partner", "Creative Team", colour.creative, 0n, {
+    hoist: true,
+  }),
+  role("approved-seller", "Verified Seller", colour.seller, 0n, {
+    hoist: true,
     legacyKeys: ["verified-seller"],
   }),
-  role("verified-customer", "Verified Customer", 0x65a30d, 0n, {
+  role("verified-reseller", "Reseller", colour.reseller, 0n, {
+    hoist: true,
+    legacyKeys: ["reseller"],
+  }),
+  divider("divider-community", "Community"),
+  role("verified-customer", "Customer", colour.customer, 0n, {
+    hoist: true,
     legacyKeys: ["verified-customer"],
   }),
-  role("beta-tester", "Beta Tester", 0x2563eb, 0n, {
+  role("beta-tester", "Beta Tester", colour.beta, 0n, {
     legacyKeys: ["beta-tester"],
   }),
   role(
     "member",
     "Member",
-    0x64748b,
+    colour.member,
     P.SendMessages |
       P.SendMessagesInThreads |
       P.CreatePublicThreads |
@@ -190,7 +248,89 @@ export const roles: DesiredRole[] = [
       P.ChangeNickname,
     { legacyKeys: ["member"] },
   ),
-  role("restricted", "Restricted", 0x6b7280, 0n),
+  role("restricted", "Restricted", colour.restricted, 0n),
+  divider("divider-notifications", "Notifications"),
+  role("notify-announcements", "Announcements", colour.none, 0n, {
+    legacyKeys: ["announcements"],
+  }),
+  role("notify-products", "Product Updates", colour.none, 0n, {
+    legacyKeys: ["product-updates"],
+  }),
+  role("notify-development", "Development Updates", colour.none, 0n, {
+    legacyKeys: ["development-updates"],
+  }),
+  role("notify-events", "Community Events", colour.none, 0n, {
+    legacyKeys: ["community-events"],
+  }),
+];
+
+/** Opt-in ping roles a member may add or remove themselves (#roles). */
+export const selfAssignableRoles: readonly RoleKey[] = [
+  "notify-announcements",
+  "notify-products",
+  "notify-development",
+  "notify-events",
+];
+
+/**
+ * Roles staff may grant or revoke from the website or `/staff role`. Staff
+ * roles are deliberately absent: they come only from recruitment activation
+ * or the owner, in Discord.
+ */
+export const staffGrantableRoles: readonly RoleKey[] = [
+  "verified-customer",
+  "beta-tester",
+  "creative-partner",
+  "approved-seller",
+  "verified-reseller",
+];
+
+/**
+ * Roles to delete once the owner approves (see `cli.ts retire-roles`).
+ * Each was reviewed on 20 Oct 2026: none holds members the blueprint needs,
+ * and nothing in the API maps to them except where noted.
+ */
+export const retiredRoles: readonly (
+  { configKey: string; reason: string } | { roleId: string; reason: string }
+)[] = [
+  {
+    configKey: "co-owner",
+    reason: "Dormant Administrator role with no holders",
+  },
+  { configKey: "support-lead", reason: "Merged into Staff Manager" },
+  {
+    configKey: "commission-manager",
+    reason: "Covered by Staff Manager (API manager mapping)",
+  },
+  {
+    configKey: "marketplace-reviewer",
+    reason: "Marketplace not launched; no holders",
+  },
+  {
+    configKey: "partner-manager",
+    reason: "Covered by Staff Manager; no holders",
+  },
+  {
+    configKey: "official-partner",
+    reason: "Replaced by the partner programme roles; no holders",
+  },
+  {
+    configKey: "premium-customer",
+    reason: "Not a KUSH tier; Customer covers it",
+  },
+  { configKey: "contributor", reason: "Unused; no holders" },
+  {
+    configKey: "marketplace-updates",
+    reason: "Marketplace not launched; no holders",
+  },
+  {
+    roleId: "1561058075161657405",
+    reason: "TEST product access: leftover from automated tests",
+  },
+  {
+    roleId: "1561059232541835384",
+    reason: "TEST product access: leftover from automated tests",
+  },
 ];
 
 export const roleByKey = (key: RoleKey) =>
@@ -220,6 +360,7 @@ export const botManagedRoles: readonly RoleKey[] = [
   "beta-tester",
   "member",
   "restricted",
+  ...selfAssignableRoles,
 ];
 
 export function rolesAfterRestriction(held: readonly RoleKey[]): RoleKey[] {
@@ -362,15 +503,15 @@ const voiceChannel = (
 export const staffRoles: RoleKey[] = [
   "administrator",
   "developer",
-  "support-lead",
-  "support-staff",
+  "staff-manager",
+  "ticket-staff",
   "moderator",
 ];
 const communityModerators: RoleKey[] = ["moderator", "administrator"];
 const community: Access = { write: "members", moderate: communityModerators };
 const customerResource: Access = {
-  view: ["verified-customer", "support-lead", "support-staff"],
-  publish: ["developer", "support-lead"],
+  view: ["verified-customer", "staff-manager", "ticket-staff"],
+  publish: ["developer", "staff-manager"],
 };
 const programme = (holder: RoleKey): Access => ({
   view: [holder, "administrator"],
@@ -417,14 +558,14 @@ export const channels: DesiredChannel[] = [
     "information",
     "getting-started",
     "How to link your KUSH account, open tickets and use bot commands.",
-    { publish: ["administrator", "support-lead"] },
+    { publish: ["administrator", "staff-manager"] },
     ["01-start-here:getting-started"],
   ),
   text(
     "information",
     "status",
     "Service and incident status, including support updates.",
-    { publish: ["administrator", "developer", "support-lead"] },
+    { publish: ["administrator", "developer", "staff-manager"] },
     ["01-start-here:status"],
   ),
 
@@ -491,7 +632,7 @@ export const channels: DesiredChannel[] = [
     "products",
     "known-issues",
     "Confirmed issues and workarounds.",
-    { publish: ["developer", "support-lead"] },
+    { publish: ["developer", "staff-manager"] },
     ["03-kush-products:known-issues"],
   ),
   text(
@@ -518,21 +659,21 @@ export const channels: DesiredChannel[] = [
     ["03-kush-products:beta-programme"],
   ),
 
-  category("support", "🛟 SUPPORT", { publish: ["support-lead"] }, [
+  category("support", "🛟 SUPPORT", { publish: ["staff-manager"] }, [
     "06-support",
   ]),
   text(
     "support",
     "create-ticket",
     "Open a private support ticket with the button below or !ticket.",
-    { publish: ["support-lead"], restrictedMayInteract: true },
+    { publish: ["staff-manager"], restrictedMayInteract: true },
     ["06-support:open-a-ticket"],
   ),
   text(
     "support",
     "faq",
     "Frequently asked questions and support information.",
-    { publish: ["support-lead"] },
+    { publish: ["staff-manager"] },
     ["06-support:support-faq"],
   ),
 
@@ -579,9 +720,9 @@ export const channels: DesiredChannel[] = [
     "ticket-queue",
     "Ticket summaries for claiming. Ticket content stays in the ticket.",
     {
-      view: ["support-lead", "support-staff"],
-      write: ["support-lead", "support-staff"],
-      moderate: ["support-lead"],
+      view: ["staff-manager", "ticket-staff"],
+      write: ["staff-manager", "ticket-staff"],
+      moderate: ["staff-manager"],
     },
     ["08-staff-operations:ticket-management"],
   ),
@@ -603,7 +744,7 @@ export const channels: DesiredChannel[] = [
     "staff",
     "operational-alerts",
     "Bot, API and integration health alerts.",
-    { view: ["administrator", "developer", "support-lead"] },
+    { view: ["administrator", "developer", "staff-manager"] },
   ),
 
   // The category stays bot-manageable so child channels can be created.
@@ -638,7 +779,7 @@ export const channels: DesiredChannel[] = [
 
   // Containers for bot-created private channels. Members are added per
   // ticket by member overwrites; Support Staff only through assignment.
-  category("tickets", "🎫 TICKETS", { view: ["support-lead"] }),
+  category("tickets", "🎫 TICKETS", { view: ["staff-manager"] }),
   category("reports", "🚨 REPORTS", { view: ["moderator", "administrator"] }),
 
   // ------------------------------------------- adopted legacy channels
@@ -672,19 +813,19 @@ export const channels: DesiredChannel[] = [
     "support",
     "support-information",
     "Troubleshooting guides and how to get help.",
-    { publish: ["support-lead", "administrator"] },
+    { publish: ["staff-manager", "administrator"] },
   ),
   text(
     "staff",
     "commission-management",
     "Commission coordination. Customer details stay in the dashboard.",
-    { view: ["administrator", "developer"] },
+    { view: ["administrator", "staff-manager", "developer"] },
   ),
   text(
     "staff",
     "recruitment-review",
     "Recruitment coordination. Applicant details stay in application channels and the dashboard.",
-    { view: ["administrator"] },
+    { view: ["administrator", "staff-manager"] },
   ),
 
   // ------------------------------------- restored legacy channels
@@ -803,7 +944,7 @@ export const channels: DesiredChannel[] = [
     "support",
     "resolved-issues",
     "Known issues and their fixes.",
-    { publish: ["support-lead", "administrator"] },
+    { publish: ["staff-manager", "administrator"] },
     ["archive:resolved-issues"],
   ),
   text(
@@ -834,6 +975,24 @@ export const channels: DesiredChannel[] = [
     { view: ["administrator"] },
     ["archive:audit-log"],
   ),
+];
+
+/**
+ * Category order, top to bottom, following a visitor's path: learn what
+ * KUSH is, see the services, get help, then the community and partner
+ * areas. Staff, ticket and owner areas sit last (members never see them).
+ */
+export const categoryOrder: readonly string[] = [
+  "information",
+  "studio",
+  "support",
+  "products",
+  "community",
+  "partnerships",
+  "staff",
+  "tickets",
+  "reports",
+  "owner",
 ];
 
 export const channelByKey = (key: string) =>
@@ -868,7 +1027,7 @@ export function ticketChannelOverwrites(input: {
         ? // Applicants' personal details: administrators only, never support
           // (managers review on the website; owner sees all channels).
           ["administrator"]
-        : ["support-lead"];
+        : ["staff-manager"];
   return [
     { principal: "everyone", allow: 0n, deny: P.ViewChannel },
     { principal: "kush-bot", allow: botWrite, deny: 0n },
@@ -890,10 +1049,11 @@ export function ticketChannelOverwrites(input: {
 
 /** Bump `version` whenever the managed set changes. */
 export const blueprint = {
-  version: 2,
+  version: 3,
   everyonePermissions,
   roles,
   channels,
+  categoryOrder,
 } as const;
 
 export type Blueprint = {
@@ -901,4 +1061,6 @@ export type Blueprint = {
   everyonePermissions: bigint;
   roles: readonly DesiredRole[];
   channels: readonly DesiredChannel[];
+  /** Category keys top to bottom; omitted means "leave the order alone". */
+  categoryOrder?: readonly string[];
 };

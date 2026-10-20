@@ -83,6 +83,16 @@ export class FakeGuild implements GuildAdapter {
       this.#role(id).position = position;
   }
 
+  async setChannelPositions(
+    positions: { id: string; position: number }[],
+  ): Promise<void> {
+    this.#record(`setChannelPositions ${positions.length}`);
+    for (const { id, position } of positions) {
+      const channel = this.state.channels.find((item) => item.id === id);
+      if (channel) channel.position = position;
+    }
+  }
+
   async createChannel(input: ChannelInput): Promise<string> {
     this.#record(`createChannel ${input.name}`);
     const id = `channel-${this.#next++}`;
