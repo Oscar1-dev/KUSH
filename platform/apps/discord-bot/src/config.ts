@@ -28,6 +28,13 @@ export const runtimeConfigSchema = z.object({
       z.object({ channelId: snowflake, messageId: snowflake }),
     )
     .default({}),
+  /** Announce pushes to this public GitHub repo in #announcements. */
+  changelog: z
+    .object({
+      repo: z.string().regex(/^[\w.-]+\/[\w.-]+$/, "owner/name"),
+      branch: z.string().min(1).default("main"),
+    })
+    .optional(),
 });
 
 export type RuntimeConfig = z.infer<typeof runtimeConfigSchema>;

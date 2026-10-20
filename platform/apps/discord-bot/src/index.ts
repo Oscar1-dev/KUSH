@@ -1,3 +1,4 @@
+import { dirname, join } from "node:path";
 import {
   Client,
   Events,
@@ -8,6 +9,7 @@ import {
 } from "discord.js";
 import { DiscordApiClient } from "./api-client.js";
 import {
+  configPath,
   loadRuntimeConfig,
   readBotToken,
   type RuntimeConfig,
@@ -52,6 +54,7 @@ import { DiscordTicketChannels } from "./tickets/discord-tickets.js";
 import { configuredRoleId, staffGrantableRoles } from "./blueprint.js";
 import { TicketManager } from "./tickets/manager.js";
 import { InviteTracker } from "./commerce/invite-tracker.js";
+import { ChangelogAnnouncer } from "./automation/changelog.js";
 
 /** Exit code for configuration errors; the supervisor will not restart on it. */
 export const EXIT_CONFIG = 78;
@@ -696,7 +699,31 @@ export async function startBot(): Promise<{
       timestamp: true,
     }),
   ).catch(() => undefined);
+  // ------------------------------------------- update announcements
+  const changelog = config.changelog
+    ? new ChangelogAnnouncer({
+        repo: config.changelog.repo,
+        branch: config.changelog.branch,
+        statePath: join(dirname(configPath()), "changelog-state.json"),
+        log,
+        post: async (reply) => {
+          const id = config.channelIds["information:announcements"];
+          const channel = id ? guild().channels.cache.get(id) : undefined;
+          if (!channel?.isSendable())
+            throw new Error("announcements channel unavailable");
+          await channel.send({ ...reply, allowedMentions: { parse: [] } });
+        },
+      })
+    : null;
+  const announceChanges = () =>
+    void changelog?.tick().catch((error: unknown) =>
+      log.warn("changelog.failed", {
+        error: error instanceof Error ? error.message : "unknown",
+      }),
+    );
+  announceChanges();
   const timers = [
+    setInterval(announceChanges, 3 * 60_000),
     setInterval(() => void uptime.tick(), 60_000),
     setInterval(() => void checkApi(), 60_000),
     setInterval(() => {
