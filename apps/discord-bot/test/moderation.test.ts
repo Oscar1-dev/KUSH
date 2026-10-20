@@ -208,7 +208,7 @@ describe("moderation commands", () => {
   it("is moderator-only", async () => {
     const h = harness();
     expect(await h.run(`!warn <@${TARGET}> hi`, ["member"])).toContain(
-      "do not have access",
+      "don't have access",
     );
     expect(h.cases).toEqual([]);
   });
@@ -303,7 +303,7 @@ describe("offboarding", () => {
   it("is admin-only and needs a staff target", async () => {
     const h = harness();
     expect(await h.run(`!offboard <@${SUPPORT}> x`)).toContain(
-      "do not have access",
+      "don't have access",
     );
     expect(
       await h.run(`!offboard <@${TARGET}> x`, ["administrator"]),

@@ -234,7 +234,7 @@ describe("command router", () => {
     const { run, audits } = harness();
     const result = await run("!health", actor(["member"]));
     expect(result.outcome).toBe("denied");
-    expect(text(result.publicReplies[0])).toContain("do not have access");
+    expect(text(result.publicReplies[0])).toContain("don't have access");
     expect(result.privateReplies).toEqual([]);
     expect(audits).toMatchObject([{ action: "!health", outcome: "denied" }]);
   });
@@ -306,7 +306,7 @@ describe("command router", () => {
       replyPrivately: async () => "dm",
     });
     expect(outcome).toBe("error");
-    expect(text(replies[0])).toMatch(/Reference: [0-9a-f]{8}/);
+    expect(text(replies[0])).toMatch(/Reference: `?[0-9a-f]{8}/);
     expect(text(replies[0])).not.toContain("hunter2");
     expect(logs.join("\n")).toContain("command.failed");
     expect(services.health.snapshot().commands.failed).toBe(1);

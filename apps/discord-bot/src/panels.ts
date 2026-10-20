@@ -8,12 +8,13 @@ import { onboardingButton } from "./runtime/components.js";
 
 export const kushColours = {
   green: 0xa7fa43, // KUSH lime (matches the website)
-  purple: 0x7c3aed, // KUSH violet
-  blue: 0x3b82f6,
+  purple: 0xa78bfa, // KUSH violet, as the Administrator role
+  blue: 0x7dd3fc, // sky, as the Developer role
+  teal: 0x5eead4, // as Ticket Staff
   obsidian: 0x111318,
-  warning: 0xf59e0b,
-  danger: 0xef4444,
-  success: 0x22c55e,
+  warning: 0xfbbf24,
+  danger: 0xf87171,
+  success: 0x4ade80,
 } as const;
 
 export type Tone =
@@ -24,7 +25,7 @@ const toneColour: Record<Tone, number> = {
   success: kushColours.success,
   warning: kushColours.warning,
   danger: kushColours.danger,
-  staff: kushColours.green,
+  staff: kushColours.teal,
 };
 
 /**
@@ -58,7 +59,7 @@ const titleStyle: Record<string, { emoji: string; tone: Tone }> = {
   "Bot log": { emoji: "🤖", tone: "staff" },
 };
 
-export const FOOTER = "KUSH • Software, development & creative services";
+export const FOOTER = "KUSH • Websites · Software · Discord · Creative";
 
 /**
  * Brand images, taken from the bot's own Discord profile (avatar = KUSH
@@ -127,6 +128,8 @@ export const embed = (title: string, description: string) => {
 
 /** Public persistent button IDs (not user-scoped; the clicker is the actor). */
 export const PUBLIC_TICKET_BUTTON = "ticket:open";
+/** Public persistent button: starts a commission for the clicker. */
+export const PUBLIC_COMMISSION_BUTTON = "ticket:open:commission";
 export const publicApplyButton = (programme: "seller" | "reseller") =>
   `partner:apply:${programme}`;
 

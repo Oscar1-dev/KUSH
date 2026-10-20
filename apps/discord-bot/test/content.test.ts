@@ -1,5 +1,7 @@
 import { ticketCategories } from "../src/tickets/categories.js";
 import { describe, expect, it } from "vitest";
+import { selfAssignableRoles } from "../src/blueprint.js";
+import { NAV_MENU, roleToggleId } from "../src/ui/navigation.js";
 import { blueprint } from "../src/blueprint.js";
 import { channelContent } from "../src/content/channel-content.js";
 import {
@@ -67,7 +69,8 @@ describe("official channel content", () => {
     const text = JSON.stringify(
       channelContent.map((message) => message.build()),
     );
-    for (const unfinished of ["!downloads", "!guide", "!licenses"])
+    // !downloads and !licenses are live now; guides are still to come.
+    for (const unfinished of ["!guide"])
       if (text.includes(unfinished))
         expect(text).toMatch(
           new RegExp(
@@ -83,6 +86,8 @@ describe("official channel content", () => {
     const handled = [
       "ticket:open",
       "onboarding:accept",
+      NAV_MENU,
+      ...selfAssignableRoles.map(roleToggleId),
       // Every category button (handled by the ticket:open:<key> route).
       ...ticketCategories.map((c) => `ticket:open:${c.key}`),
     ];
