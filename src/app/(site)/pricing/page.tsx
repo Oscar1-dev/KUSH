@@ -68,7 +68,7 @@ export default async function PricingPage() {
               ))}
             </div>
             <p className={pages.updated} style={{ marginTop: 18 }}>
-              Card payments are handled by Stripe; KUSH never sees your card. Store credit is used automatically.
+              Card payments are handled by Stripe; KUSH never sees your card.
             </p>
           </div>
         </section>

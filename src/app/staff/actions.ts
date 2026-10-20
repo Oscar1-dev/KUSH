@@ -352,3 +352,44 @@ export async function staffOffboard(_p: ActionState, form: FormData) {
     "Offboarded. The bot is removing their Discord roles and letting them know.",
   );
 }
+
+export async function staffAdjustCredit(_p: ActionState, form: FormData) {
+  const userId = id(form, "userId");
+  const requestId = id(form, "requestId");
+  if (!userId || !requestId) return { error: "Customer not found." };
+  const amount = pence(text(form, "price"));
+  if (!amount) return { error: "Enter an amount in pounds, e.g. 5 or 2.50." };
+  const direction = text(form, "direction") === "remove" ? -1 : 1;
+  return call(
+    "/web/staff/credit/adjust",
+    { userId, amountPence: direction * amount, note: text(form, "note"), requestId },
+    `/staff/customers/${userId}`,
+    direction > 0 ? "Credit added." : "Credit removed.",
+  );
+}
+
+export async function staffRoleChange(_p: ActionState, form: FormData) {
+  const userId = id(form, "userId");
+  const requestId = id(form, "requestId");
+  if (!userId || !requestId) return { error: "Customer not found." };
+  const action = text(form, "action") === "revoke" ? "revoke" : "grant";
+  return call(
+    `/web/staff/customers/${userId}/roles`,
+    { roleKey: text(form, "roleKey"), action, reason: text(form, "reason"), requestId },
+    `/staff/customers/${userId}`,
+    action === "grant"
+      ? "Role granted. Discord updates within a minute."
+      : "Role revoked. Discord updates within a minute.",
+  );
+}
+
+export async function staffTicketPriority(_p: ActionState, form: FormData) {
+  const ticketId = id(form, "ticketId");
+  if (!ticketId) return { error: "Ticket not found." };
+  return call(
+    `/web/staff/tickets/${ticketId}/priority`,
+    { expectedVersion: version(form), priority: text(form, "priority") },
+    `/staff/tickets/${ticketId}`,
+    "Priority updated.",
+  );
+}

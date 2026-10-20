@@ -58,9 +58,11 @@ export default async function CommissionPage({
   const position = commissionStages.findIndex((s) => s.status === (onPath[commission.status] ?? commission.status));
   const accepted = quotes.find((q) => q.status === "accepted");
   const awaitingPayment = ["payment_pending", "accepted"].includes(commission.status);
-  const creditPence = awaitingPayment
-    ? (await kushApi<{ balancePence: number }>("/web/workspace/credit", { token })).balancePence
-    : 0;
+  // The "use credit" option only shows while credit spending is switched on.
+  const credit = awaitingPayment
+    ? await kushApi<{ balancePence: number; spendable?: boolean }>("/web/workspace/credit", { token })
+    : null;
+  const creditPence = credit?.spendable ? credit.balancePence : 0;
 
   return (
     <>

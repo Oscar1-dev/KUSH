@@ -13,7 +13,7 @@ export default async function OrdersPage() {
   const { token } = await requireAccount();
   const [{ orders }, credit] = await Promise.all([
     kushApi<{ orders: Order[] }>("/web/workspace/orders", { token }),
-    kushApi<{ balancePence: number }>("/web/workspace/credit", { token }),
+    kushApi<{ balancePence: number; spendable?: boolean }>("/web/workspace/credit", { token }),
   ]);
   const paid = orders.filter((o) => ["paid", "partially_refunded"].includes(o.status));
 
@@ -33,7 +33,9 @@ export default async function OrdersPage() {
         <Link href="/account/credit" className={styles.card}>
           <p className={styles.cardLabel}>STORE CREDIT</p>
           <p className={styles.cardValue}>{money(credit.balancePence)}</p>
-          <p className={styles.cardText}>Used automatically at checkout.</p>
+          <p className={styles.cardText}>
+            {credit.spendable ? "Used automatically at checkout." : "Recorded on your account; not spendable yet."}
+          </p>
         </Link>
       </div>
 

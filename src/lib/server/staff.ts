@@ -35,7 +35,8 @@ export type Permission =
   | "refunds.manage"
   | "credit.adjust"
   | "referrals.review"
-  | "stats.view";
+  | "stats.view"
+  | "roles.manage";
 
 export interface StaffMe {
   roles: StaffRole[];

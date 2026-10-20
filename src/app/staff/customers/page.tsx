@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 import styles from "@/components/account/account.module.css";
 import { kushApi } from "@/lib/server/kush-api";
 import { has, requireStaff } from "@/lib/server/staff";
@@ -28,7 +30,7 @@ export default async function StaffCustomers() {
       </h1>
       <p className={styles.lede}>{customers.length} KUSH accounts. Personal details stay on the record they belong to.</p>
       {customers.map((c) => (
-        <div key={c.id} className={styles.row}>
+        <Link key={c.id} href={`/staff/customers/${c.id}`} className={styles.listLink}>
           <div className={styles.rowMain}>
             <p className={styles.rowTitle}>
               {c.name} {c.disabled ? <span className={styles.badge}>DISABLED</span> : null}
@@ -42,7 +44,7 @@ export default async function StaffCustomers() {
           <p className={styles.rowMeta} style={{ whiteSpace: "nowrap" }}>
             {c.tickets} tickets · {c.commissions} commissions · {c.products} products
           </p>
-        </div>
+        </Link>
       ))}
     </>
   );

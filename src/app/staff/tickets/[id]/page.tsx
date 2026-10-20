@@ -141,6 +141,19 @@ export default async function StaffTicket({ params }: { params: Promise<{ id: st
               </ActionForm>
             </div>
           ) : null}
+          {actions.statuses.length ? (
+            <div className={styles.card} key={`priority-${ticket.version}`}>
+              <p className={styles.cardLabel}>PRIORITY · {ticket.priority.toUpperCase()}</p>
+              <ActionForm action="priority" hidden={v} submit="SET" tone="plain">
+                <select name="priority" className={styles.input} defaultValue={ticket.priority} aria-label="Priority">
+                  <option value="low">Low</option>
+                  <option value="normal">Normal</option>
+                  <option value="high">High</option>
+                  <option value="urgent">Urgent</option>
+                </select>
+              </ActionForm>
+            </div>
+          ) : null}
           {actions.assign ? (
             <div className={styles.card} key={`assign-${ticket.version}`}>
               <p className={styles.cardLabel}>ASSIGNED TO</p>
