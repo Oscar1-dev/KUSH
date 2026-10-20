@@ -112,7 +112,7 @@ export const channelContent: ChannelMessage[] = [
               heading: "Start here",
               emoji: "🚀",
               body: steps([
-                "Read the rules in #rules and press **I accept** to join in.",
+                "Read #rules and press **I have read and accept the rules** to join in.",
                 "Use the menu below to find what you're after.",
                 `Stuck? ${cmd("ticket create")} opens a private ticket, no account needed.`,
               ]),

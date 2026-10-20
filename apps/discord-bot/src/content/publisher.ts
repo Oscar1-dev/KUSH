@@ -134,11 +134,27 @@ export function renderContentPreview(
     }
     const buttons = (reply.components ?? []).flatMap((row) => {
       const json = "toJSON" in row ? row.toJSON() : row;
-      return (json as { components?: { label?: string }[] }).components ?? [];
+      return (
+        (
+          json as {
+            components?: {
+              label?: string;
+              placeholder?: string;
+              options?: { label: string }[];
+            }[];
+          }
+        ).components ?? []
+      );
     });
     if (buttons.length)
       lines.push(
-        `Buttons: ${buttons.map((button) => `**[${button.label}]**`).join(" ")}`,
+        `Buttons: ${buttons
+          .map((button) =>
+            button.options
+              ? `**[▾ ${button.placeholder ?? "Menu"}]** (${button.options.map((option) => option.label).join(" · ")})`
+              : `**[${button.label}]**`,
+          )
+          .join(" ")}`,
         "",
       );
   }
