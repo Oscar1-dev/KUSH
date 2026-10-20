@@ -94,7 +94,13 @@ export async function loadCommissionChoices(
   api: CommandContext["services"]["api"],
 ): Promise<CommissionChoice[]> {
   try {
-    const services = await api.catalogue();
+    // Interactions must be answered within 3 seconds: don't wait long.
+    const services = await Promise.race([
+      api.catalogue(),
+      new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error("slow")), 1_500),
+      ),
+    ]);
     const choices = services.map((service) => ({
       category: service.category,
       label: service.name,
@@ -505,7 +511,11 @@ const commissionCommands: CommandDefinition[] = [
     usage: "!commission create",
     run: async (context) => {
       await context.reply({
-        content: `<@${context.actor.userId}>, pick a service. Your request goes to KUSH privately and you'll get a quote before anything is charged.`,
+        ...say(
+          "info",
+          "What should KUSH build?",
+          "Pick a service. Your request goes to KUSH privately, and you'll get a written quote before anything is charged.",
+        ),
         components: [
           commissionServiceMenu(
             signer(context),

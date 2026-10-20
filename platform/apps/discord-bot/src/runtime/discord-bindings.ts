@@ -54,6 +54,7 @@ import {
   applicationModal,
   commissionModal,
   commissionServiceMenu,
+  fallbackCommissionChoices,
   linkButton,
   linkModal,
   ticketCategoryMenu,
@@ -285,8 +286,9 @@ async function respond(
     | ModalSubmitInteraction,
   reply: BotReply,
 ) {
-  if (interaction.deferred) await interaction.editReply(reply);
-  else if (interaction.replied) await interaction.followUp(ephemeral(reply));
+  // A second reply is a follow-up, never an overwrite of the first.
+  if (interaction.replied) await interaction.followUp(ephemeral(reply));
+  else if (interaction.deferred) await interaction.editReply(reply);
   else await interaction.reply(ephemeral(reply));
 }
 
@@ -331,6 +333,9 @@ async function handleSlash(
           })
           .filter((value): value is string => Boolean(value));
   const actor = actorFromMember(interaction.member, services.config.roleIds);
+  // Acknowledge within Discord's 3 seconds; the private reply follows.
+  // (No slash command opens a form directly, so deferring is always safe.)
+  await interaction.deferReply({ flags: MessageFlags.Ephemeral });
   await router.dispatch(command, {
     source: "slash",
     actor,
@@ -447,8 +452,11 @@ async function handleComponent(
     // The commission panel button starts the commission intake.
     if (interaction.customId === PUBLIC_COMMISSION_BUTTON) {
       await respond(interaction, {
-        content:
+        ...say(
+          "info",
+          "What should KUSH build?",
           "Pick a service. You'll get a written quote before anything is charged.",
+        ),
         components: [
           commissionServiceMenu(
             signerFor(services),
@@ -719,10 +727,16 @@ async function handleComponent(
     }
     case "commission-service": {
       if (!interaction.isStringSelectMenu()) return;
+      // Discord allows 3 seconds to open a form, so no API call here: the
+      // label comes from the menu the person saw, and the category must be
+      // one the intake accepts (the API checks it again on submit).
       const category = interaction.values[0] ?? "";
-      const choices = await loadCommissionChoices(services.api);
-      const choice = choices.find((item) => item.category === category);
-      if (!choice) return;
+      if (!fallbackCommissionChoices.some((item) => item.category === category))
+        return;
+      const picked = interaction.component.options.find(
+        (option) => option.value === category,
+      );
+      const choice = { category, label: picked?.label ?? category };
       await interaction.showModal(
         commissionModal(
           signerFor(services),

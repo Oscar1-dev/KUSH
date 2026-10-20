@@ -231,7 +231,7 @@ export async function registerInsights(
                 (SELECT max(s.last_seen_at) FROM sessions s WHERE s.user_id=u.id AND s.kind='web') AS "lastSeenAt"
          FROM support_members m JOIN users u ON u.id=m.user_id
          LEFT JOIN user_identities i ON i.user_id=u.id AND i.provider='discord'
-         WHERE m.tenant_id=$1 AND m.role='customer' AND u.email NOT LIKE '%@test.invalid'
+         WHERE m.tenant_id=$1 AND m.role='customer' AND u.email NOT LIKE '%@test.invalid' AND coalesce(u.display_name,'') NOT LIKE 'TEST %'
          ORDER BY u.created_at DESC LIMIT 300`,
         [ctx.tenantId],
       );
