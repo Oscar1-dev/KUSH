@@ -11,7 +11,10 @@ export async function businessStats(pool: Pool, tenantId: string) {
     Number((await pool.query<{ n: string }>(sql, [tenantId])).rows[0]?.n ?? 0);
   return {
     customers: await one(
-      "SELECT count(*) AS n FROM support_members WHERE tenant_id=$1 AND role='customer'",
+      // Test accounts (automated tests, TEST-labelled data) aren't customers.
+      `SELECT count(*) AS n FROM support_members m JOIN users u ON u.id=m.user_id
+       WHERE m.tenant_id=$1 AND m.role='customer' AND u.email NOT LIKE '%@test.invalid'
+         AND coalesce(u.display_name,'') NOT LIKE 'TEST %'`,
     ),
     orders: await one(
       "SELECT count(*) AS n FROM orders WHERE tenant_id=$1 AND status IN ('paid','partially_refunded','refunded')",
