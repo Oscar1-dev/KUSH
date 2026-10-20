@@ -42,6 +42,13 @@ const orderColumns = `id, number, kind, description, status, currency, subtotal_
 
 const site = () => process.env.KUSH_SITE_URL ?? "http://localhost:3000";
 
+/**
+ * Whether store credit may be spent at checkout. Off until the owner has
+ * set the commercial rules and live payments (KUSH_CREDIT_SPENDING=on).
+ * Until then credit is only recorded: earned, adjusted and shown.
+ */
+export const creditSpendable = () => process.env.KUSH_CREDIT_SPENDING === "on";
+
 export class OrderService {
   constructor(
     private readonly pool: Pool,
@@ -103,6 +110,9 @@ export class OrderService {
       )
     ).rows[0];
     if (existing) return this.resume(existing);
+    // Store credit is a ledger, not yet a way to pay: it is only spent at
+    // checkout once the owner switches it on (see creditSpendable()).
+    useCredit = useCredit && creditSpendable();
     if (line.pricePence > 0 && !this.gateway.configured && !useCredit)
       fail(503, "Card payments aren't switched on yet");
 

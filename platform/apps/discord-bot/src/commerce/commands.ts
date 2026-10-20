@@ -1,6 +1,12 @@
-import { ApiError, type CommissionTarget, type Order } from "../api-client.js";
+import {
+  ApiError,
+  requestUuid,
+  type CommissionTarget,
+  type Order,
+} from "../api-client.js";
 import { card, embed } from "../panels.js";
 import { hasAuthority } from "../runtime/authority.js";
+import { say } from "../ui/kit.js";
 import {
   CommandError,
   type CommandContext,
@@ -35,6 +41,15 @@ export function parsePrice(value: string): number | null {
 }
 
 const label = (value: string) => value.replaceAll("_", " ");
+
+/** Roles staff may grant (blueprint.staffGrantableRoles), with their names. */
+const grantableChoices = [
+  { name: "Customer", value: "verified-customer" },
+  { name: "Beta Tester", value: "beta-tester" },
+  { name: "Creative Team", value: "creative-partner" },
+  { name: "Verified Seller", value: "approved-seller" },
+  { name: "Reseller", value: "verified-reseller" },
+] as const;
 
 const signer = (context: CommandContext) => ({
   secret: context.services.componentSecret,
@@ -322,7 +337,9 @@ const customerCommands: CommandDefinition[] = [
             tone: "brand",
             description: [
               `Balance: **${money(credit.balancePence)}**`,
-              "Credit is used automatically at checkout. It can't be exchanged for cash.",
+              credit.spendable
+                ? "Credit is used automatically at checkout. It can't be exchanged for cash."
+                : "Credit is recorded on your account. It can't be spent at checkout yet, and it can't be exchanged for cash.",
               "",
               ...credit.history.map(
                 (entry) =>
@@ -974,6 +991,69 @@ const staffCommands: CommandDefinition[] = [
           }),
         ],
       });
+    },
+  },
+  {
+    path: ["staff", "role"],
+    group: "Support staff",
+    authority: "staff",
+    summary: "Grant or revoke a customer or partner role",
+    usage: "!staff role <@member> <grant|revoke> <role> <reason>",
+    options: [
+      { name: "member", description: "Who", required: true, type: "user" },
+      {
+        name: "action",
+        description: "Grant or revoke",
+        required: true,
+        choices: [
+          { name: "Grant", value: "grant" },
+          { name: "Revoke", value: "revoke" },
+        ],
+      },
+      {
+        name: "role",
+        description: "Which role",
+        required: true,
+        choices: grantableChoices,
+      },
+      {
+        name: "reason",
+        description: "Why (kept in the audit log)",
+        required: true,
+      },
+    ],
+    run: async (context) => {
+      const [who, action, roleKey, ...reason] = context.args;
+      const discordUserId = MENTION.exec(who ?? "")?.[1];
+      const role = grantableChoices.find((choice) => choice.value === roleKey);
+      if (
+        !discordUserId ||
+        (action !== "grant" && action !== "revoke") ||
+        !role ||
+        reason.join(" ").trim().length < 3
+      )
+        throw new CommandError(
+          `Use it like this: \`!staff role @member grant beta-tester Joined the beta\`. Roles: ${grantableChoices.map((choice) => `\`${choice.value}\``).join(", ")}.`,
+          "How to use it",
+        );
+      const result = await context.services.api.setStaffRole({
+        actorDiscordId: context.actor.userId,
+        discordUserId,
+        roleKey: role.value,
+        action,
+        reason: reason.join(" ").trim().slice(0, 300),
+        // One record per message or interaction, so a retry can't double up.
+        requestId: requestUuid(
+          context.invocationId ?? `${context.actor.userId}:${Date.now()}`,
+        ),
+      });
+      await context.reply(
+        say(
+          "success",
+          `${role.name}: ${result.state === "granted" ? "granted" : "revoked"}`,
+          `For <@${discordUserId}>. Discord updates within a minute; it's also shown on their customer page on the staff website.`,
+        ),
+      );
     },
   },
   {

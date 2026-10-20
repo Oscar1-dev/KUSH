@@ -56,6 +56,7 @@ export class DiscordGuildAdapter implements GuildAdapter {
           name: channel.name,
           type: channel.type,
           parentId: channel.parentId,
+          position: channel.rawPosition,
           topic: "topic" in channel ? (channel.topic as string | null) : null,
           overwrites: channel.permissionOverwrites.cache.map((overwrite) => ({
             id: overwrite.id,
@@ -92,6 +93,21 @@ export class DiscordGuildAdapter implements GuildAdapter {
     });
   }
 
+  /** Number of members holding each role (needs the Server Members intent). */
+  async roleHolders(): Promise<Map<string, number>> {
+    const members = await this.guild.members.fetch();
+    const counts = new Map<string, number>();
+    for (const member of members.values())
+      for (const id of member.roles.cache.keys())
+        counts.set(id, (counts.get(id) ?? 0) + 1);
+    return counts;
+  }
+
+  /** Irreversible. Only called by `cli.ts retire-roles --apply`. */
+  async deleteRole(id: string, reason: string) {
+    await this.guild.roles.delete(id, reason);
+  }
+
   async setEveryonePermissions(permissions: bigint, reason: string) {
     await this.guild.roles.everyone.setPermissions(permissions, reason);
   }
@@ -103,6 +119,16 @@ export class DiscordGuildAdapter implements GuildAdapter {
     void reason; // The positions endpoint does not accept an audit reason.
     await this.guild.roles.setPositions(
       positions.map((item) => ({ role: item.id, position: item.position })),
+    );
+  }
+
+  async setChannelPositions(
+    positions: { id: string; position: number }[],
+    reason: string,
+  ) {
+    void reason; // The positions endpoint does not accept an audit reason.
+    await this.guild.channels.setPositions(
+      positions.map((item) => ({ channel: item.id, position: item.position })),
     );
   }
 
@@ -229,8 +255,15 @@ const toDiscord = (overwrites: ResolvedOverwrite[]): OverwriteResolvable[] =>
 export async function connectGuild(
   token: string,
   guildId: string,
+  options: { members?: boolean } = {},
 ): Promise<{ adapter: DiscordGuildAdapter; close: () => Promise<void> }> {
-  const client = new Client({ intents: [GatewayIntentBits.Guilds] });
+  // Server Members (privileged) only when a command must count role holders.
+  const client = new Client({
+    intents: [
+      GatewayIntentBits.Guilds,
+      ...(options.members ? [GatewayIntentBits.GuildMembers] : []),
+    ],
+  });
   await client.login(token);
   try {
     const guild = await client.guilds.fetch(guildId);

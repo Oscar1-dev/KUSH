@@ -55,6 +55,7 @@ export const permissions = [
   "credit.adjust", // manual store-credit adjustments
   "referrals.review", // review flagged referrals, rewards
   "stats.view", // business overview numbers
+  "roles.manage", // grant/revoke allowlisted programme & customer roles
 ] as const;
 export type Permission = (typeof permissions)[number];
 
@@ -80,6 +81,7 @@ const grants: Record<StaffRole, Permission[]> = {
     "orders.view",
     "referrals.review",
     "stats.view",
+    "roles.manage",
   ],
   administrator: [
     "tickets.assigned",
@@ -109,6 +111,7 @@ const grants: Record<StaffRole, Permission[]> = {
     "credit.adjust",
     "referrals.review",
     "stats.view",
+    "roles.manage",
   ],
   owner: [...permissions],
 };

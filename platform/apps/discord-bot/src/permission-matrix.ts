@@ -115,16 +115,16 @@ export const personas: Persona[] = [
     roles: ["member", "moderator"],
   },
   {
-    key: "support-staff",
+    key: "ticket-staff",
     label: "Support Staff",
-    memberId: "support-staff",
-    roles: ["member", "support-staff"],
+    memberId: "ticket-staff",
+    roles: ["member", "ticket-staff"],
   },
   {
-    key: "support-lead",
+    key: "staff-manager",
     label: "Support Lead",
-    memberId: "support-lead",
-    roles: ["member", "support-lead"],
+    memberId: "staff-manager",
+    roles: ["member", "staff-manager"],
   },
   {
     key: "developer",

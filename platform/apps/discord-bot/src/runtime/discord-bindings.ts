@@ -28,7 +28,11 @@ import {
   HoneypotTracker,
   handleHoneypotMessage,
 } from "../moderation/honeypot.js";
-import { roles as blueprintRoles } from "../blueprint.js";
+import {
+  configuredRoleId,
+  roles as blueprintRoles,
+  type RoleKey,
+} from "../blueprint.js";
 import { ARGUMENTS_OPTION, slashOptions } from "../commands.js";
 import { verifyComponentId } from "../component-id.js";
 import {
@@ -57,6 +61,13 @@ import {
 } from "./components.js";
 import { loadCommissionChoices } from "../commerce/commands.js";
 import { tokenise } from "./prefix.js";
+import { say } from "../ui/kit.js";
+import {
+  NAV_MENU,
+  navigatorAnswer,
+  notifyLabel,
+  toggledRole,
+} from "../ui/navigation.js";
 
 export interface BindingDependencies {
   router: CommandRouter;
@@ -289,9 +300,14 @@ async function handleSlash(
     (item) => item.path.join(" ") === path.join(" "),
   );
   if (!command || !interaction.inCachedGuild()) {
-    await respond(interaction, {
-      content: "That command is not available here.",
-    });
+    await respond(
+      interaction,
+      say(
+        "warning",
+        "Not available here",
+        "That command can't be used in this place.",
+      ),
+    );
     return;
   }
   const options = slashOptions(command);
@@ -373,6 +389,25 @@ async function handleComponent(
   const userId = interaction.user.id;
   const guildId = interaction.guildId;
   if (!guildId || guildId !== services.config.guildId) return;
+
+  // Public navigator (#welcome): a private answer for whoever chose.
+  if (interaction.isStringSelectMenu() && interaction.customId === NAV_MENU) {
+    await respond(
+      interaction,
+      navigatorAnswer(interaction.values[0] ?? "", services.config.channelIds, [
+        linkButton(signerFor(services), userId),
+      ]),
+    );
+    return;
+  }
+  // Opt-in notification roles (#roles). Only allowlisted keys toggle.
+  if (interaction.isButton()) {
+    const key = toggledRole(interaction.customId);
+    if (key) {
+      await toggleNotificationRole(interaction, key, services);
+      return;
+    }
+  }
 
   // Public persistent panel buttons: the clicker is the actor.
   if (interaction.isButton()) {
@@ -495,9 +530,14 @@ async function handleComponent(
       const { accessFromRecord } = await import("../tickets/manager.js");
       await services.tickets.sync(accessFromRecord(record));
     }
-    await respond(interaction, {
-      content: `🔒 Ticket #${closed.number} closed.`,
-    });
+    await respond(
+      interaction,
+      say(
+        "success",
+        `Ticket #${closed.number} closed`,
+        "The channel is now read-only. Type `!reopen` if you need more help.",
+      ),
+    );
     if (interaction.channel?.isSendable())
       await interaction.channel
         .send({
@@ -535,12 +575,16 @@ async function handleComponent(
       });
     } catch (error) {
       if (error instanceof ApiError && [400, 404, 409].includes(error.status)) {
-        await respond(interaction, {
-          content:
-            error.status === 404
-              ? "❌ This NDA isn't yours to sign."
-              : `⚠️ Not signed: ${error.message}`,
-        });
+        await respond(
+          interaction,
+          error.status === 404
+            ? say(
+                "denied",
+                "Not your NDA",
+                "Only the person it was issued to can sign this agreement.",
+              )
+            : say("warning", "Not signed yet", error.message),
+        );
         return;
       }
       throw error;
@@ -550,10 +594,14 @@ async function handleComponent(
       actorId: userId,
       outcome: "ok",
     });
-    await respond(interaction, {
-      content:
-        "✅ **NDA signed.** Thank you. A PDF copy is in your KUSH account under Staff applications. The team will now confirm your role.",
-    });
+    await respond(
+      interaction,
+      say(
+        "success",
+        "NDA signed",
+        "Thank you. A PDF copy is in your KUSH account under **Staff applications**. The team will now confirm your role.",
+      ),
+    );
     if (interaction.channel?.isSendable())
       await interaction.channel
         .send({
@@ -566,10 +614,14 @@ async function handleComponent(
 
   const verified = scoped(interaction, services);
   if (!verified) {
-    await respond(interaction, {
-      content:
-        "This control has expired or belongs to someone else. Type the command again to get your own.",
-    });
+    await respond(
+      interaction,
+      say(
+        "warning",
+        "This button has expired",
+        "It belongs to someone else or is over 10 minutes old. Run the command again to get your own.",
+      ),
+    );
     return;
   }
 
@@ -609,9 +661,14 @@ async function handleComponent(
           actorId: userId,
           outcome: "ok",
         });
-        await respond(interaction, {
-          content: "Your Discord account is now linked to your KUSH account.",
-        });
+        await respond(
+          interaction,
+          say(
+            "success",
+            "Account linked",
+            "Your Discord and KUSH accounts are connected. Orders, commissions and tickets now follow you between the website and Discord.",
+          ),
+        );
       }
       return;
     case "apply-modal": {
@@ -626,9 +683,14 @@ async function handleComponent(
       await interaction.deferReply({ flags: MessageFlags.Ephemeral });
       const url = interaction.fields.getTextInputValue("url").trim();
       if (url && !/^https:\/\/\S+$/i.test(url)) {
-        await respond(interaction, {
-          content: "The URL must start with https:// — please apply again.",
-        });
+        await respond(
+          interaction,
+          say(
+            "warning",
+            "Check the link",
+            "The URL must start with https://. Please apply again.",
+          ),
+        );
         return;
       }
       const created = await services.api.submitApplication({
@@ -645,9 +707,14 @@ async function handleComponent(
         actorId: userId,
         outcome: "ok",
       });
-      await respond(interaction, {
-        content: `Your ${programme} application was received (status: ${created.status}). KUSH will review it privately; applying does not create an agreement.`,
-      });
+      await respond(
+        interaction,
+        say(
+          "success",
+          "Application received",
+          `KUSH will review your ${programme} application privately (status: ${created.status.replaceAll("_", " ")}). Applying doesn't create an agreement.`,
+        ),
+      );
       return;
     }
     case "commission-service": {
@@ -692,9 +759,22 @@ async function handleComponent(
           actorId: userId,
           outcome: "ok",
         });
-        await respond(interaction, {
-          content: `✅ **${created.title}** is with KUSH${created.ticketNumber ? ` (ticket #${created.ticketNumber}; its private channel opens in a moment)` : ""}. You'll get a quote to accept on the website before anything is charged. Track it any time with \`/commission status\`.`,
-        });
+        await respond(
+          interaction,
+          say(
+            "success",
+            "Commission request sent",
+            [
+              `**${created.title}** is with the KUSH team.`,
+              created.ticketNumber
+                ? `Your private channel (ticket #${created.ticketNumber}) opens in a moment.`
+                : "",
+              "You'll get a written quote to accept before anything is charged. Track it with `/commission status`.",
+            ]
+              .filter(Boolean)
+              .join("\n"),
+          ),
+        );
       } catch (error) {
         // Not linked yet: keep the request as a commission ticket instead,
         // so nobody is turned away; staff can quote once they link.
@@ -721,10 +801,15 @@ async function handleComponent(
           creatorId: userId,
           existingChannelId: created.channel?.channel_id ?? null,
         });
-        await respond(interaction, {
-          content: `Your request is in <#${channelId}> (ticket ${created.reference}). Link your KUSH account so you can accept quotes and pay securely on the website:`,
-          components: [linkButton(signerFor(services), userId)],
-        });
+        await respond(
+          interaction,
+          say(
+            "success",
+            "Request received",
+            `It's in <#${channelId}> (ticket ${created.reference}). Link your KUSH account so you can accept quotes and pay securely:`,
+            { components: [linkButton(signerFor(services), userId)] },
+          ),
+        );
       }
       return;
     }
@@ -752,16 +837,75 @@ async function handleComponent(
         outcome: "ok",
         detail: { ticket: created.ticket.number },
       });
-      await respond(interaction, {
-        content: `Ticket ${created.reference} (${category.label}) is open in <#${channelId}>. Only you and authorised ${created.queue === "reports" ? "moderators" : "staff"} can see it.`,
-      });
+      await respond(
+        interaction,
+        say(
+          "success",
+          `Ticket ${created.reference} is open`,
+          `**${category.label}** · <#${channelId}>\nOnly you and authorised ${created.queue === "reports" ? "moderators" : "staff"} can see it.`,
+        ),
+      );
       return;
     }
     default:
-      await respond(interaction, {
-        content: "This control is no longer supported.",
-      });
+      await respond(
+        interaction,
+        say(
+          "warning",
+          "This button is out of date",
+          "Run the command again to get a fresh one.",
+        ),
+      );
   }
+}
+
+/** Adds or removes one opt-in notification role for the clicker. */
+async function toggleNotificationRole(
+  interaction: ButtonInteraction,
+  key: RoleKey,
+  services: BotServices,
+) {
+  const roleId = configuredRoleId(services.config.roleIds, key);
+  if (!roleId || !interaction.inCachedGuild()) {
+    await respond(
+      interaction,
+      say("warning", "Not ready yet", "Notification roles aren't set up yet."),
+    );
+    return;
+  }
+  const member = interaction.member;
+  const restrictedId = configuredRoleId(services.config.roleIds, "restricted");
+  if (restrictedId && member.roles.cache.has(restrictedId)) {
+    await respond(interaction, say("denied", "Not available while restricted"));
+    return;
+  }
+  const label = notifyLabel(key);
+  if (member.roles.cache.has(roleId)) {
+    await member.roles.remove(roleId, "Turned off a notification role");
+    await respond(
+      interaction,
+      say(
+        "success",
+        `${label}: off`,
+        "You won't be pinged for these any more.",
+      ),
+    );
+  } else {
+    await member.roles.add(roleId, "Turned on a notification role");
+    await respond(
+      interaction,
+      say(
+        "success",
+        `${label}: on`,
+        "Press the same button again to turn it off.",
+      ),
+    );
+  }
+  services.audit({
+    action: `roles.notify.${key}`,
+    actorId: interaction.user.id,
+    outcome: "ok",
+  });
 }
 
 async function acceptRules(
@@ -770,15 +914,25 @@ async function acceptRules(
 ) {
   const memberRoleId = services.config.roleIds.member;
   if (!memberRoleId || !interaction.inCachedGuild()) {
-    await respond(interaction, {
-      content: "Membership is not configured yet. Please try again later.",
-    });
+    await respond(
+      interaction,
+      say(
+        "warning",
+        "Not ready yet",
+        "Membership isn't configured yet. Please try again later.",
+      ),
+    );
     return;
   }
   if (interaction.member.roles.cache.has(memberRoleId)) {
-    await respond(interaction, {
-      content: "You have already accepted the rules.",
-    });
+    await respond(
+      interaction,
+      say(
+        "info",
+        "You're already a member",
+        "You accepted the rules earlier, so you're all set.",
+      ),
+    );
     return;
   }
   // The database is the source of truth: record acceptance first, so a
@@ -794,9 +948,14 @@ async function acceptRules(
     actorId: interaction.user.id,
     outcome: "ok",
   });
-  await respond(interaction, {
-    content: "Welcome! You can now take part in the community channels.",
-  });
+  await respond(
+    interaction,
+    say(
+      "success",
+      "Welcome to KUSH",
+      "You're a member now. Say hi in #introductions, and pick notification roles in #roles if you'd like updates.",
+    ),
+  );
 }
 
 export async function handleInteraction(
@@ -821,10 +980,15 @@ export async function handleInteraction(
         error: error instanceof Error ? error.message : "unknown",
       });
     if (interaction.isRepliable())
-      await respond(interaction as ButtonInteraction, {
-        content:
-          friendly ??
-          "KUSH could not complete that request. Nothing private was posted. Please try again later.",
-      }).catch(() => undefined);
+      await respond(
+        interaction as ButtonInteraction,
+        friendly
+          ? say("error", "Couldn't complete that", friendly)
+          : say(
+              "error",
+              "Something went wrong",
+              "KUSH could not complete that request. Nothing private was posted. Please try again later.",
+            ),
+      ).catch(() => undefined);
   }
 }

@@ -120,6 +120,8 @@ describe.skipIf(!databaseUrl)(
 
     beforeAll(async () => {
       process.env.KUSH_WEBSITE_SECRET = WEBSITE;
+      // These tests cover spending credit; it is off by default.
+      process.env.KUSH_CREDIT_SPENDING = "on";
       process.env.KUSH_DISCORD_INTEGRATION_SECRET = BOT;
       pool = createDatabase(databaseUrl!).pool;
       tenantId = (
@@ -273,6 +275,39 @@ describe.skipIf(!databaseUrl)(
         (await web("GET", `/web/workspace/orders/${order.id}`, "ben"))
           .statusCode,
       ).toBe(404);
+    });
+
+    it("never spends credit while spending is switched off", async () => {
+      const { userId } = customers.ana!;
+      await pool.query("BEGIN");
+      await applyCredit(pool, {
+        tenantId,
+        userId,
+        amountPence: 5_000,
+        kind: "adjustment",
+        idempotencyKey: "test:ana:off",
+      });
+      await pool.query("COMMIT");
+      process.env.KUSH_CREDIT_SPENDING = "off";
+      try {
+        const result = (
+          await web("POST", "/web/workspace/checkout/product", "ana", {
+            productSlug: "test-toolkit",
+            requestId: randomUUID(),
+          })
+        ).json();
+        // Charged in full through Stripe; the balance is untouched.
+        expect(result.order).toMatchObject({
+          creditAppliedPence: 0,
+          totalPence: 1500,
+        });
+        expect(await creditBalance(pool, tenantId, userId)).toBe(5_000);
+        expect(
+          (await web("GET", "/web/workspace/credit", "ana")).json().spendable,
+        ).toBe(false);
+      } finally {
+        process.env.KUSH_CREDIT_SPENDING = "on";
+      }
     });
 
     it("applies store credit, settles credit-only orders and never goes negative", async () => {

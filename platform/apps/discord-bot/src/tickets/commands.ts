@@ -153,7 +153,7 @@ export const ticketCommands: CommandDefinition[] = [
   {
     path: ["assign"],
     group: "Support staff",
-    authority: "support-lead",
+    authority: "staff-manager",
     summary: "Assign a ticket to a staff member",
     usage: "!assign <@staff | none> [number]",
     run: async (context) => {

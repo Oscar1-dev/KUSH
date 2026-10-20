@@ -18,6 +18,60 @@ const desired = (overrides: Partial<DesiredRoles> = {}): DesiredRoles => ({
   ...overrides,
 });
 
+describe("staff-granted roles", () => {
+  const withGrants = {
+    ...ids,
+    grantable: { "beta-tester": "BT", "verified-customer": "VC" },
+  };
+  it("adds a granted role and keeps a hand-given one untouched", () => {
+    expect(
+      computeRoleChanges(
+        new Set(["X"]),
+        desired({ grantedRoleKeys: ["beta-tester"] }),
+        withGrants,
+      ),
+    ).toEqual({ add: ["BT"], remove: [] });
+    // BT given by hand in Discord, never granted or revoked here: kept.
+    expect(computeRoleChanges(new Set(["BT"]), desired(), withGrants)).toEqual({
+      add: [],
+      remove: [],
+    });
+  });
+
+  it("removes a role only when staff revoked it", () => {
+    expect(
+      computeRoleChanges(
+        new Set(["BT"]),
+        desired({ revokedRoleKeys: ["beta-tester"] }),
+        withGrants,
+      ),
+    ).toEqual({ add: [], remove: ["BT"] });
+  });
+
+  it("keeps a hand-granted Customer role without an entitlement", () => {
+    expect(
+      computeRoleChanges(
+        new Set(["VC"]),
+        desired({ grantedRoleKeys: ["verified-customer"] }),
+        withGrants,
+      ),
+    ).toEqual({ add: [], remove: [] });
+    expect(
+      computeRoleChanges(new Set(["VC"]), desired(), withGrants).remove,
+    ).toEqual(["VC"]);
+  });
+
+  it("never grants to a restricted member", () => {
+    expect(
+      computeRoleChanges(
+        new Set(["R"]),
+        desired({ grantedRoleKeys: ["beta-tester"] }),
+        withGrants,
+      ).add,
+    ).toEqual([]);
+  });
+});
+
 describe("role change computation", () => {
   it("grants Member after rules acceptance", () => {
     expect(

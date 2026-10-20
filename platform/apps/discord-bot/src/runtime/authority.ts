@@ -7,8 +7,8 @@ import { configuredRoleId, type RoleKey } from "../blueprint.js";
 export type Authority =
   | "everyone"
   | "member"
-  | "support-staff"
-  | "support-lead"
+  | "ticket-staff"
+  | "staff-manager"
   /** Anyone who works tickets: support staff, support lead or moderators. */
   | "ticket-handler"
   /** Any staff role; the API then checks the exact KUSH permission. */
@@ -37,15 +37,15 @@ const grantedBy: Record<
   owner: ["owner"],
   administrator: ["owner", "administrator"],
   moderator: ["owner", "administrator", "moderator"],
-  "support-lead": ["owner", "support-lead"],
-  "support-staff": ["owner", "support-lead", "support-staff"],
-  "ticket-handler": ["owner", "support-lead", "support-staff", "moderator"],
+  "staff-manager": ["owner", "staff-manager"],
+  "ticket-staff": ["owner", "staff-manager", "ticket-staff"],
+  "ticket-handler": ["owner", "staff-manager", "ticket-staff", "moderator"],
   staff: [
     "owner",
     "administrator",
     "developer",
-    "support-lead",
-    "support-staff",
+    "staff-manager",
+    "ticket-staff",
     "moderator",
   ],
 };

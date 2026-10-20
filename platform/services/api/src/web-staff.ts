@@ -1,4 +1,5 @@
 import { registerDiscordStaff } from "./discord-staff.js";
+import { registerMemberRoles } from "./member-roles.js";
 import type { FastifyInstance, FastifyRequest } from "fastify";
 import type { Pool } from "@kush/database";
 import { z } from "@kush/contracts";
@@ -167,6 +168,24 @@ export async function registerStaff(
         ctx,
         params<{ ticketId: string }>(request).ticketId,
         statusSchema.parse(request.body),
+      ),
+    ),
+  );
+
+  const prioritySchema = z
+    .object({
+      expectedVersion: z.number().int().positive(),
+      priority: z.enum(["low", "normal", "high", "urgent"]),
+    })
+    .strict();
+  app.post(
+    "/web/staff/tickets/:ticketId/priority",
+    { schema: { params: uuidParam("ticketId"), body: body(prioritySchema) } },
+    asStaff((ctx, request) =>
+      staff.setPriority(
+        ctx,
+        params<{ ticketId: string }>(request).ticketId,
+        prioritySchema.parse(request.body),
       ),
     ),
   );
@@ -491,6 +510,7 @@ export async function registerStaff(
   );
 
   registerDiscordStaff(app, { pool, access, staff, workflow });
+  registerMemberRoles(app, { pool, access, asStaff });
 
   return { access, asStaff };
 }

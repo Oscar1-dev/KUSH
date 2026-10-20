@@ -8,22 +8,27 @@ Each block is one persistent bot message. Buttons listed are wired to working ha
 
 Channel: `information:welcome` · Pinned: yes
 
-> **Welcome to KUSH**
+> **👋 Welcome to KUSH**
 >
-> KUSH is an independent software studio: websites, custom software and creative services, with support for everything we build.
+> KUSH builds websites, software, Discord systems and creative work, and supports everything it builds. This server is where you find us, get help and meet the community.
 > 
-> **Start here**
-> 1. Read the rules and press **I have read and accept the rules** to join the community.
-> 2. See getting-started for how this server works.
-> 3. Need help? Open a private ticket in create-ticket or type `!ticket`.
+> **🚀 Start here**
+> `1` Read #rules and press **I have read and accept the rules** to join in.
+> `2` Use the menu below to find what you're after.
+> `3` Stuck? `/ticket create` opens a private ticket, no account needed.
 > 
-> Type `!help` at any time to see the commands available to you.
+> **🔐 Good to know**
+> • KUSH staff will never ask for your password or payment details in Discord.
+> • Payments only happen on Stripe's secure checkout, from links the bot sends you privately.
+> • Slash commands reply privately; type `/help` to see yours.
+
+Buttons: **[▾ 🧭  Find your way around KUSH…]** (Services & prices · Start a commission · Get help · Products & orders · My KUSH account · Community · Partners & careers · Notification roles)
 
 ## #rules `rules.main`
 
 Channel: `information:rules` · Pinned: yes
 
-> **Community rules**
+> **📜 Community rules**
 >
 > 1. Be respectful. No harassment, hate speech or personal attacks.
 > 2. No spam, unsolicited advertising or self-promotion outside the channels that allow it.
@@ -33,247 +38,377 @@ Channel: `information:rules` · Pinned: yes
 > 6. KUSH provides digital software and creative services; unlawful goods and activity are not permitted.
 > Breaking the rules can lead to restriction, a timeout or removal.
 
-> **Joining the community**
+> **✅ Joining the community**
 >
-> Press the button below to confirm you accept the rules. You will receive the **Member** role and can then take part in the community channels. Opening a support ticket does not require this.
+> Press the button to confirm you accept the rules. You'll get the **Member** role and can take part in the community channels. You don't need this to open a support ticket.
 
 Buttons: **[I have read and accept the rules]**
+
+## #roles `roles.main`
+
+Channel: `information:roles` · Pinned: yes
+
+> **🏷️ Roles**
+>
+> What the coloured names mean, and how people get them.
+> 
+> **🛡️ Team**
+> • **Owner** · **Administrator** run KUSH
+> • **Staff Manager** runs the team, quotes and commissions
+> • **Developer** builds the work · **Ticket Staff** answers tickets
+> • **Moderator** keeps the community friendly
+> 
+> **🤝 Partners**
+> • **Creative Team** · **Verified Seller** · **Reseller**: approved partner programmes
+> 
+> **💬 Community**
+> • **Customer** has bought from KUSH · **Beta Tester** tries things early
+> • **Member** accepted the rules · **Restricted** is limited while staff review
+> 
+> **🔔 Notifications**
+> Pick what pings you. Press again to turn it off.
+> 📣 **Announcements**: Big news from KUSH
+> 📦 **Product Updates**: New products and releases
+> 🧪 **Development Updates**: Behind-the-scenes progress
+> 🎉 **Community Events**: Events, giveaways and polls
+
+Buttons: **[Announcements]** **[Product Updates]** **[Development Updates]** **[Community Events]**
 
 ## #getting-started `getting-started.main`
 
 Channel: `information:getting-started` · Pinned: yes
 
-> **Getting started**
+> **🧭 Getting started**
 >
-> **Support** — `!ticket` (or the button in create-ticket) opens a private channel that only you and authorised staff can see. No account or purchase is needed.
+> Slash commands reply privately (only you see them). The same commands also work with `!` if you prefer.
 > 
-> **Your tickets** — `!tickets` lists them privately. Inside a ticket: `!close <reason>`, `!reopen`, `!transcript` (sent to you privately).
+> **🛟 Get help**
+> • `/ticket create` opens a private ticket. Inside it: `/ticket close`, `/ticket transcript`
+> • `/tickets` lists your tickets
 > 
-> **Linking your KUSH account** — `!account` links Discord to an existing KUSH account using a one-time code.
+> **✏️ Work with KUSH**
+> • `/commission create` requests a commission; `/commission status` tracks it
+> • `/products` shows live prices; `/buy` checks out with Stripe
+> • `/orders` and `/order` show your orders and receipts
 > 
-> **Commands** — `!help` shows only the commands you can use. Every `!` command also has a `/` version whose replies are private.
-> 
-> **Private replies** — account details are sent by direct message. If your DMs are closed, use the `/` version instead.
-> 
-> 
-> 
-> Products, downloads and setup guides: _they will appear here once KUSH publishes verified products — not available yet._
+> **🔗 Your account**
+> • `/account` links Discord to your KUSH account with a one-time code
+> • `/credit` store credit · `/referrals` your referral code and rewards
+> • `/downloads` and `/licenses` for products you own
 
 ## #status `status.main`
 
 Channel: `information:status` · Pinned: yes
 
-> **Service status**
+> **🟢 Service status**
 >
-> Incidents and planned maintenance are announced in this channel. For the current state of the KUSH bot and services, type `!status`.
+> Incidents and planned maintenance are announced here. For a live check of the bot and KUSH services, type `/status`.
 
 ## #do-not-post `honeypot.warning`
 
-Channel: `information:do-not-post` — **not created yet** (created by the v2 apply) · Pinned: yes
+Channel: `information:do-not-post` · Pinned: yes
 
-> **Do not post here**
+> **⚠️ Do not post here**
 >
-> This channel exists to catch spam and compromised accounts. **Any message posted here is deleted automatically and the author is timed out** while staff review it. If you posted by mistake, open a ticket once the timeout ends.
+> This channel catches spam and compromised accounts. **Anything posted here is removed automatically** and flagged to moderators. One accidental post isn't punished; you'll just be told it was removed. Repeated posting quickly leads to a temporary mute while staff take a look.
 
 ## #introductions `introductions.guide`
 
 Channel: `community:introductions` · Pinned: yes
 
-> **Introduce yourself**
+> **🙋 Introduce yourself**
 >
-> Tell everyone who you are and what you build or create. Please do not share personal contact details, and keep promotion to showcases.
+> Tell everyone who you are and what you build or create. Keep personal contact details private, and keep promotion to #showcases.
 
 ## #showcases `showcases.guide`
 
 Channel: `community:showcases` · Pinned: yes
 
-> **Showcases**
+> **🎨 Showcases**
 >
-> Share work you have made. Post only work you have the right to share, credit collaborators, and never post malicious or pirated files.
+> Share work you've made. Only post work you have the right to share, credit collaborators, and never post malicious or pirated files.
+
+## #vouches `vouches.guide`
+
+Channel: `community:vouches` · Pinned: yes
+
+> **⭐ Vouches**
+>
+> Reviews from verified KUSH customers. Every vouch here also appears on the KUSH website.
+> 
+> **Leave yours**
+> Type `!vouch <1-5> <your review>`, e.g. `!vouch 5 Fast, friendly and exactly what I asked for.`
+> 
+> **The rules**
+> • Only members with the **Customer** role can vouch (link your Discord on the website after buying).
+> • One vouch per day. Fake, abusive or spam vouches are removed.
 
 ## #suggestions `suggestions.guide`
 
 Channel: `community:suggestions` · Pinned: yes
 
-> **Suggestions**
+> **💡 Suggestions**
 >
-> Suggest improvements to KUSH or this community, one idea per message. Suggestions are read by the team; they are not commitments or roadmap promises.
+> Suggest improvements to KUSH or this community, one idea per message. The team reads every one; they aren't roadmap promises.
 
 ## #services `services.main`
 
 Channel: `studio:services` · Pinned: yes
 
-> **KUSH services**
+> **🛠️ KUSH services**
 >
-> **Website development** — websites and web applications.
-> **Custom software** — tools and applications built around a specific workflow.
-> **Creative services** — digital creative work.
-> **Discord setup and support systems** — structured servers with tested permissions, private tickets and staff tools.
+> Eight things, done properly. Live prices: `/products`.
 > 
-> Every project starts with a private conversation about scope. Pricing, timelines and ownership are agreed in writing before any work begins; nothing posted in Discord is a quote or a contract.
+> **🌐 Websites & Portfolios**
+> Portfolio, business and advanced websites, landing pages and redesigns.
 > 
-> To start, see commission-enquiries or type `!ticket` and choose **Commission enquiry**.
+> **📊 Web Apps & Dashboards**
+> Custom web applications, dashboards and customer portals.
+> 
+> **🤖 Discord Bots & Servers**
+> Server setups with tested permissions, bots, tickets and staff tools.
+> 
+> **🖥️ Desktop Software & Tools**
+> Windows utilities, scripts and bespoke applications.
+> 
+> **🎮 Gaming & Rust Servers**
+> Rust configurations, plugins and maps, plus game community tools.
+> 
+> **🔧 Technical Support & Setup**
+> Troubleshooting, domains, DNS and getting systems working together.
+> 
+> **🎨 Design & Creative**
+> UI/UX, video editing and GFX; branding and motion with partners.
+> 
+> **⚙️ Automation & APIs**
+> Automations, integrations and back-end workflows.
+
+Buttons: **[Start a commission]**
 
 ## #commission-enquiries `commission-enquiries.main`
 
 Channel: `studio:commission-enquiries` · Pinned: yes
 
-> **Request a commission**
+> **✏️ Request a commission**
 >
-> Press the button to open a **private commission enquiry**. Describe what you need, any deadline, and examples of what you like.
+> Tell us what you need. It takes a couple of minutes.
 > 
-> KUSH will reply in your private channel. An enquiry is not an agreement: price, scope, delivery dates and ownership are confirmed in writing before work starts.
+> **How it works**
+> `1` Press **Start a commission** and pick the service.
+> `2` Describe the project: what it's for, any deadline, examples you like.
+> `3` The team replies in a private channel with a written quote: price, what you get, revisions and timeline.
+> `4` Accept it and pay securely with Stripe. Work starts once it's paid.
+> 
+> **Good to know**
+> • Asking costs nothing, and nothing is charged until you accept a quote.
+> • Track progress any time with `/commission status`, here or on the website.
 
-Buttons: **[Start a commission enquiry]**
+Buttons: **[Start a commission]**
 
 ## #products `products.main`
 
 Channel: `products:products` · Pinned: yes
 
-> **KUSH products**
+> **📦 KUSH products**
 >
-> KUSH has not published any public products yet. When it does, each product will be listed here with its version, platform and support details. Releases and changelogs will appear in releases.
+> Ready-made products you can buy. `/products` lists them with live prices; `/buy` opens Stripe's secure checkout, privately.
+> 
+> **After you buy**
+> • Your order and receipt: `/orders`
+> • Downloads arrive privately: `/downloads`
+> • Release notes are posted in #releases.
 
 ## #downloads `downloads.main`
 
-Channel: `products:downloads` — **not created yet** (created by the v2 apply) · Pinned: yes
+Channel: `products:downloads` · Pinned: yes
 
-> **Downloads**
+> **⬇️ Downloads**
 >
-> Downloads are delivered privately to verified customers, and only for the products they own. Download links are never posted in public channels — do not trust links shared by other members.
+> Downloads are delivered privately, and only for products you own: type `/downloads`. Links expire after a few minutes and are checked against your account.
 > 
-> `!downloads`: _product entitlements are being connected — not available yet._
+> **Stay safe**
+> Download links are never posted in public channels. Don't trust links shared by other members.
 
 ## #setup-guides `setup-guides.main`
 
-Channel: `products:setup-guides` — **not created yet** (created by the v2 apply) · Pinned: yes
+Channel: `products:setup-guides` · Pinned: yes
 
-> **Setup guides**
+> **🧭 Setup guides**
 >
-> Setup guides are provided for the products you own. For installation help right now, open a ticket and choose **Installation help**.
+> For installation help right now, open a ticket and choose **Installation help**.
 > 
-> `!guide <product>`: _guides will be published with each product — not available yet._
+> `!guide <product>`: _guides will be published with each product: not available yet._
 
 ## #known-issues `known-issues.main`
 
 Channel: `products:known-issues` · Pinned: yes
 
-> **Known issues**
+> **🐞 Known issues**
 >
-> Confirmed issues and workarounds are posted here by KUSH staff. To report a new problem, open a ticket and choose **Product bug** — please do not post private details publicly.
+> Confirmed issues and workarounds are posted here by the team. To report a new problem, open a ticket and choose **Product bug**. Please don't post private details publicly.
 
 ## #beta-programme `beta.main`
 
 Channel: `products:beta-programme` · Pinned: yes
 
-> **Beta programme**
+> **🧪 Beta programme**
 >
-> Welcome, beta testers. Pre-release builds may be unstable; please report problems with clear steps to reproduce and keep beta material confidential unless told otherwise.
+> Welcome, beta testers. Pre-release builds can be unstable: report problems with clear steps to reproduce, and keep beta material confidential unless told otherwise.
 
 ## #create-ticket `create-ticket.panel`
 
 Channel: `support:create-ticket` · Pinned: yes
 
-> **KUSH support**
+> **🎫 Create a ticket**
 >
-> Open a **private ticket** for general support, purchases, installation, technical issues, bugs, billing, commissions, partnerships or anything else. Only you and authorised staff can see it — no account or purchase needed.
+> **Pick the category that fits best.** A private channel opens that only you and the right KUSH team can see. No account or purchase needed.
 > 
-> To report a member, choose **Member report**: reports are handled by moderators only.
+> **Who sees what**
+> • 🔒 **Billing** is handled confidentially by managers.
+> • 🚩 **Member reports** go to moderators only.
+> 
+> **Afterwards**
+> Follow and reply to your tickets here or on the KUSH website; it's the same conversation.
 
-Buttons: **[Open a private ticket]**
+Buttons: **[General support]** **[Purchase assistance]** **[Installation help]** **[Technical issue]** **[Product bug]** **[Billing]** **[Commission enquiry]** **[Partnership enquiry]** **[Seller application]** **[Member report]** **[Other]**
 
 ## #faq `faq.main`
 
 Channel: `support:faq` · Pinned: yes
 
-> **Frequently asked questions**
+> **❓ Frequently asked questions**
 >
-> **How do I get help?** Type `!ticket` or use the button in create-ticket.
+> **How do I get help?**
+> `/ticket create`, or a button in #create-ticket.
 > 
-> **Who can see my ticket?** Only you and the KUSH staff handling it. Member reports are seen only by moderators.
+> **Who can see my ticket?**
+> Only you and the KUSH staff handling it. Member reports are seen only by moderators.
 > 
-> **Can I get a copy of my ticket?** Yes — type `!transcript` inside it and it is sent to you privately.
+> **Can I keep a copy?**
+> Yes: `/ticket transcript` inside the ticket sends it to you privately.
 > 
-> **How do I request a commission?** Use commission-enquiries. Nothing is agreed until price and scope are confirmed in writing.
+> **How do commissions work?**
+> `/commission create`. You get a written quote first, and pay only once you've accepted it.
 > 
-> **Where are downloads?** They are delivered privately to verified customers. Never trust download links posted by other members.
+> **Is paying safe?**
+> Payments happen on Stripe's checkout; KUSH never sees your card. Nobody from KUSH will ask for card details in Discord.
 > 
-> **Can I become a seller or reseller?** Partner applications are not open yet; see partner-information.
+> **Where are my downloads?**
+> `/downloads` sends them privately. Never trust download links from other members.
+
+## #applications `applications.main`
+
+Channel: `partnerships:applications` · Pinned: yes
+
+> **🧑‍💼 Join the KUSH team**
+>
+> We're looking for people who care about doing things properly.
+> 
+> **Roles we hire for**
+> • **Ticket Staff**: help customers through tickets on the website and in Discord
+> • **Moderator**: keep this server welcoming and handle member reports
+> • **Developer**: build websites and software for commissions (portfolio needed)
+> • **Staff Manager**: scope projects, prepare quotes and coordinate the team
+> 
+> **How it works**
+> `1` Apply with your Discord account on the website.
+> `2` A private channel opens here between you and the recruitment team.
+> `3` If you're conditionally accepted, senior roles sign the KUSH staff NDA, here or on the website.
+> `4` An administrator confirms your role and switches your access on.
+> 
+> **Safety**
+> Nobody gets a staff role automatically, and KUSH will never ask for your password.
 
 ## #partner-information `partner-information.main`
 
 Channel: `partnerships:partner-information` · Pinned: yes
 
-> **Partner programmes**
+> **🤝 Partner programmes**
 >
-> KUSH plans three programmes:
-> **Approved sellers** — list their own digital products through KUSH.
-> **Verified resellers** — resell KUSH products under a written agreement.
-> **Creative partners** — collaborate on commissioned work by invitation.
+> Three ways to work with KUSH beyond commissions:
 > 
-> Applications: _the application process opens once agreements are finalised — not available yet._ To express interest now, open a ticket and choose **Partnership enquiry**.
+> **Verified Seller**
+> List your own digital products through KUSH (the marketplace opens later).
 > 
-> No payments, payouts or agreements are made in Discord.
+> **Reseller**
+> Resell KUSH products under a written reseller agreement.
+> 
+> **Creative Team**
+> Collaborate on commissioned creative work, by invitation.
+> 
+> **Interested?**
+> _Self-service partner applications: not available yet._ Open a ticket and choose **Partnership enquiry**. No payments, payouts or agreements are made in Discord.
 
 ## #reseller-programme `reseller-programme.main`
 
-Channel: `partnerships:reseller-programme` — **not created yet** (created by the v2 apply) · Pinned: yes
+Channel: `partnerships:reseller-programme` · Pinned: yes
 
-> **Verified reseller resources**
+> **🤝 Reseller resources**
 >
-> This private channel is for programme members and KUSH. Programme terms are in your written agreement; questions about payments or contracts should go through a ticket, never a public channel.
+> This private channel is for the **Reseller** programme and KUSH. Terms are in your written agreement; questions about payments or contracts go through a ticket, never a public channel.
 
 ## #seller-programme `seller-programme.main`
 
-Channel: `partnerships:seller-programme` — **not created yet** (created by the v2 apply) · Pinned: yes
+Channel: `partnerships:seller-programme` · Pinned: yes
 
-> **Approved seller resources**
+> **🤝 Verified Seller resources**
 >
-> This private channel is for programme members and KUSH. Programme terms are in your written agreement; questions about payments or contracts should go through a ticket, never a public channel.
+> This private channel is for the **Verified Seller** programme and KUSH. Terms are in your written agreement; questions about payments or contracts go through a ticket, never a public channel.
 
 ## #creative-partners `creative-partners.main`
 
-Channel: `partnerships:creative-partners` — **not created yet** (created by the v2 apply) · Pinned: yes
+Channel: `partnerships:creative-partners` · Pinned: yes
 
-> **Creative partner resources**
+> **🤝 Creative Team resources**
 >
-> This private channel is for programme members and KUSH. Programme terms are in your written agreement; questions about payments or contracts should go through a ticket, never a public channel.
+> This private channel is for the **Creative Team** programme and KUSH. Terms are in your written agreement; questions about payments or contracts go through a ticket, never a public channel.
 
 ## #staff-chat `staff-chat.guide`
 
 Channel: `staff:staff-chat` · Pinned: yes
 
-> **Staff guide**
+> **🛡️ Staff guide**
 >
-> **Privacy** — customer details stay inside tickets and the KUSH backend. Never paste personal data, credentials or ticket content here.
+> Discord and the staff website are one system: both call the same KUSH backend, which checks your live Discord roles on every action.
 > 
-> **Tickets** — `!tickets` (your tickets and the queue), `!claim <n>`, `!priority <level>`, `/note` (internal, never visible to customers), `!close <reason>`, `!transcript`. Support Lead: `!assign @staff`.
+> **🔒 Privacy**
+> Customer details stay in tickets and the backend. Never paste personal data, credentials or ticket content here.
 > 
-> **Linking** — staff commands act through your KUSH staff account; link it with `!account`.
+> **🎫 Tickets**
+> • `/tickets` yours and the queue · `/ticket claim` · `/ticket add` @member
+> • `/note` internal note · `/priority` · `/ticket close` · `/ticket transcript`
+> • Staff Manager: `/assign` @staff
 > 
-> **Reports** — member reports go to moderators only.
+> **✏️ Commissions**
+> • `/staff commissions` yours (or everyone's) · `/commission status` in a ticket
+> • `/commission quote` · `/commission assign` · `/commission update` · `/commission complete`
+> 
+> **📊 Customers & business**
+> • `/staff customer` @member · `/staff role` grant or revoke a programme role
+> • `/staff orders` · `/staff stats` · `/product create` / `edit` / `archive`
+> • Refunds, payments and credit changes are website-only (they need 2FA).
 
 ## #ticket-queue `ticket-queue.guide`
 
 Channel: `staff:ticket-queue` · Pinned: yes
 
-> **Ticket queue**
+> **🎫 Ticket queue**
 >
-> New tickets are announced here as summaries only — never the customer's description. Claim with `!claim <number>`; the ticket channel then opens for you. Use `!tickets` for the full unclaimed list.
+> New tickets are announced here as summaries only, never the customer's description. Claim with `/ticket claim`; the ticket channel then opens for you. `/tickets` shows the full unclaimed list.
 
 ## #moderation-log `moderation-log.guide`
 
 Channel: `staff:moderation-log` · Pinned: yes
 
-> **Moderation log**
+> **🚨 Moderation log**
 >
-> Automatic moderation actions (including honeypot timeouts) and new member reports are recorded here. Review honeypot timeouts promptly and remove any that were mistakes.
+> Automatic moderation (including honeypot timeouts), recorded cases and new member reports land here. Review honeypot timeouts promptly and lift any that were mistakes. Cases are also on the staff website under Moderation.
 
 ## #bot-log `bot-log.guide`
 
 Channel: `staff:bot-log` · Pinned: yes
 
-> **Bot log**
+> **🤖 Bot log**
 >
-> Audit events from the KUSH bot: privileged commands (allowed, denied or failed), account links, ticket creation and onboarding. Message content is never logged here.
+> Audit events from the KUSH bot: privileged commands (allowed, denied or failed), account links, tickets and onboarding. Message content is never logged here.
 

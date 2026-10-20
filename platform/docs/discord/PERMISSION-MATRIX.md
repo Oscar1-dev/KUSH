@@ -1,8 +1,8 @@
-<!-- Generated from apps/discord-bot/src/blueprint.ts (v2). Do not edit by hand. -->
+<!-- Generated from apps/discord-bot/src/blueprint.ts (v3). Do not edit by hand. -->
 
 # KUSH Discord permission matrix
 
-Computed by the effective-permission evaluator (`src/permissions.ts`) from blueprint v2. `M` manage messages, `W` send, `R` view and read only, `·` no access. The guild owner account and the Owner role (Administrator) bypass every overwrite.
+Computed by the effective-permission evaluator (`src/permissions.ts`) from blueprint v3. `M` manage messages, `W` send, `R` view and read only, `·` no access. The guild owner account and the Owner role (Administrator) bypass every overwrite.
 
 This is a model of the blueprint, not evidence of live guild state. Live verification is recorded separately (see DEPLOYMENT.md).
 
@@ -47,8 +47,8 @@ This is a model of the blueprint, not evidence of live guild state. Live verific
 | studio/#portfolio | R | R | R | R | R | R | R | R | R | R | R | R | W | M | M | M |
 | partnerships/#applications | R | R | R | R | R | R | R | R | R | R | R | R | R | M | M | M |
 | support/#support-information | R | R | R | R | R | R | R | R | R | R | R | W | R | M | M | M |
-| staff/#commission-management | · | · | · | · | · | · | · | · | · | · | · | · | R | M | M | M |
-| staff/#recruitment-review | · | · | · | · | · | · | · | · | · | · | · | · | · | M | M | M |
+| staff/#commission-management | · | · | · | · | · | · | · | · | · | · | · | R | R | M | M | M |
+| staff/#recruitment-review | · | · | · | · | · | · | · | · | · | · | · | R | · | M | M | M |
 | information/#roles | R | R | R | R | R | R | R | R | R | R | R | R | R | M | M | M |
 | information/#server-faq | R | R | R | R | R | R | R | R | R | R | R | R | R | M | M | M |
 | community/#feedback | R | W | R | R | W | W | W | W | W | M | W | W | W | M | M | M |

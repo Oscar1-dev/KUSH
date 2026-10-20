@@ -82,6 +82,16 @@ Tests: API 114, bot 187, all passing.
 - Staff: `/staff/orders` (+ refund form), `/staff/products`, `/staff/catalogue` (prices), `/staff/referrals` (review flagged, deliver vouchers), business numbers on `/staff`, full quote form (price, deliverables, revisions, extras, expiry) and offline payment on commissions.
 - Verified: typecheck + lint; signed-out redirects; customer pages rendered with a temporary TEST session (removed). Staff pages need a real staff login (live Discord roles + 2FA) to view.
 
+## Discord overhaul & unified staff ops (2026-10-20)
+
+See [docs/discord/OVERHAUL-2026-10.md](discord/OVERHAUL-2026-10.md) (audit, role hierarchy, channel permissions, owner steps) and the updated [PARITY.md](PARITY.md).
+
+- Blueprint v3: Staff Manager (adopts Management's ID) · Ticket Staff · Creative Team · Verified Seller · Reseller · Customer; coloured hierarchy with powerless dividers; opt-in notification roles; bot under Administrator; categories ordered by visitor journey; `retire-roles` for 11 obsolete roles (hash-gated).
+- UI kit (`apps/discord-bot/src/ui/kit.ts`): every pinned post, refusal and error is a consistent card; #welcome navigator menu; #roles toggles.
+- One operation per action for website and Discord: role grants (`setRoleGrant`, allowlist, audited, idempotent, applied by role sync), customer overview with credit ledger adjustments, ticket priority.
+- Store credit is a ledger only until `KUSH_CREDIT_SPENDING=on` (owner decision once commercial rules and payments exist).
+- Tests: API 117, bot 203, all passing. Live Discord: read-only inspection only; no changes applied yet.
+
 ## Decisions & assumptions
 
 - Money is stored as integer pence (GBP default); never floats.

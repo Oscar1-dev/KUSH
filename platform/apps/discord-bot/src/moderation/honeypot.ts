@@ -33,8 +33,8 @@ const exemptRoles: readonly RoleKey[] = [
   "owner",
   "administrator",
   "developer",
-  "support-lead",
-  "support-staff",
+  "staff-manager",
+  "ticket-staff",
   "moderator",
   "kush-bot",
 ];

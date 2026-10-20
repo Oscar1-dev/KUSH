@@ -88,6 +88,10 @@ export interface DesiredRoles {
   /** Every product role the tenant uses, so stale ones can be removed. */
   managedProductRoleIds: string[];
   linked: boolean;
+  /** Allowlisted role keys staff granted (website or /staff role). */
+  grantedRoleKeys: string[];
+  /** Keys staff revoked: the bot removes these if it holds them. */
+  revokedRoleKeys: string[];
 }
 
 /** Queues (or coalesces into) one pending role sync for a member. */
@@ -196,6 +200,12 @@ export class EntitlementService {
           [tenantId, userId],
         )
       : { rows: [] as { discord_role_id: string | null }[] };
+    const grants = (
+      await this.pool.query<{ role_key: string; state: string }>(
+        "SELECT role_key, state FROM member_role_grants WHERE tenant_id=$1 AND discord_user_id=$2 ORDER BY role_key",
+        [tenantId, discordUserId],
+      )
+    ).rows;
     const managed = await this.pool.query<{ discord_role_id: string }>(
       "SELECT DISTINCT discord_role_id FROM products WHERE tenant_id=$1 AND discord_role_id IS NOT NULL",
       [tenantId],
@@ -211,6 +221,12 @@ export class EntitlementService {
         .map((row) => row.discord_role_id)
         .sort(),
       linked: Boolean(userId),
+      grantedRoleKeys: grants
+        .filter((g) => g.state === "granted")
+        .map((g) => g.role_key),
+      revokedRoleKeys: grants
+        .filter((g) => g.state === "revoked")
+        .map((g) => g.role_key),
     };
   }
 

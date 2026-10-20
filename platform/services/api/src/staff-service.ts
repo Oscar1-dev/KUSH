@@ -415,6 +415,43 @@ export class StaffService {
     });
   }
 
+  /** Same field `!priority` sets in Discord; the ticket handler's call. */
+  async setPriority(
+    staff: StaffContext,
+    ticketId: string,
+    input: {
+      expectedVersion: number;
+      priority: "low" | "normal" | "high" | "urgent";
+    },
+  ) {
+    return this.tx(async (c) => {
+      const ticket = await this.lockTicket(c, staff, ticketId);
+      if (
+        !this.mayWork(
+          staff,
+          ticket,
+          await this.reportCategories(c, staff.tenantId),
+        )
+      )
+        fail(403, "Claim this ticket before changing it");
+      if (ticket.version !== input.expectedVersion)
+        fail(409, "Ticket changed; reload before retrying");
+      await c.query(
+        "UPDATE support_tickets SET priority=$3,version=version+1,updated_at=now() WHERE tenant_id=$1 AND id=$2",
+        [staff.tenantId, ticketId, input.priority],
+      );
+      await this.event(
+        c,
+        staff,
+        ticketId,
+        "ticket.priority",
+        { priority: input.priority },
+        "staff",
+      );
+      return { priority: input.priority };
+    });
+  }
+
   async claim(staff: StaffContext, ticketId: string, expectedVersion: number) {
     demand(staff, "tickets.queue");
     return this.tx(async (c) => {

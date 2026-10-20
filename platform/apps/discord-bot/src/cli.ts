@@ -32,7 +32,9 @@ const usage = `Usage:
                                         Official channel messages (preview, plan, or LIVE publish/edit)
   cli.ts register-commands             LIVE: register slash fallbacks in the configured guild only
   cli.ts lockdown [--apply --confirm-guild <id>]
-                                        Restrict exposed sensitive channels (owner-authorised)`;
+                                        Restrict exposed sensitive channels (owner-authorised)
+  cli.ts retire-roles [--apply --confirm-guild <id> --plan-hash <hash>]
+                                        Review (then delete) obsolete roles listed in the blueprint`;
 
 const flag = (args: string[], name: string) => args.includes(name);
 const option = (args: string[], name: string) => {
@@ -84,12 +86,14 @@ async function liveSession<T>(
     adapter: import("./discord-adapter.js").DiscordGuildAdapter,
     config: Awaited<ReturnType<typeof readConfig>>,
   ) => Promise<T>,
+  options: { members?: boolean } = {},
 ): Promise<T> {
   const config = await readConfig();
   const { connectGuild } = await import("./discord-adapter.js");
   const { adapter, close } = await connectGuild(
     await readBotToken(),
     config.guildId,
+    options,
   );
   try {
     return await work(adapter, config);
@@ -243,6 +247,80 @@ async function main() {
     )) as { name: string }[];
     console.log(
       `Registered ${result.length} guild commands: ${result.map((item) => item.name).join(", ")}`,
+    );
+    return;
+  }
+  if (operation === "retire-roles") {
+    const { planRoleRetirement, retirementHash } =
+      await import("./retire-roles.js");
+    const { retiredRoles } = await import("./blueprint.js");
+    await liveSession(
+      async (adapter, config) => {
+        const observed = await adapter.observe();
+        const items = planRoleRetirement(
+          retiredRoles,
+          observed,
+          config.roleIds,
+          await adapter.roleHolders(),
+        );
+        const hash = retirementHash(items);
+        if (!flag(args, "--apply")) {
+          console.log(
+            JSON.stringify({ dryRun: true, planHash: hash, items }, null, 2),
+          );
+          return;
+        }
+        if (option(args, "--confirm-guild") !== config.guildId)
+          throw new Error(
+            "--confirm-guild does not match the configured guild",
+          );
+        if (option(args, "--plan-hash") !== hash)
+          throw new Error(
+            "The roles changed since the reviewed dry-run (plan hash differs). Review again.",
+          );
+        const backups = join(dirname(configPath()), "backups");
+        await mkdir(backups, { recursive: true });
+        await copyFile(
+          configPath(),
+          join(
+            backups,
+            `discord-${new Date().toISOString().replace(/[:.]/g, "-")}.json`,
+          ),
+        );
+        const deleted: string[] = [];
+        for (const item of items.filter((entry) => entry.action === "delete")) {
+          await adapter.deleteRole(
+            item.roleId,
+            `KUSH blueprint v3: ${item.reason}`.slice(0, 100),
+          );
+          deleted.push(item.roleId);
+        }
+        // Forget deleted roles so nothing maps to a missing ID.
+        const roleIds = Object.fromEntries(
+          Object.entries(config.roleIds).filter(
+            ([, id]) => !deleted.includes(id),
+          ),
+        );
+        const raw = JSON.parse(await readFile(configPath(), "utf8")) as Record<
+          string,
+          unknown
+        >;
+        await writeFile(
+          configPath(),
+          `${JSON.stringify({ ...raw, roleIds }, null, 2)}\n`,
+        );
+        console.log(
+          JSON.stringify(
+            {
+              deleted,
+              ownerActions: items.filter((item) => item.action === "owner"),
+            },
+            null,
+            2,
+          ),
+        );
+      },
+      { members: true },
     );
     return;
   }

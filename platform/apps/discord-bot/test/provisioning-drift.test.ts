@@ -147,7 +147,7 @@ describe("provisioning apply and idempotency", () => {
     // Remaining work is manual and explained: senior roles must be dragged
     // above the bot, and the bot cannot grant Administrator-level bits.
     const reasons = second.conflicts.map((item) => item.reason).join("\n");
-    expect(reasons).toMatch(/Move role "Moderator" above "KUSH Bot"/);
+    expect(reasons).toMatch(/Move role "Administrator" above "KUSH Bot"/);
     expect(reasons).toMatch(
       /Owner must update this role manually.*Administrator/s,
     );
@@ -160,7 +160,10 @@ describe("provisioning apply and idempotency", () => {
       guild,
     );
     // Simulate the owner: drag senior roles above the bot, grant bits.
-    const senior = blueprint.roles.slice(0, 6);
+    const senior = blueprint.roles.slice(
+      0,
+      blueprint.roles.findIndex((role) => role.key === "kush-bot"),
+    );
     senior.forEach((role, index) => {
       const observed = guild.state.roles.find(
         (item) => item.id === result.mapping.roleIds[role.key],
@@ -254,12 +257,15 @@ describe("hierarchy and bot authority", () => {
   it("does not propose edits to roles above the bot", () => {
     const observed = observedWith(correctOverwrites);
     observed.bot = { userId: "bot-user", roleId: "kush-bot" };
-    const developer = observed.roles.find((role) => role.id === "developer")!;
-    developer.colour = 0;
+    // Administrator sits above the bot by design.
+    const administrator = observed.roles.find(
+      (role) => role.id === "administrator",
+    )!;
+    administrator.colour = 0;
     const plan = planProvisioning(onlyStaffChat, observed);
     expect(plan.operations).toEqual([]);
     expect(plan.conflicts).toMatchObject([
-      { key: "developer", reason: expect.stringContaining("manually") },
+      { key: "administrator", reason: expect.stringContaining("manually") },
     ]);
   });
 
@@ -388,7 +394,7 @@ describe("v1 to v2 migration", () => {
   const plan = planProvisioning(blueprint, v1, v1Ids);
 
   it("adopts legacy IDs instead of creating duplicates", () => {
-    expect(plan.resolved.roleIds["support-staff"]).toBe("v1-support");
+    expect(plan.resolved.roleIds["ticket-staff"]).toBe("v1-support");
     expect(plan.resolved.channelIds["staff:staff-chat"]).toBe("v1-staff-chat");
     expect(plan.resolved.channelIds["community:showcases"]).toBe("v1-showcase");
     expect(
@@ -402,9 +408,9 @@ describe("v1 to v2 migration", () => {
     expect(plan.operations).toContainEqual(
       expect.objectContaining({
         action: "update-role",
-        key: "support-staff",
+        key: "ticket-staff",
         changes: expect.arrayContaining([
-          'name "Support Team" → "Support Staff"',
+          'name "Support Team" → "Ticket Staff"',
         ]),
       }),
     );
@@ -418,7 +424,10 @@ describe("v1 to v2 migration", () => {
   });
 
   it("reports unmanaged legacy resources and their exposure without deleting them", () => {
-    expect(plan.unmanaged.roles.map((role) => role.name)).toContain(
+    // v3 adopts the old Management role as Staff Manager (same ID, so the
+    // API's manager mapping keeps working) instead of leaving it unmanaged.
+    expect(plan.resolved.roleIds["staff-manager"]).toBe("v1-management");
+    expect(plan.unmanaged.roles.map((role) => role.name)).not.toContain(
       "Management",
     );
     expect(plan.unmanaged.channels).toEqual(

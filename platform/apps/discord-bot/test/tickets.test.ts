@@ -27,7 +27,7 @@ import { formatTranscript } from "../src/tickets/transcript.js";
 const GUILD = "100000000000000000";
 const BOT_ROLE = "100000000000000001";
 const roleIds = {
-  "support-lead": "200000000000000001",
+  "staff-manager": "200000000000000001",
   "support-team": "200000000000000002", // v1 key for Support Staff
   moderator: "200000000000000003",
   administrator: "200000000000000004",
@@ -186,7 +186,7 @@ describe("ticket channels", () => {
       P.ViewChannel,
     );
     expect(
-      overwrite(channel.overwrites, roleIds["support-lead"]),
+      overwrite(channel.overwrites, roleIds["staff-manager"]),
     ).toBeDefined();
     expect(overwrite(channel.overwrites, CUSTOMER)).toMatchObject({
       kind: "member",
@@ -237,7 +237,7 @@ describe("ticket channels", () => {
     expect(channel.parentId).toBe(channelIds.reports);
     expect(overwrite(channel.overwrites, roleIds.moderator)).toBeDefined();
     expect(
-      overwrite(channel.overwrites, roleIds["support-lead"]),
+      overwrite(channel.overwrites, roleIds["staff-manager"]),
     ).toBeUndefined();
     expect(
       discord.sent.some(
@@ -381,13 +381,11 @@ describe("ticket channels", () => {
   });
 
   it("resolves v1 role IDs through legacy keys", () => {
-    expect(configuredRoleId({ "support-team": "x" }, "support-staff")).toBe(
-      "x",
-    );
+    expect(configuredRoleId({ "support-team": "x" }, "ticket-staff")).toBe("x");
     expect(
       configuredRoleId(
-        { "support-staff": "y", "support-team": "x" },
-        "support-staff",
+        { "ticket-staff": "y", "support-team": "x" },
+        "ticket-staff",
       ),
     ).toBe("y");
   });
@@ -479,11 +477,7 @@ describe("ticket commands", () => {
   }
 
   it("claims the ticket in its channel and grants the claimer access", async () => {
-    const result = await run(
-      "!claim",
-      actor(["member", "support-staff"]),
-      true,
-    );
+    const result = await run("!claim", actor(["member", "ticket-staff"]), true);
     expect(result.outcome).toBe("ok");
     expect(result.calls.map((call) => call.method)).toContain("claimBy");
     expect(
@@ -508,7 +502,7 @@ describe("ticket commands", () => {
   it("keeps internal notes private: deletes the command and confirms only by DM", async () => {
     const result = await run(
       "!note checked the logs",
-      actor(["member", "support-staff"]),
+      actor(["member", "ticket-staff"]),
       true,
     );
     expect(result.deleted).toBe(true);
@@ -558,7 +552,7 @@ describe("ticket commands", () => {
   it("asks for a ticket number outside ticket channels", async () => {
     const result = await run(
       "!claim",
-      actor(["member", "support-staff"]),
+      actor(["member", "ticket-staff"]),
       false,
     );
     expect(JSON.stringify(result.publicReplies)).toContain("ticket number");

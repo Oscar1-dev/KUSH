@@ -217,10 +217,10 @@ describe("authority", () => {
   });
 
   it("enforces least privilege between staff roles", () => {
-    expect(hasAuthority(actor(["moderator"]), "support-staff")).toBe(false);
-    expect(hasAuthority(actor(["administrator"]), "support-staff")).toBe(false);
-    expect(hasAuthority(actor(["support-staff"]), "moderator")).toBe(false);
-    expect(hasAuthority(actor(["support-lead"]), "support-staff")).toBe(true);
+    expect(hasAuthority(actor(["moderator"]), "ticket-staff")).toBe(false);
+    expect(hasAuthority(actor(["administrator"]), "ticket-staff")).toBe(false);
+    expect(hasAuthority(actor(["ticket-staff"]), "moderator")).toBe(false);
+    expect(hasAuthority(actor(["staff-manager"]), "ticket-staff")).toBe(true);
     expect(hasAuthority(actor(["administrator"]), "moderator")).toBe(true);
     expect(hasAuthority(actor(["developer"]), "administrator")).toBe(false);
     expect(hasAuthority(actor([]), "member")).toBe(false);
@@ -234,7 +234,7 @@ describe("command router", () => {
     const { run, audits } = harness();
     const result = await run("!health", actor(["member"]));
     expect(result.outcome).toBe("denied");
-    expect(text(result.publicReplies[0])).toContain("do not have access");
+    expect(text(result.publicReplies[0])).toContain("don't have access");
     expect(result.privateReplies).toEqual([]);
     expect(audits).toMatchObject([{ action: "!health", outcome: "denied" }]);
   });
@@ -243,7 +243,7 @@ describe("command router", () => {
     const { run, audits } = harness();
     const result = await run("!config", actor(["administrator"]));
     expect(result.outcome).toBe("ok");
-    expect(text(result.privateReplies[0])).toContain("Blueprint: v2");
+    expect(text(result.privateReplies[0])).toContain("Blueprint: v3");
     expect(text(result.publicReplies[0])).not.toContain("Blueprint");
     expect(text(result.publicReplies[0])).toContain("direct message");
     expect(audits).toMatchObject([{ action: "!config", outcome: "ok" }]);
@@ -306,7 +306,7 @@ describe("command router", () => {
       replyPrivately: async () => "dm",
     });
     expect(outcome).toBe("error");
-    expect(text(replies[0])).toMatch(/Reference: [0-9a-f]{8}/);
+    expect(text(replies[0])).toMatch(/Reference: `?[0-9a-f]{8}/);
     expect(text(replies[0])).not.toContain("hunter2");
     expect(logs.join("\n")).toContain("command.failed");
     expect(services.health.snapshot().commands.failed).toBe(1);

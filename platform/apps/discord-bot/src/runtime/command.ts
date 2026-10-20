@@ -13,6 +13,7 @@ import type { HealthMonitor } from "./health.js";
 import type { Logger } from "./logger.js";
 import { resolvePath, type Routable } from "./prefix.js";
 import { SlidingWindowLimiter } from "./rate-limit.js";
+import { say } from "../ui/kit.js";
 
 export type BotReply = Pick<
   BaseMessageOptions,
@@ -122,10 +123,18 @@ export function friendlyApiError(error: unknown): string | null {
 }
 
 /** A user-facing failure; its message is safe to show. */
-export class CommandError extends Error {}
+export class CommandError extends Error {
+  constructor(
+    message: string,
+    /** Card heading; the message is the body. */
+    readonly title = "That didn't work",
+  ) {
+    super(message);
+  }
+}
 
 export const usageError = (command: CommandDefinition) =>
-  new CommandError(`Usage: \`${command.usage}\``);
+  new CommandError(`Use it like this: \`${command.usage}\``, "How to use it");
 
 export class CommandRouter {
   readonly #perUser: SlidingWindowLimiter;
@@ -160,9 +169,13 @@ export class CommandRouter {
     const privileged = !["everyone", "member"].includes(command.authority);
 
     if (isRestricted(actor) && !command.allowRestricted) {
-      await full.reply({
-        content: `Your account is restricted, so ${name} is unavailable. Open a ticket with !ticket if you want to appeal.`,
-      });
+      await full.reply(
+        say(
+          "denied",
+          "Not available while restricted",
+          `Your account is restricted, so ${name} is unavailable. To appeal, open a ticket with ${"`/ticket create`"}.`,
+        ),
+      );
       return "denied";
     }
     if (!hasAuthority(actor, command.authority)) {
@@ -172,7 +185,9 @@ export class CommandRouter {
           actorId: actor.userId,
           outcome: "denied",
         });
-      await full.reply({ content: `You do not have access to ${name}.` });
+      await full.reply(
+        say("denied", "Not for your role", `You don't have access to ${name}.`),
+      );
       return "denied";
     }
 
@@ -185,9 +200,9 @@ export class CommandRouter {
         const seconds = Math.ceil(
           Math.max(userLimit.retryAfterMs, cooldown.retryAfterMs) / 1000,
         );
-        await full.reply({
-          content: `Slow down — try again in ${seconds}s.`,
-        });
+        await full.reply(
+          say("warning", "Slow down a little", `Try again in ${seconds}s.`),
+        );
       }
       return "limited";
     }
@@ -200,12 +215,12 @@ export class CommandRouter {
       return "ok";
     } catch (error) {
       if (error instanceof CommandError) {
-        await full.reply({ content: error.message });
+        await full.reply(say("error", error.title, error.message));
         return "error";
       }
       const friendly = friendlyApiError(error);
       if (friendly) {
-        await full.reply({ content: friendly });
+        await full.reply(say("error", "Couldn't complete that", friendly));
         return "error";
       }
       const incident = randomUUID().slice(0, 8);
@@ -224,9 +239,14 @@ export class CommandRouter {
           detail: { incident },
         });
       await full
-        .reply({
-          content: `KUSH could not complete ${name}. Nothing private was posted. Reference: ${incident}.`,
-        })
+        .reply(
+          say(
+            "error",
+            "Something went wrong",
+            `KUSH could not complete ${name}. Nothing private was posted.
+Reference: \`${incident}\``,
+          ),
+        )
         .catch(() => undefined);
       return "error";
     }
