@@ -56,7 +56,7 @@ This is a model of the blueprint, not evidence of live guild state. Live verific
 | community/#vouches | R | R | R | R | R | R | R | R | R | M | R | R | R | M | M | M |
 | community/#General Lounge | R | W | R | R | W | W | W | W | W | M | W | W | W | M | M | M |
 | products/#product-announcements | R | R | R | R | R | R | R | R | R | R | R | R | W | M | M | M |
-| products/#development-progress | R | R | R | R | R | R | R | R | R | R | R | R | W | M | M | M |
+| products/#development-updates | R | R | R | R | R | R | R | R | R | R | R | R | W | M | M | M |
 | products/#feature-requests | R | W | R | R | W | W | W | W | W | M | W | W | W | M | M | M |
 | products/#bug-reports | R | W | R | R | W | W | W | W | W | M | W | W | W | M | M | M |
 | studio/#commission-information | R | R | R | R | R | R | R | R | R | R | R | R | R | M | M | M |
