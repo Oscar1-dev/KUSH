@@ -42,9 +42,42 @@ const clean = (line: string) =>
     .replace(/[.;:,]\s*$/, "")
     .trim();
 
+export type ChangeKind = "major" | "minor";
+
+/**
+ * #announcements gets major changes (launches, new services, new
+ * features, important news); #development-updates gets the rest (fixes,
+ * polish, progress). A commit can decide explicitly with a trailer line
+ * `Announce: major` or `Announce: minor`; otherwise its headline is read.
+ */
+export function kindOf(
+  headline: string,
+  body: readonly string[] = [],
+): ChangeKind {
+  const trailer = body
+    .map((line) => /^announce:\s*(major|minor)\s*$/i.exec(line.trim())?.[1])
+    .find(Boolean);
+  if (trailer) return trailer.toLowerCase() as ChangeKind;
+  const text = headline.replace(/^[\w &/-]{1,30}:\s*/, ""); // "Website: …"
+  if (
+    /^(fix|fixes|fixed|tidy|polish|tweak|refactor|improve|update|bump|clean|faster|small)/i.test(
+      text,
+    )
+  )
+    return "minor";
+  if (
+    /\b(new|launch|launches|introduc\w*|now live|automatic|announc\w*|added?)\b/i.test(
+      text,
+    )
+  )
+    return "major";
+  return "minor";
+}
+
 /** Turns a push's commits into announcement lines (headline + details). */
 export function summarisePush(commits: readonly Commit[]) {
-  const changes: { headline: string; details: string[] }[] = [];
+  const changes: { headline: string; details: string[]; kind: ChangeKind }[] =
+    [];
   for (const commit of commits) {
     if (commit.parents > 1) continue;
     const [subject = "", ...body] = commit.message.split("\n");
@@ -55,7 +88,11 @@ export function summarisePush(commits: readonly Commit[]) {
       .filter((line) => /^[-*•]\s+/.test(line))
       .map(clean)
       .filter((line) => line && !noise.some((pattern) => pattern.test(line)));
-    changes.push({ headline, details: details.slice(0, 4) });
+    changes.push({
+      headline,
+      details: details.slice(0, 4),
+      kind: kindOf(headline, body),
+    });
   }
   return changes;
 }
@@ -65,11 +102,14 @@ const MAX_CHANGES = 8;
 export function announcement(
   changes: ReturnType<typeof summarisePush>,
   when: Date,
+  kind: ChangeKind = "major",
 ): BotReply {
   const shown = changes.slice(0, MAX_CHANGES);
   const extra = changes.length - shown.length;
   const description = [
-    "Fresh changes have just landed across KUSH.",
+    kind === "major"
+      ? "Fresh changes have just landed across KUSH."
+      : "Smaller improvements and fixes from the latest update.",
     "",
     ...shown.flatMap((change) => [
       `**✦ ${change.headline}**`,
@@ -87,12 +127,12 @@ export function announcement(
   return {
     embeds: [
       card({
-        title: "KUSH update",
-        emoji: "🚀",
-        tone: "brand",
+        title: kind === "major" ? "KUSH update" : "Development update",
+        emoji: kind === "major" ? "🚀" : "🛠️",
+        tone: kind === "major" ? "brand" : "info",
         description,
         thumbnail: icon ?? null,
-        banner: true,
+        banner: kind === "major",
         timestamp: true,
         footer: `KUSH changelog • ${when.toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" })}`,
       }),
@@ -104,7 +144,8 @@ export interface ChangelogOptions {
   repo: string; // "owner/name"
   branch: string;
   statePath: string;
-  post(reply: BotReply): Promise<void>;
+  /** Posts to #announcements ("major") or #development-updates ("minor"). */
+  post(kind: ChangeKind, reply: BotReply): Promise<void>;
   log: Logger;
   fetch?: typeof fetch;
   now?: () => Date;
@@ -186,9 +227,12 @@ export class ChangelogAnnouncer {
       // Save first: a failed post is logged, never re-posted in a loop.
       await this.#save({ lastSha: head });
       if (!changes.length) return 0;
-      await this.options.post(
-        announcement(changes, (this.options.now ?? (() => new Date()))()),
-      );
+      const when = (this.options.now ?? (() => new Date()))();
+      for (const kind of ["major", "minor"] as const) {
+        const subset = changes.filter((change) => change.kind === kind);
+        if (subset.length)
+          await this.options.post(kind, announcement(subset, when, kind));
+      }
       this.options.log.info("changelog.announced", {
         head: head.slice(0, 7),
         changes: changes.length,

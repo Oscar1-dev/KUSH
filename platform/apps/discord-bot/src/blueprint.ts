@@ -550,7 +550,7 @@ export const channels: DesiredChannel[] = [
   text(
     "information",
     "announcements",
-    "Official KUSH announcements.",
+    "Major improvements, new services, launches and important KUSH news.",
     { publish: ["administrator"] },
     ["01-start-here:announcements"],
   ),
@@ -872,10 +872,11 @@ export const channels: DesiredChannel[] = [
   ),
   text(
     "products",
-    "development-progress",
-    "Progress updates from the KUSH team.",
+    "development-updates",
+    "Smaller improvements, progress reports, bug fixes and what's coming next. Posted automatically with each update.",
     { publish: ["administrator", "developer"] },
-    ["archive:development-progress"],
+    // Was #development-progress (same channel and history).
+    ["products:development-progress", "archive:development-progress"],
   ),
   text(
     "products",

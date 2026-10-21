@@ -5,6 +5,7 @@ import { describe, expect, it } from "vitest";
 import {
   ChangelogAnnouncer,
   announcement,
+  kindOf,
   summarisePush,
   type Commit,
 } from "../src/automation/changelog.js";
@@ -32,6 +33,7 @@ describe("push summaries", () => {
       {
         headline: "Website: new pricing page",
         details: ["Every service with live prices", "See for details"],
+        kind: "major",
       },
     ]);
     expect(JSON.stringify(announcement(changes, new Date()))).not.toMatch(
@@ -74,7 +76,8 @@ describe("announcer", () => {
         statePath,
         log: createLogger(() => undefined),
         fetch: remote.fetch,
-        post: async (reply) => void posted.push(reply),
+        post: async (kind, reply) =>
+          void posted.push({ ...reply, content: kind }),
       });
     expect(await announcer().tick()).toBe(0); // first run: just remembers
     expect(posted).toEqual([]);
@@ -107,11 +110,27 @@ describe("announcer", () => {
         statePath,
         log: createLogger(() => undefined),
         fetch: remote.fetch,
-        post: async (reply) => void posted.push(reply),
+        post: async (kind, reply) =>
+          void posted.push({ ...reply, content: kind }),
       });
     await make().tick();
     remote = github("bbb", [commit("Update platform from local KUSH repo", 2)]);
     expect(await make().tick()).toBe(0);
     expect(posted).toEqual([]);
+  });
+});
+
+describe("which channel a change goes to", () => {
+  it("sends launches to #announcements and fixes to #development-updates", () => {
+    expect(kindOf("Automatic update announcements in Discord")).toBe("major");
+    expect(kindOf("Website: new pricing page")).toBe("major");
+    expect(kindOf("Launch the Rust server service")).toBe("major");
+    expect(kindOf("Fix the commission form timing out")).toBe("minor");
+    expect(kindOf("Discord: faster slash command replies")).toBe("minor");
+    expect(kindOf("Polish the staff dashboard")).toBe("minor");
+    expect(kindOf("Something vague")).toBe("minor");
+    // The commit can decide explicitly.
+    expect(kindOf("Fix pricing", ["", "Announce: major"])).toBe("major");
+    expect(kindOf("New internal tool", ["Announce: minor"])).toBe("minor");
   });
 });
