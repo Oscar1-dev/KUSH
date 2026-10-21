@@ -700,14 +700,21 @@ export async function startBot(): Promise<{
     }),
   ).catch(() => undefined);
   // ------------------------------------------- update announcements
+  const configuredChannelId = (key: string, legacy: string[] = []) =>
+    [key, ...legacy].map((k) => config.channelIds[k]).find(Boolean);
   const changelog = config.changelog
     ? new ChangelogAnnouncer({
         repo: config.changelog.repo,
         branch: config.changelog.branch,
         statePath: join(dirname(configPath()), "changelog-state.json"),
         log,
-        post: async (reply) => {
-          const id = config.channelIds["information:announcements"];
+        post: async (kind, reply) => {
+          const id =
+            kind === "major"
+              ? config.channelIds["information:announcements"]
+              : configuredChannelId("products:development-updates", [
+                  "products:development-progress",
+                ]);
           const channel = id ? guild().channels.cache.get(id) : undefined;
           if (!channel?.isSendable())
             throw new Error("announcements channel unavailable");
